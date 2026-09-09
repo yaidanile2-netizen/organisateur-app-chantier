@@ -121,3 +121,21 @@
     color: #d1d5db;
   }
 }
+
+
+.btn-primary {
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 18px;
+  margin-top: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+.btn-primary:active {
+  opacity: 0.85;
+}
