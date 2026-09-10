@@ -3,7 +3,7 @@
 // Clé publique VAPID (publique par nature, sans risque de la mettre dans le
 // code du site — la clé privée, elle, ne quitte jamais n8n).
 const VAPID_PUBLIC_KEY =
-    'BBsFWevFp3lkK7EAZVPu14mC9vs5487xSrgtyt8Q-xWLkJq35SOPrGMqpcdjDfB6ga3A8k-4KJ_T3QuAaBeJWsc'
+    'BAOOm8r2_D2lJPsXKY7HutOB2u26vG5FpoQaIrdXsq0g28Zv0E2DxdVWKc-1U_snt2BCAAdRNWLwrzFT-leErJw'
 
 const SAVE_SUBSCRIPTION_URL =
     'https://n8n-production-bdf5.up.railway.app/webhook/save-subscription'
