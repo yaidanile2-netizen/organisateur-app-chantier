@@ -121,7 +121,8 @@ export default function MuscuView() {
                 </p>
                 {prochaine && prochaine.date_debut ? (
                     <p className="muscu-prochaine">
-                        Prochaine séance : <strong>{jourFormat.format(new Date(prochaine.date_debut))}</strong>, départ{' '}
+                        Prochaine séance : <strong>{jourFormat.format(new Date(prochaine.date_debut))}</strong>,{' '}
+                        {seanceParCode(codeDeTache(prochaine) ?? 'A').lieu === 'maison' ? 'à la maison à' : 'départ'}{' '}
                         {heureFormat.format(new Date(prochaine.date_debut))} · Séance {codeDeTache(prochaine) ?? '?'}
                     </p>
                 ) : (
