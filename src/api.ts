@@ -143,3 +143,75 @@ export async function supprimerTache(id: string): Promise<void> {
         throw new Error(`Impossible de supprimer la tâche (${res.status})`)
     }
 }
+
+// Coach nutrition — webhooks n8n /nutrition, /nutrition-etat, /supprimer-repas
+
+export type Objectif = 'musculation' | 'cardio' | 'croissance' | 'perte_gras' | 'peau'
+export type Moment = 'petit_dejeuner' | 'dejeuner' | 'diner' | 'collation'
+
+export type Repas = {
+    id: string
+    date: string
+    moment: Moment
+    description: string
+    nutriments: string[]
+}
+
+export type EtatNutrition = {
+    priorites: Objectif[]
+    repas_semaine: Repas[]
+}
+
+export type Suggestion = { aliment: string; nutriment?: string; comment?: string }
+
+export type ReponseNutrition = {
+    intent: 'repas' | 'bilan' | 'objectifs' | 'question'
+    reponse: string
+    detail: string
+    repas: Omit<Repas, 'id' | 'date'> | null
+    objectifs: Objectif[] | null
+    manques: string[]
+    suggestions: Suggestion[]
+}
+
+export type DemandeNutrition =
+    | { texte: string }
+    | { action: 'bilan' }
+    | { action: 'objectifs'; objectifs: Objectif[] }
+
+export async function getEtatNutrition(): Promise<EtatNutrition> {
+    const res = await fetch(`${BASE_URL}/nutrition-etat`)
+    return lireJson<EtatNutrition>(res, 'Impossible de charger le suivi nutrition', {
+        priorites: [],
+        repas_semaine: [],
+    })
+}
+
+export async function envoyerNutrition(demande: DemandeNutrition): Promise<ReponseNutrition> {
+    const res = await fetch(`${BASE_URL}/nutrition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(demande),
+    })
+    const vide: ReponseNutrition = {
+        intent: 'question',
+        reponse: '',
+        detail: '',
+        repas: null,
+        objectifs: null,
+        manques: [],
+        suggestions: [],
+    }
+    return lireJson<ReponseNutrition>(res, 'Le coach nutrition ne répond pas', vide)
+}
+
+export async function supprimerRepas(id: string): Promise<void> {
+    const res = await fetch(`${BASE_URL}/supprimer-repas`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+    })
+    if (!res.ok) {
+        throw new Error(`Impossible de supprimer le repas (${res.status})`)
+    }
+}

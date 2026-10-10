@@ -505,3 +505,137 @@
     color: #f5f5f7;
   }
 }
+
+/* Coach nutrition */
+
+.coach .muted {
+  margin-bottom: 8px;
+}
+
+.coach-objectifs {
+  margin-bottom: 4px;
+}
+
+.coach-chip {
+  appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  --chip-color: #a855f7;
+}
+.coach-chip-top {
+  --chip-color: #16a34a;
+  font-weight: 700;
+}
+
+.coach-form {
+  margin-top: 16px;
+}
+
+.coach-reponse {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f5f3ff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coach-texte {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  color: #1c1c1e;
+}
+
+.coach-manques {
+  margin: 0;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: #6b7280;
+}
+.coach-manque {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.coach-suggestions {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1c1c1e;
+}
+
+.coach-titre {
+  font-size: 14px;
+  margin: 18px 0 6px;
+  color: #374151;
+}
+
+.coach-journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.coach-journal li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef0f2;
+}
+.coach-journal li:last-child {
+  border-bottom: none;
+}
+
+.coach-quand {
+  font-size: 12px;
+  color: #6b7280;
+  width: 74px;
+  flex-shrink: 0;
+  text-transform: capitalize;
+  line-height: 1.4;
+}
+
+.coach-repas {
+  flex: 1;
+  font-size: 14px;
+  color: #1c1c1e;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.coach-nutriments {
+  font-size: 12px;
+}
+
+.coach-retirer {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .coach-reponse {
+    background: #1e1b2e;
+  }
+  .coach-texte,
+  .coach-suggestions,
+  .coach-repas {
+    color: #f5f5f7;
+  }
+  .coach-titre {
+    color: #d1d5db;
+  }
+  .coach-journal li {
+    border-bottom-color: #2a2a2d;
+  }
+}

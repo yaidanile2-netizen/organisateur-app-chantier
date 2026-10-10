@@ -4,6 +4,7 @@ import { activerNotifications, etatNotifications, notificationsDisponibles, type
 import { getCategories, type Categorie } from './api'
 import DayView from './DayView'
 import SportPlanner from './SportPlanner'
+import NutritionCoach from './NutritionCoach'
 
 const todayLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
@@ -48,6 +49,8 @@ function App() {
                       <DayView rafraichir={version} />
 
                       <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
+
+                      <NutritionCoach />
 
                       <section className="card">
                                 <h2>Notifications</h2>
@@ -94,7 +97,7 @@ function App() {
                         )}
 
                       <p className="status">
-                                ✅ Chantier 8 : vue jour + création/modification de tâches — en place.
+                                ✅ Vue jour, séances de sport automatiques et coach nutrition — en place.
                       </p>
               </main>
         </div>
