@@ -72,28 +72,40 @@ async function lireJson<T>(res: Response, messageErreur: string, siVide: T): Pro
     return JSON.parse(texte) as T
 }
 
-function dansLaJournee(iso: string | null, debut: string, fin: string): boolean {
+function dansIntervalle(iso: string | null, debut: string, fin: string): boolean {
     if (!iso) return false
     const t = new Date(iso).getTime()
     return t >= new Date(debut).getTime() && t <= new Date(fin).getTime()
 }
 
-export async function getTaches(date: Date): Promise<Tache[]> {
-    const { debut, fin } = debutEtFinDeJournee(date)
+export async function getTachesEntre(debutPeriode: Date, finPeriode: Date): Promise<Tache[]> {
+    const debut = debutPeriode.toISOString()
+    const fin = finPeriode.toISOString()
     const url = `${BASE_URL}/taches?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`
     const res = await fetch(url)
     const taches = await lireJson<Tache[]>(res, 'Impossible de charger les tâches', [])
-    // Filet de sécurité : on ne garde que les tâches de ce jour-là, même si le
+    // Filet de sécurité : on ne garde que les tâches de la période, même si le
     // webhook renvoie plus large.
-    return taches.filter((t) => dansLaJournee(t.date_debut, debut, fin))
+    return taches.filter((t) => dansIntervalle(t.date_debut, debut, fin))
+}
+
+export async function getCoursEntre(debutPeriode: Date, finPeriode: Date): Promise<Cours[]> {
+    const debut = debutPeriode.toISOString()
+    const fin = finPeriode.toISOString()
+    const url = `${BASE_URL}/cours?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`
+    const res = await fetch(url)
+    const cours = await lireJson<Cours[]>(res, 'Impossible de charger les cours', [])
+    return cours.filter((c) => dansIntervalle(c.date_debut, debut, fin))
+}
+
+export async function getTaches(date: Date): Promise<Tache[]> {
+    const { debut, fin } = debutEtFinDeJournee(date)
+    return getTachesEntre(new Date(debut), new Date(fin))
 }
 
 export async function getCours(date: Date): Promise<Cours[]> {
     const { debut, fin } = debutEtFinDeJournee(date)
-    const url = `${BASE_URL}/cours?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`
-    const res = await fetch(url)
-    const cours = await lireJson<Cours[]>(res, 'Impossible de charger les cours', [])
-    return cours.filter((c) => dansLaJournee(c.date_debut, debut, fin))
+    return getCoursEntre(new Date(debut), new Date(fin))
 }
 
 export async function getCategories(): Promise<Categorie[]> {

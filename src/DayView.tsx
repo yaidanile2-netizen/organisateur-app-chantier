@@ -34,7 +34,7 @@ function estAujourdhui(date: Date): boolean {
     )
 }
 
-export default function DayView() {
+export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
     const [date, setDate] = useState(() => new Date())
     const [taches, setTaches] = useState<Tache[]>([])
     const [cours, setCours] = useState<Cours[]>([])
@@ -62,7 +62,7 @@ export default function DayView() {
     useEffect(() => {
         recharger()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [date])
+    }, [date, rafraichir])
 
     function changerJour(delta: number) {
         setDate((d) => {

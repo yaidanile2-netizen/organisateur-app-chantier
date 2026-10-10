@@ -3,6 +3,7 @@ import './App.css'
 import { activerNotifications, etatNotifications, notificationsDisponibles, type EtatNotifications } from './push'
 import { getCategories, type Categorie } from './api'
 import DayView from './DayView'
+import SportPlanner from './SportPlanner'
 
 const todayLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
@@ -13,6 +14,7 @@ const todayLabel = new Intl.DateTimeFormat('fr-FR', {
 function App() {
     const [etat, setEtat] = useState<EtatNotifications | 'chargement'>('chargement')
     const [categories, setCategories] = useState<Categorie[]>([])
+    const [version, setVersion] = useState(0)
 
   useEffect(() => {
         if (!notificationsDisponibles()) {
@@ -43,7 +45,9 @@ function App() {
               </header>
 
               <main className="content">
-                      <DayView />
+                      <DayView rafraichir={version} />
+
+                      <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 
                       <section className="card">
                                 <h2>Notifications</h2>
