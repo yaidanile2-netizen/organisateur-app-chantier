@@ -190,6 +190,7 @@ export default function NutritionCoach() {
                                         <div className="nu-liste-texte">
                                             <b>{i.aliment}</b>
                                             <span>{i.pourquoi}</span>
+                                            {i.portion && <span className="nu-portion">● = {i.portion}</span>}
                                             <div className="nu-points">
                                                 {Array.from({ length: i.cible }, (_, k) => (
                                                     <button
@@ -230,10 +231,13 @@ export default function NutritionCoach() {
                     <textarea
                         value={texte}
                         onChange={(e) => setTexte(e.target.value)}
-                        placeholder="Ex. : ce midi des pâtes au thon et un yaourt"
+                        placeholder="Ex. : ce midi 3 œufs, du riz complet et 2 bananes"
                         rows={2}
                         disabled={enCours !== null}
                     />
+                    <p className="nu-astuce">
+                        💡 Donne les quantités (3 œufs, 2 bananes, 1 boîte de sardines…) : ta liste se coche toute seule.
+                    </p>
                     <button type="submit" className="btn-primary" disabled={enCours !== null || !texte.trim()}>
                         {enCours === 'repas' ? 'Analyse…' : 'Analyser'}
                     </button>
@@ -279,14 +283,55 @@ export default function NutritionCoach() {
                             </>
                         )}
                         {analyse.coches.length > 0 && (
-                            <p className="nu-coches">
-                                📝 Coché dans ta liste :{' '}
-                                {analyse.coches.map((c) => (
-                                    <span key={c.id} className="nu-pastille ok">
-                                        {c.emoji} {c.aliment} +{c.apres - c.avant}
-                                    </span>
-                                ))}
-                            </p>
+                            <div className="nu-coches">
+                                <p className="nu-col-titre">📝 Ajouté à ta liste</p>
+                                <table className="nu-coches-table">
+                                    <tbody>
+                                        {analyse.coches.map((c) => {
+                                            const item = liste.find((i) => i.id === c.id)
+                                            const fait = item ? item.fait : c.apres
+                                            const cible = item ? item.cible : c.apres
+                                            const ajoute = fait - c.avant
+                                            return (
+                                                <tr key={c.id}>
+                                                    <td className="nu-coches-aliment">
+                                                        <span>{c.emoji}</span>
+                                                        <div>
+                                                            <b>{c.aliment}</b>
+                                                            {c.quantite && <small>{c.quantite}</small>}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="nu-pas">
+                                                            <button
+                                                                onClick={() => item && cocher(item, Math.max(0, fait - 1))}
+                                                                disabled={!item || fait <= 0}
+                                                                aria-label="Une portion de moins"
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <b className={ajoute > 0 ? 'plus' : ''}>
+                                                                {ajoute >= 0 ? `+${ajoute}` : ajoute}
+                                                            </b>
+                                                            <button
+                                                                onClick={() => item && cocher(item, Math.min(cible, fait + 1))}
+                                                                disabled={!item || fait >= cible}
+                                                                aria-label="Une portion de plus"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="nu-coches-total">
+                                                        <b>{fait}</b>/{cible}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                                <p className="nu-gris-petit">Le coach s'est trompé de quantité ? Corrige avec − / +.</p>
+                            </div>
                         )}
                     </div>
                 )}

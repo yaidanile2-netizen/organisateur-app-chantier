@@ -162,6 +162,8 @@ export type ItemListe = {
     emoji: string
     aliment: string
     pourquoi: string
+    /** Ce que représente une pastille, ex. « 1 œuf », « 1 pot ». */
+    portion?: string
     cible: number
     fait: number
 }
@@ -177,7 +179,7 @@ export type Suggestion = { emoji?: string; aliment: string; nutriment?: string; 
 
 export type LignePlan = { jour: string; repas?: string; idee: string; pour?: string }
 
-export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number }
+export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number; quantite?: string }
 
 export type ReponseNutrition = {
     intent: 'repas' | 'bilan' | 'objectifs' | 'liste' | 'question'

@@ -310,7 +310,7 @@ export default function MuscuView() {
                                             <button
                                                 key={t.id}
                                                 className={`mu-pastille ${t.statut === 'fait' ? 'fait' : ''}`}
-                                                style={{ background: `linear-gradient(135deg, ${s.degrade[0]}, ${s.degrade[1]})` }}
+                                                style={{ '--c': s.couleur } as React.CSSProperties}
                                                 onClick={() => setCode(s.code)}
                                                 title={`Séance ${s.code}`}
                                             >
@@ -348,7 +348,7 @@ export default function MuscuView() {
                                     <Fragment key={t.id}>
                                         <tr className={t.statut === 'fait' ? 'fait' : ''}>
                                             <td>
-                                                <span className="mu-badge" style={{ background: s.couleur }}>
+                                                <span className="mu-badge" style={{ '--c': s.couleur } as React.CSSProperties}>
                                                     {s.code}
                                                 </span>{' '}
                                                 {s.emoji}
@@ -436,7 +436,7 @@ export default function MuscuView() {
                         <button
                             key={s.code}
                             className={`mu-carte-seance ${s.code === code ? 'actif' : ''}`}
-                            style={{ background: `linear-gradient(140deg, ${s.degrade[0]}, ${s.degrade[1]})` }}
+                            style={{ '--c': s.couleur } as React.CSSProperties}
                             onClick={() => {
                                 setCode(s.code)
                                 setConseils(null)
@@ -456,7 +456,7 @@ export default function MuscuView() {
             {/* Détail de la séance */}
             <section
                 className="mu-detail"
-                style={{ '--c': seance.couleur, '--g1': seance.degrade[0], '--g2': seance.degrade[1] } as React.CSSProperties}
+                style={{ '--c': seance.couleur } as React.CSSProperties}
             >
                 <div className="mu-detail-hero">
                     <div className="mu-detail-texte">
@@ -615,7 +615,7 @@ export default function MuscuView() {
                                 return (
                                     <tr key={h.date}>
                                         <td>
-                                            <span className="mu-badge" style={{ background: s.couleur }}>
+                                            <span className="mu-badge" style={{ '--c': s.couleur } as React.CSSProperties}>
                                                 {s.code}
                                             </span>{' '}
                                             {s.emoji}
