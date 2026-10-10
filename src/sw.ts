@@ -6,6 +6,18 @@ declare let self: ServiceWorkerGlobalScope
 // Précache généré par vite-plugin-pwa (chantier 1) — inchangé.
 precacheAndRoute(self.__WB_MANIFEST)
 
+// Mise à jour automatique (registerType: 'autoUpdate') : sans ces deux lignes,
+// une nouvelle version reste « en attente » tant que l'app n'est pas
+// entièrement fermée — on l'active tout de suite et elle prend le contrôle
+// des pages déjà ouvertes (registerSW.js recharge alors la page).
+self.addEventListener('install', () => {
+    self.skipWaiting()
+})
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+    event.waitUntil(self.clients.claim())
+})
+
 // Chantier 7 — notifications : le serveur envoie un push SANS contenu
 // (juste pour réveiller le service worker), on va chercher le texte du
 // rappel nous-mêmes auprès de n8n avant d'afficher la notification.
