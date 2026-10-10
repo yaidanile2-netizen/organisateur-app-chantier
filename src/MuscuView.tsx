@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { getTachesEntre, modifierTache, type Tache } from './api'
-import { PROGRAMME, SALLE, seanceParCode, type Exercice } from './programme'
+import { PROGRAMME, SALLE, seanceParCode, type CodeSeance, type Exercice } from './programme'
 import { MARQUEUR, codeDeTache } from './sport'
 
-type Code = 'A' | 'B' | 'C'
+type Code = CodeSeance
 type Historique = { date: string; code: Code }[]
 
 // Suivi personnel (charges, séries cochées, historique) gardé sur l'appareil.
@@ -115,14 +115,17 @@ export default function MuscuView() {
         <>
             <section className="card muscu-entete">
                 <h2>Muscu · {SALLE.nom}</h2>
-                <p className="muted">{SALLE.horaires} · 3 séances de 30 min par semaine, dont une de cardio.</p>
+                <p className="muted">
+                    {SALLE.horaires} · 3 séances de 30 min en salle (dont une de cardio) + 1 séance à la maison avec les
+                    élastiques.
+                </p>
                 {prochaine && prochaine.date_debut ? (
                     <p className="muscu-prochaine">
                         Prochaine séance : <strong>{jourFormat.format(new Date(prochaine.date_debut))}</strong>, départ{' '}
                         {heureFormat.format(new Date(prochaine.date_debut))} · Séance {codeDeTache(prochaine) ?? '?'}
                     </p>
                 ) : (
-                    <p className="muted">Aucune séance programmée : utilise « Séances à la salle » dans l’onglet Agenda.</p>
+                    <p className="muted">Aucune séance programmée : utilise « Séances de sport » dans l’onglet Agenda.</p>
                 )}
             </section>
 
@@ -147,6 +150,7 @@ export default function MuscuView() {
                 <h2>
                     Séance {seance.code} · {seance.titre}
                 </h2>
+                <p className="muscu-lieu">{seance.lieu === 'maison' ? '🏠 À la maison · élastiques et poids du corps' : `🏋️ En salle · ${SALLE.nom}`}</p>
                 <p className="muted">{seance.focus}</p>
                 <div className="muscu-progression">
                     <div className="muscu-barre">
@@ -229,11 +233,17 @@ export default function MuscuView() {
                     ))}
                 </ul>
 
-                {seance.code !== 'C' && (
+                {seance.code !== 'C' && seance.lieu === 'salle' && (
                     <p className="muted muscu-conseil">
                         Progression : quand tu réussis toutes les séries en haut de la fourchette de répétitions avec une
                         bonne technique, monte d’un cran à la séance suivante. Pas de charge maximale : la technique
                         d’abord.
+                    </p>
+                )}
+                {seance.lieu === 'maison' && (
+                    <p className="muted muscu-conseil">
+                        Progression : quand les répétitions deviennent faciles, prends un élastique plus résistant ou
+                        raccourcis-le. Pour les pompes, ajoute 1 répétition par séance.
                     </p>
                 )}
 

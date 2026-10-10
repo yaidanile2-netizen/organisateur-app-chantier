@@ -932,3 +932,16 @@
     background: #2a2a2d;
   }
 }
+
+.muscu-lieu {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chip-color);
+}
+.muscu-onglets {
+  flex-wrap: nowrap;
+}
+.muscu-onglet {
+  min-width: 0;
+}

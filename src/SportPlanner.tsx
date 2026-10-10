@@ -7,7 +7,7 @@ import {
     supprimerTache,
     type Tache,
 } from './api'
-import { PROGRAMME, SALLE } from './programme'
+import { SALLE, SEANCES_SALLE } from './programme'
 import {
     MARQUEUR,
     debutDeSemaine,
@@ -111,10 +111,11 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
 
     return (
         <section className="card sport-planner">
-            <h2>Séances à la salle</h2>
+            <h2>Séances de sport</h2>
             <p className="muted">
-                {PROGRAMME.length} séances de {reglages.duree} min par semaine au {SALLE.nom}, placées autour de tes cours
-                en comptant les trajets.
+                {SEANCES_SALLE.length} séances de {reglages.duree} min au {SALLE.nom}
+                {reglages.seanceMaison ? ' + 1 à la maison avec les élastiques' : ''}, placées autour de tes cours en
+                comptant les trajets.
             </p>
 
             <button className="btn-link sport-reglages-lien" onClick={() => setVoirReglages((v) => !v)}>
@@ -170,6 +171,26 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                             />
                         </label>
                     </div>
+                    <label className="checkbox-row">
+                        <input
+                            type="checkbox"
+                            checked={reglages.seanceMaison}
+                            onChange={(e) => changerReglage('seanceMaison', e.target.checked)}
+                        />
+                        Ajouter une séance à la maison (élastiques)
+                    </label>
+                    {reglages.seanceMaison && (
+                        <div className="form-row">
+                            <label>
+                                Séance maison finie avant
+                                <input
+                                    type="time"
+                                    value={reglages.maisonAvant}
+                                    onChange={(e) => changerReglage('maisonAvant', e.target.value || '22:00')}
+                                />
+                            </label>
+                        </div>
+                    )}
                     <p className="muted sport-periode">
                         Le trajet vers la salle compte à l’aller et au retour. Après un cours, l’app compte le trajet
                         IUT → maison avant de te faire partir à la salle.
@@ -227,14 +248,16 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                                     <span className="sport-quoi">
                                         <strong>Séance {p.seance.code}</strong> · {p.seance.court}
                                         <span className="muted sport-trajet">
-                                            Départ {heureFormat.format(p.depart)} · retour {heureFormat.format(p.retour)}
+                                            {p.seance.lieu === 'maison'
+                                                ? 'À la maison, sans trajet'
+                                                : `Départ ${heureFormat.format(p.depart)} · retour ${heureFormat.format(p.retour)}`}
                                         </span>
                                     </span>
                                 </li>
                             ))}
                         </ul>
                     )}
-                    {propositions.length > 0 && propositions.length < PROGRAMME.length && (
+                    {propositions.length > 0 && propositions.length < SEANCES_SALLE.length + (reglages.seanceMaison ? 1 : 0) && (
                         <p className="muted">Seulement {propositions.length} créneau(x) possible(s) cette semaine.</p>
                     )}
                     {existantes.length > 0 && (
@@ -259,7 +282,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                 <>
                     <p className="status">
                         ✅ {propositions.length} séance(s) ajoutée(s) à ton agenda, trajets compris. Le rappel arrive avant
-                        l’heure de départ si les notifications sont activées.
+                        l’heure de départ (ou avant la séance à la maison) si les notifications sont activées.
                     </p>
                     <button className="btn-secondary sport-refaire" onClick={() => setEtape('repos')}>
                         Reprogrammer
