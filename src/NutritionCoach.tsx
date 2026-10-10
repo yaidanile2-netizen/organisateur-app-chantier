@@ -1,56 +1,64 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import './nutrition.css'
 import {
+    cocherListe,
     envoyerNutrition,
     getEtatNutrition,
     supprimerRepas,
+    type ItemListe,
     type Moment,
     type Objectif,
     type Repas,
     type ReponseNutrition,
 } from './api'
 
-const OBJECTIFS: { cle: Objectif; libelle: string }[] = [
-    { cle: 'musculation', libelle: 'Musculation' },
-    { cle: 'cardio', libelle: 'Cardio' },
-    { cle: 'croissance', libelle: 'Croissance' },
-    { cle: 'perte_gras', libelle: 'Moins de gras' },
-    { cle: 'peau', libelle: 'Peau du visage' },
+const OBJECTIFS: { cle: Objectif; libelle: string; emoji: string }[] = [
+    { cle: 'musculation', libelle: 'Musculation', emoji: '💪' },
+    { cle: 'cardio', libelle: 'Cardio', emoji: '❤️' },
+    { cle: 'croissance', libelle: 'Croissance', emoji: '📈' },
+    { cle: 'perte_gras', libelle: 'Moins de gras', emoji: '🔥' },
+    { cle: 'peau', libelle: 'Peau du visage', emoji: '✨' },
 ]
 const PAR_DEFAUT: Objectif[] = OBJECTIFS.map((o) => o.cle)
+const objectif = (o: Objectif) => OBJECTIFS.find((x) => x.cle === o) ?? { cle: o, libelle: o, emoji: '•' }
 
-const MOMENTS: Record<Moment, string> = {
-    petit_dejeuner: 'Petit-déj',
-    dejeuner: 'Déjeuner',
-    diner: 'Dîner',
-    collation: 'Collation',
+const MOMENTS: Record<Moment, { libelle: string; emoji: string }> = {
+    petit_dejeuner: { libelle: 'Petit-déj', emoji: '🌅' },
+    dejeuner: { libelle: 'Déjeuner', emoji: '🍽️' },
+    diner: { libelle: 'Dîner', emoji: '🌙' },
+    collation: { libelle: 'Collation', emoji: '🍎' },
 }
 
-const jourFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
-
-function libelle(o: Objectif): string {
-    return OBJECTIFS.find((x) => x.cle === o)?.libelle ?? o
-}
-
-// Affiche le texte du coach : retours à la ligne conservés, **gras** rendu en gras.
-function TexteCoach({ texte }: { texte: string }) {
-    const morceaux = texte.split(/(\*\*[^*]+\*\*)/g)
-    return (
-        <p className="coach-texte">
-            {morceaux.map((m, i) =>
-                m.startsWith('**') && m.endsWith('**') ? <strong key={i}>{m.slice(2, -2)}</strong> : m
-            )}
-        </p>
-    )
-}
+// Lignes du tableau de la semaine : un nutriment est « couvert » un jour donné si un repas
+// de ce jour l'apporte (d'après l'analyse du coach).
+const NUTRIMENTS: { libelle: string; emoji: string; motifs: RegExp }[] = [
+    { libelle: 'Protéines', emoji: '🥚', motifs: /protein/ },
+    { libelle: 'Glucides complexes', emoji: '🍚', motifs: /glucides complexes|feculent|complet/ },
+    { libelle: 'Fibres', emoji: '🥦', motifs: /fibre/ },
+    { libelle: 'Oméga-3', emoji: '🐟', motifs: /omega/ },
+    { libelle: 'Fer', emoji: '🫘', motifs: /\bfer\b/ },
+    { libelle: 'Calcium', emoji: '🥛', motifs: /calcium/ },
+    { libelle: 'Potassium', emoji: '🍌', motifs: /potassium/ },
+    { libelle: 'Magnésium', emoji: '🌰', motifs: /magnesium/ },
+    { libelle: 'Vitamine C', emoji: '🍊', motifs: /vitamine c\b|vit\.? c\b/ },
+    { libelle: 'Vitamine A', emoji: '🥕', motifs: /vitamine a\b|beta-?carotene/ },
+    { libelle: 'Zinc', emoji: '⚙️', motifs: /zinc/ },
+]
+const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const sansAccent = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+const jourIndex = (d: Date) => (d.getDay() + 6) % 7
+const jourNom = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' })
 
 export default function NutritionCoach() {
     const [priorites, setPriorites] = useState<Objectif[]>(PAR_DEFAUT)
     const [prioritesServeur, setPrioritesServeur] = useState<Objectif[]>(PAR_DEFAUT)
     const [repas, setRepas] = useState<Repas[]>([])
+    const [liste, setListe] = useState<ItemListe[]>([])
+    const [filtre, setFiltre] = useState<'reste' | 'tout'>('reste')
     const [texte, setTexte] = useState('')
-    const [reponse, setReponse] = useState<ReponseNutrition | null>(null)
-    const [voirDetail, setVoirDetail] = useState(false)
-    const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs'>(null)
+    const [analyse, setAnalyse] = useState<ReponseNutrition | null>(null)
+    const [bilan, setBilan] = useState<ReponseNutrition | null>(null)
+    const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs' | 'liste'>(null)
     const [erreur, setErreur] = useState<string | null>(null)
 
     async function recharger() {
@@ -60,6 +68,7 @@ export default function NutritionCoach() {
             setPriorites(p)
             setPrioritesServeur(p)
             setRepas(etat.repas_semaine)
+            setListe(etat.liste)
         } catch (err) {
             setErreur(err instanceof Error ? err.message : 'Erreur de chargement.')
         }
@@ -69,18 +78,20 @@ export default function NutritionCoach() {
         recharger()
     }, [])
 
-    async function demander(type: 'repas' | 'bilan' | 'objectifs') {
+    async function demander(type: 'repas' | 'bilan' | 'objectifs' | 'liste') {
         setEnCours(type)
         setErreur(null)
-        setVoirDetail(type === 'bilan')
         try {
             const r =
                 type === 'repas'
                     ? await envoyerNutrition({ texte: texte.trim() })
                     : type === 'bilan'
                       ? await envoyerNutrition({ action: 'bilan' })
-                      : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
-            setReponse(r)
+                      : type === 'liste'
+                        ? await envoyerNutrition({ action: 'liste' })
+                        : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
+            if (type === 'bilan') setBilan(r)
+            else if (type !== 'liste') setAnalyse(r)
             if (type === 'repas') setTexte('')
             await recharger()
         } catch (err) {
@@ -90,9 +101,16 @@ export default function NutritionCoach() {
         }
     }
 
-    // Toucher un objectif le fait passer en priorité n°1.
-    function mettreEnAvant(o: Objectif) {
-        setPriorites((p) => [o, ...p.filter((x) => x !== o)])
+    async function cocher(item: ItemListe, fait: number) {
+        const avant = liste
+        setListe((l) => l.map((i) => (i.id === item.id ? { ...i, fait } : i)))
+        try {
+            const items = await cocherListe(item.id, fait)
+            if (items.length) setListe(items)
+        } catch {
+            setListe(avant)
+            setErreur('Impossible de mettre à jour la liste pour l’instant.')
+        }
     }
 
     async function retirer(r: Repas) {
@@ -105,46 +123,110 @@ export default function NutritionCoach() {
         }
     }
 
+    const totalCible = liste.reduce((n, i) => n + i.cible, 0)
+    const totalFait = liste.reduce((n, i) => n + Math.min(i.fait, i.cible), 0)
+    const pourcent = totalCible ? Math.round((totalFait / totalCible) * 100) : 0
+    const listeAffichee = [...liste]
+        .filter((i) => filtre === 'tout' || i.fait < i.cible)
+        .sort((a, b) => Number(a.fait >= a.cible) - Number(b.fait >= b.cible))
     const prioritesModifiees = priorites.join() !== prioritesServeur.join()
+    const aujourdhui = jourIndex(new Date())
+
+    // Tableau de la semaine
+    const couverture = NUTRIMENTS.map((n) => {
+        const jours = Array(7).fill(false) as boolean[]
+        for (const r of repas) {
+            const texteRepas = sansAccent(`${r.nutriments.join(' ')} ${r.description}`)
+            if (n.motifs.test(texteRepas)) jours[jourIndex(new Date(r.date))] = true
+        }
+        return { ...n, jours }
+    })
 
     return (
-        <section className="card coach">
-            <h2>Coach nutrition</h2>
+        <div className="nu">
+            <section className="nu-hero">
+                <h1>Nutrition</h1>
+                <p>Ton coach te dit quoi manger, en nutriments et en aliments simples.</p>
+            </section>
 
-            <p className="muted">Mes priorités (touche un objectif pour le mettre en avant) :</p>
-            <ul className="categories coach-objectifs">
-                {priorites.map((o, i) => (
-                    <li key={o}>
-                        <button
-                            className={`chip coach-chip ${i === 0 ? 'coach-chip-top' : ''}`}
-                            onClick={() => mettreEnAvant(o)}
-                            disabled={enCours !== null}
-                        >
-                            {i + 1}. {libelle(o)}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-            {prioritesModifiees && (
-                <div className="modal-actions">
-                    <button className="btn-secondary" onClick={() => setPriorites(prioritesServeur)} disabled={enCours !== null}>
-                        Annuler
-                    </button>
-                    <button className="btn-primary" onClick={() => demander('objectifs')} disabled={enCours !== null}>
-                        {enCours === 'objectifs' ? 'Enregistrement…' : 'Enregistrer mes priorités'}
-                    </button>
+            {erreur && <p className="form-error">{erreur}</p>}
+
+            {/* Liste de la semaine */}
+            <section className="nu-carte">
+                <div className="nu-carte-tete">
+                    <div className="nu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
+                        <span>{pourcent}%</span>
+                    </div>
+                    <div className="nu-carte-titre">
+                        <h2>🛒 Ma liste de la semaine</h2>
+                        <p>
+                            {liste.length
+                                ? `${totalFait} portions sur ${totalCible} · il en reste ${totalCible - totalFait}`
+                                : 'Ce que tu dois manger cette semaine, à cocher au fur et à mesure.'}
+                        </p>
+                    </div>
                 </div>
-            )}
 
-            <form
-                className="task-form coach-form"
-                onSubmit={(e) => {
-                    e.preventDefault()
-                    if (texte.trim()) demander('repas')
-                }}
-            >
-                <label>
-                    Qu'est-ce que tu as mangé ?
+                {liste.length === 0 ? (
+                    <button className="btn-primary" onClick={() => demander('liste')} disabled={enCours !== null}>
+                        {enCours === 'liste' ? 'Le coach prépare ta liste…' : '✨ Générer ma liste de la semaine'}
+                    </button>
+                ) : (
+                    <>
+                        <div className="segmented nu-filtre" role="group" aria-label="Filtre">
+                            <button className={filtre === 'reste' ? 'actif' : ''} onClick={() => setFiltre('reste')}>
+                                Reste à manger ({liste.filter((i) => i.fait < i.cible).length})
+                            </button>
+                            <button className={filtre === 'tout' ? 'actif' : ''} onClick={() => setFiltre('tout')}>
+                                Tout ({liste.length})
+                            </button>
+                        </div>
+                        <ul className="nu-liste">
+                            {listeAffichee.map((i) => {
+                                const fini = i.fait >= i.cible
+                                return (
+                                    <li key={i.id} className={fini ? 'fini' : ''}>
+                                        <span className="nu-liste-emoji">{i.emoji}</span>
+                                        <div className="nu-liste-texte">
+                                            <b>{i.aliment}</b>
+                                            <span>{i.pourquoi}</span>
+                                            <div className="nu-points">
+                                                {Array.from({ length: i.cible }, (_, k) => (
+                                                    <button
+                                                        key={k}
+                                                        className={`nu-point ${k < i.fait ? 'ok' : ''}`}
+                                                        onClick={() => cocher(i, k < i.fait ? k : k + 1)}
+                                                        aria-label={`${i.aliment} : ${k + 1} portion(s)`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <span className={`nu-reste ${fini ? 'ok' : ''}`}>
+                                            {fini ? '✓' : `${i.cible - i.fait}`}
+                                            <small>{fini ? 'fait' : 'reste'}</small>
+                                        </span>
+                                    </li>
+                                )
+                            })}
+                            {listeAffichee.length === 0 && <li className="nu-vide">🎉 Tout est coché pour cette semaine !</li>}
+                        </ul>
+                        <button className="btn-link nu-refaire" onClick={() => demander('liste')} disabled={enCours !== null}>
+                            {enCours === 'liste' ? 'Le coach refait ta liste…' : '↻ Refaire ma liste (garde ce qui est coché)'}
+                        </button>
+                    </>
+                )}
+            </section>
+
+            {/* Noter un repas */}
+            <section className="nu-carte">
+                <h2>🍽️ Qu’est-ce que tu as mangé ?</h2>
+                <form
+                    className="nu-saisie"
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        if (texte.trim()) demander('repas')
+                    }}
+                >
                     <textarea
                         value={texte}
                         onChange={(e) => setTexte(e.target.value)}
@@ -152,84 +234,244 @@ export default function NutritionCoach() {
                         rows={2}
                         disabled={enCours !== null}
                     />
-                </label>
-                <div className="modal-actions">
-                    <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => demander('bilan')}
-                        disabled={enCours !== null}
-                    >
-                        {enCours === 'bilan' ? 'Bilan en cours…' : 'Bilan de ma semaine'}
-                    </button>
                     <button type="submit" className="btn-primary" disabled={enCours !== null || !texte.trim()}>
                         {enCours === 'repas' ? 'Analyse…' : 'Analyser'}
                     </button>
-                </div>
-            </form>
+                </form>
 
-            {erreur && <p className="form-error">{erreur}</p>}
+                {analyse && (analyse.apports.length > 0 || analyse.reponse) && (
+                    <div className="nu-resultat">
+                        <h3>{analyse.titre || 'Analyse'}</h3>
+                        <p className="nu-phrase">{analyse.reponse}</p>
+                        {(analyse.apports.length > 0 || analyse.manques.length > 0) && (
+                            <div className="nu-deux">
+                                <div className="nu-col nu-col-ok">
+                                    <span className="nu-col-titre">✅ Ce repas apporte</span>
+                                    {analyse.apports.map((a) => (
+                                        <span key={a} className="nu-pastille ok">
+                                            {a}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="nu-col nu-col-manque">
+                                    <span className="nu-col-titre">⚠️ Il te manque</span>
+                                    {analyse.manques.map((m) => (
+                                        <span key={m} className="nu-pastille manque">
+                                            {m}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {analyse.suggestions.length > 0 && (
+                            <>
+                                <span className="nu-col-titre">🥗 À ajouter ensuite</span>
+                                <div className="nu-suggestions">
+                                    {analyse.suggestions.map((s, k) => (
+                                        <div key={k} className="nu-sugg">
+                                            <span className="nu-sugg-emoji">{s.emoji || '🍽️'}</span>
+                                            <b>{s.aliment}</b>
+                                            {s.comment && <span>{s.comment}</span>}
+                                            {s.nutriment && <span className="nu-pastille info">{s.nutriment}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                        {analyse.coches.length > 0 && (
+                            <p className="nu-coches">
+                                📝 Coché dans ta liste :{' '}
+                                {analyse.coches.map((c) => (
+                                    <span key={c.id} className="nu-pastille ok">
+                                        {c.emoji} {c.aliment} +{c.apres - c.avant}
+                                    </span>
+                                ))}
+                            </p>
+                        )}
+                    </div>
+                )}
+            </section>
 
-            {reponse && reponse.reponse && (
-                <div className="coach-reponse">
-                    <TexteCoach texte={reponse.reponse} />
-                    {reponse.manques.length > 0 && (
-                        <p className="coach-manques">
-                            <span>Il te manque :</span>{' '}
-                            {reponse.manques.map((m) => (
-                                <span key={m} className="coach-manque">
-                                    {m}
-                                </span>
+            {/* Tableau de la semaine */}
+            <section className="nu-carte">
+                <h2>📊 Mon tableau de la semaine</h2>
+                <p className="nu-sous">Les nutriments que tes repas ont apportés, jour par jour.</p>
+                <div className="nu-tableau-scroll">
+                    <table className="nu-tableau">
+                        <thead>
+                            <tr>
+                                <th />
+                                {JOURS.map((j, k) => (
+                                    <th key={k} className={k === aujourdhui ? 'auj' : ''}>
+                                        {j}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {couverture.map((n) => (
+                                <tr key={n.libelle}>
+                                    <th>
+                                        <span>{n.emoji}</span> {n.libelle}
+                                    </th>
+                                    {n.jours.map((ok, k) => (
+                                        <td key={k} className={`${k === aujourdhui ? 'auj' : ''} ${k > aujourdhui ? 'futur' : ''}`}>
+                                            <span className={`nu-case ${ok ? 'ok' : ''}`}>{ok ? '✓' : ''}</span>
+                                        </td>
+                                    ))}
+                                </tr>
                             ))}
-                        </p>
-                    )}
-                    {reponse.suggestions.length > 0 && (
-                        <ul className="coach-suggestions">
-                            {reponse.suggestions.map((s, i) => (
-                                <li key={i}>
-                                    <strong>{s.aliment}</strong>
-                                    {s.comment ? ` : ${s.comment}` : ''}
-                                    {s.nutriment ? <span className="muted"> ({s.nutriment})</span> : null}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    {reponse.detail && (
-                        <>
-                            <button className="btn-link" onClick={() => setVoirDetail((v) => !v)}>
-                                {voirDetail ? 'Masquer le détail' : 'Voir le détail'}
-                            </button>
-                            {voirDetail && <TexteCoach texte={reponse.detail} />}
-                        </>
-                    )}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+                {repas.length === 0 && <p className="nu-sous">Note tes repas pour remplir le tableau.</p>}
+            </section>
 
-            <h3 className="coach-titre">Cette semaine</h3>
-            {repas.length === 0 ? (
-                <p className="muted">Aucun repas noté depuis lundi.</p>
-            ) : (
-                <ul className="coach-journal">
-                    {repas.map((r) => (
-                        <li key={r.id}>
-                            <span className="coach-quand">
-                                {jourFormat.format(new Date(r.date))}
-                                <br />
-                                {MOMENTS[r.moment] ?? r.moment}
-                            </span>
-                            <span className="coach-repas">
-                                {r.description}
-                                {r.nutriments.length > 0 && (
-                                    <span className="muted coach-nutriments">{r.nutriments.join(' · ')}</span>
-                                )}
-                            </span>
-                            <button className="btn-icon coach-retirer" onClick={() => retirer(r)} aria-label="Retirer ce repas">
-                                ×
-                            </button>
-                        </li>
+            {/* Bilan */}
+            <section className="nu-carte">
+                <div className="nu-ligne-titre">
+                    <h2>🧭 Bilan de la semaine</h2>
+                    <button className="btn-secondary nu-petit" onClick={() => demander('bilan')} disabled={enCours !== null}>
+                        {enCours === 'bilan' ? 'Bilan…' : bilan ? '↻ Refaire' : 'Faire le bilan'}
+                    </button>
+                </div>
+                {!bilan && <p className="nu-sous">Ce qui est bien couvert, ce qui manque, et quoi manger les prochains jours.</p>}
+                {bilan && (
+                    <div className="nu-resultat">
+                        <h3>{bilan.titre || 'Bilan'}</h3>
+                        <p className="nu-phrase">{bilan.reponse}</p>
+                        <div className="nu-deux">
+                            <div className="nu-col nu-col-ok">
+                                <span className="nu-col-titre">✅ Points forts</span>
+                                {bilan.points_forts.map((a) => (
+                                    <span key={a} className="nu-pastille ok">
+                                        {a}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="nu-col nu-col-manque">
+                                <span className="nu-col-titre">⚠️ À améliorer</span>
+                                {bilan.manques.map((m) => (
+                                    <span key={m} className="nu-pastille manque">
+                                        {m}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        {bilan.plan.length > 0 && (
+                            <>
+                                <span className="nu-col-titre">📅 Plan des prochains jours</span>
+                                <table className="nu-plan">
+                                    <thead>
+                                        <tr>
+                                            <th>Jour</th>
+                                            <th>Repas</th>
+                                            <th>Idée</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bilan.plan.map((p, k) => {
+                                            const nouveauJour = k === 0 || bilan.plan[k - 1].jour !== p.jour
+                                            const nb = bilan.plan.filter((x) => x.jour === p.jour).length
+                                            return (
+                                                <tr key={k} className={nouveauJour ? 'nouveau' : ''}>
+                                                    {nouveauJour && (
+                                                        <td rowSpan={nb} className="nu-plan-jour">
+                                                            {p.jour}
+                                                        </td>
+                                                    )}
+                                                    <td className="nu-plan-repas">{p.repas}</td>
+                                                    <td>
+                                                        <b>{p.idee}</b>
+                                                        {p.pour && <span className="nu-plan-pour">{p.pour}</span>}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
+                    </div>
+                )}
+            </section>
+
+            {/* Priorités */}
+            <section className="nu-carte">
+                <h2>🎯 Mes priorités</h2>
+                <p className="nu-sous">Touche un objectif pour le passer en n°1.</p>
+                <div className="nu-objectifs">
+                    {priorites.map((o, k) => (
+                        <button
+                            key={o}
+                            className={`nu-objectif ${k === 0 ? 'top' : ''}`}
+                            onClick={() => setPriorites((p) => [o, ...p.filter((x) => x !== o)])}
+                            disabled={enCours !== null}
+                        >
+                            <span className="nu-objectif-rang">{k + 1}</span>
+                            {objectif(o).emoji} {objectif(o).libelle}
+                        </button>
                     ))}
-                </ul>
-            )}
-        </section>
+                </div>
+                {prioritesModifiees && (
+                    <div className="modal-actions">
+                        <button className="btn-secondary" onClick={() => setPriorites(prioritesServeur)} disabled={enCours !== null}>
+                            Annuler
+                        </button>
+                        <button className="btn-primary" onClick={() => demander('objectifs')} disabled={enCours !== null}>
+                            {enCours === 'objectifs' ? 'Enregistrement…' : 'Enregistrer'}
+                        </button>
+                    </div>
+                )}
+            </section>
+
+            {/* Journal */}
+            <section className="nu-carte">
+                <h2>📖 Mon journal de la semaine</h2>
+                {repas.length === 0 ? (
+                    <p className="nu-sous">Aucun repas noté depuis lundi.</p>
+                ) : (
+                    <table className="nu-journal">
+                        <tbody>
+                            {repas.map((r, k) => {
+                                const d = new Date(r.date)
+                                const nouveauJour = k === 0 || jourIndex(new Date(repas[k - 1].date)) !== jourIndex(d)
+                                const m = MOMENTS[r.moment] ?? { libelle: r.moment, emoji: '🍽️' }
+                                return (
+                                    <Fragment key={r.id}>
+                                        {nouveauJour && (
+                                            <tr className="nu-journal-jour">
+                                                <td colSpan={3}>{jourNom.format(d)}</td>
+                                            </tr>
+                                        )}
+                                        <tr>
+                                            <td className="nu-journal-moment">
+                                                <span>{m.emoji}</span>
+                                                {m.libelle}
+                                            </td>
+                                            <td>
+                                                <b>{r.description}</b>
+                                                <div className="nu-journal-nutri">
+                                                    {r.nutriments.slice(0, 5).map((n) => (
+                                                        <span key={n} className="nu-pastille info">
+                                                            {n}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="nu-journal-x">
+                                                <button className="btn-icon" onClick={() => retirer(r)} aria-label="Retirer ce repas">
+                                                    ×
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </Fragment>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                )}
+            </section>
+        </div>
     )
 }

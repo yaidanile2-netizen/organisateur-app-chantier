@@ -157,34 +157,59 @@ export type Repas = {
     nutriments: string[]
 }
 
+export type ItemListe = {
+    id: string
+    emoji: string
+    aliment: string
+    pourquoi: string
+    cible: number
+    fait: number
+}
+
 export type EtatNutrition = {
     priorites: Objectif[]
     repas_semaine: Repas[]
+    liste: ItemListe[]
+    semaine: string
 }
 
-export type Suggestion = { aliment: string; nutriment?: string; comment?: string }
+export type Suggestion = { emoji?: string; aliment: string; nutriment?: string; comment?: string }
+
+export type LignePlan = { jour: string; repas?: string; idee: string; pour?: string }
+
+export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number }
 
 export type ReponseNutrition = {
-    intent: 'repas' | 'bilan' | 'objectifs' | 'question'
+    intent: 'repas' | 'bilan' | 'objectifs' | 'liste' | 'question'
+    titre: string
     reponse: string
-    detail: string
-    repas: Omit<Repas, 'id' | 'date'> | null
-    objectifs: Objectif[] | null
+    apports: string[]
     manques: string[]
     suggestions: Suggestion[]
+    points_forts: string[]
+    plan: LignePlan[]
+    repas: Omit<Repas, 'id' | 'date'> | null
+    objectifs: Objectif[] | null
+    liste: ItemListe[] | null
+    coches: Coche[]
+    detail: string
 }
 
 export type DemandeNutrition =
     | { texte: string }
     | { action: 'bilan' }
+    | { action: 'liste' }
     | { action: 'objectifs'; objectifs: Objectif[] }
 
 export async function getEtatNutrition(): Promise<EtatNutrition> {
     const res = await fetch(`${BASE_URL}/nutrition-etat`)
-    return lireJson<EtatNutrition>(res, 'Impossible de charger le suivi nutrition', {
+    const etat = await lireJson<EtatNutrition>(res, 'Impossible de charger le suivi nutrition', {
         priorites: [],
         repas_semaine: [],
+        liste: [],
+        semaine: '',
     })
+    return { ...etat, liste: Array.isArray(etat.liste) ? etat.liste : [] }
 }
 
 export async function envoyerNutrition(demande: DemandeNutrition): Promise<ReponseNutrition> {
@@ -195,12 +220,18 @@ export async function envoyerNutrition(demande: DemandeNutrition): Promise<Repon
     })
     const vide: ReponseNutrition = {
         intent: 'question',
+        titre: '',
         reponse: '',
-        detail: '',
-        repas: null,
-        objectifs: null,
+        apports: [],
         manques: [],
         suggestions: [],
+        points_forts: [],
+        plan: [],
+        repas: null,
+        objectifs: null,
+        liste: null,
+        coches: [],
+        detail: '',
     }
     return lireJson<ReponseNutrition>(res, 'Le coach nutrition ne répond pas', vide)
 }
@@ -214,4 +245,14 @@ export async function supprimerRepas(id: string): Promise<void> {
     if (!res.ok) {
         throw new Error(`Impossible de supprimer le repas (${res.status})`)
     }
+}
+
+export async function cocherListe(id: string, fait: number): Promise<ItemListe[]> {
+    const res = await fetch(`${BASE_URL}/liste-cocher`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, fait }),
+    })
+    const r = await lireJson<{ items: ItemListe[] }>(res, 'Impossible de mettre à jour la liste', { items: [] })
+    return Array.isArray(r.items) ? r.items : []
 }

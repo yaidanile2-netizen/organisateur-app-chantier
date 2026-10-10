@@ -278,3 +278,40 @@ export function codeDeTache(t: Tache): CodeSeance | null {
     const m2 = t.titre.match(/Séance ([ABCD])/)
     return m2 ? (m2[1] as CodeSeance) : null
 }
+
+function versCreneau(seance: SeanceProgramme, depart: number, r: Reglages): Creneau {
+    const trajet = seance.lieu === 'salle' ? r.trajetSalle : 0
+    const debut = depart + trajet * MIN
+    const fin = debut + r.duree * MIN
+    return { seance, depart: new Date(depart), debut: new Date(debut), fin: new Date(fin), retour: new Date(fin + trajet * MIN) }
+}
+
+// Pour déplacer une séance : le meilleur créneau possible de chaque jour de la semaine
+// (en respectant les cours, les trajets et les autres tâches, sauf la séance déplacée).
+export function creneauxPourDeplacer(
+    seance: SeanceProgramme,
+    lundi: Date,
+    cours: Cours[],
+    autresTaches: Tache[],
+    r: Reglages,
+    maintenant: Date = new Date(),
+): { jour: Date; creneau: Creneau | null }[] {
+    const occ = absences(cours, autresTaches, r)
+    const res: { jour: Date; creneau: Creneau | null }[] = []
+    for (let i = 0; i < 7; i++) {
+        const jour = new Date(lundi)
+        jour.setDate(lundi.getDate() + i)
+        const fin = new Date(jour)
+        fin.setHours(23, 59, 59, 999)
+        if (fin.getTime() < maintenant.getTime()) continue
+        const o = meilleurCreneau(jour, occ, r, maintenant, seance.lieu)
+        res.push({ jour, creneau: o ? versCreneau(seance, o.depart, r) : null })
+    }
+    return res
+}
+
+// Séance placée à la main : l'heure donnée est le début de la séance.
+export function creneauManuel(seance: SeanceProgramme, debutSeance: Date, r: Reglages): Creneau {
+    const trajet = seance.lieu === 'salle' ? r.trajetSalle : 0
+    return versCreneau(seance, debutSeance.getTime() - trajet * MIN, r)
+}

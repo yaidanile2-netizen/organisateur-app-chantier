@@ -5,8 +5,59 @@
 // À la maison — D, avec les élastiques et au poids du corps : les muscles que les
 //   séances en salle ne travaillent pas (ou peu), repris du programme élastiques de Daniel.
 
+export type Muscle =
+    | 'pectoraux'
+    | 'epaules'
+    | 'deltoides-arriere'
+    | 'trapezes'
+    | 'dos'
+    | 'biceps'
+    | 'triceps'
+    | 'avant-bras'
+    | 'abdos'
+    | 'obliques'
+    | 'lombaires'
+    | 'fessiers'
+    | 'moyen-fessier'
+    | 'quadriceps'
+    | 'ischios'
+    | 'mollets'
+    | 'cardio'
+
+export const MUSCLES: Record<Muscle, string> = {
+    pectoraux: 'Pectoraux',
+    epaules: 'Épaules',
+    'deltoides-arriere': 'Arrière d’épaules',
+    trapezes: 'Trapèzes',
+    dos: 'Dos',
+    biceps: 'Biceps',
+    triceps: 'Triceps',
+    'avant-bras': 'Avant-bras',
+    abdos: 'Abdos',
+    obliques: 'Obliques',
+    lombaires: 'Lombaires',
+    fessiers: 'Fessiers',
+    'moyen-fessier': 'Moyen fessier',
+    quadriceps: 'Quadriceps',
+    ischios: 'Ischios',
+    mollets: 'Mollets',
+    cardio: 'Cardio',
+}
+
+export type Materiel = 'machine' | 'poulie' | 'corps' | 'elastique' | 'cardio'
+
+export const MATERIEL: Record<Materiel, { emoji: string; libelle: string }> = {
+    machine: { emoji: '🏋️', libelle: 'Machine' },
+    poulie: { emoji: '🪢', libelle: 'Poulie' },
+    corps: { emoji: '🤸', libelle: 'Poids du corps' },
+    elastique: { emoji: '🎗️', libelle: 'Élastique' },
+    cardio: { emoji: '🚴', libelle: 'Cardio' },
+}
+
 export type Exercice = {
     id: string
+    muscles: Muscle[]
+    materiel: Materiel
     nom: string
     machine: string
     series: number
@@ -17,13 +68,15 @@ export type Exercice = {
     charge?: boolean // false pour les exercices sans charge (planche, cardio)
 }
 
-export type Bloc = { titre: string; info?: string; exercices: Exercice[] }
+export type Bloc = { titre: string; tours: number; repos: number; info?: string; exercices: Exercice[] }
 
 export type CodeSeance = 'A' | 'B' | 'C' | 'D'
 
 export type SeanceProgramme = {
     code: CodeSeance
     lieu: 'salle' | 'maison'
+    emoji: string
+    degrade: [string, string]
     titre: string
     court: string
     couleur: string
@@ -42,6 +95,8 @@ export const PROGRAMME: SeanceProgramme[] = [
     {
         code: 'A',
         lieu: 'salle',
+        emoji: '💪',
+        degrade: ['#0b2a6b', '#1e5bd8'],
         titre: 'Haut du corps',
         court: 'Haut du corps (pecs, dos, épaules, bras)',
         couleur: '#4d9fff',
@@ -53,10 +108,14 @@ export const PROGRAMME: SeanceProgramme[] = [
         blocs: [
             {
                 titre: 'Superset 1',
+                tours: 3,
+                repos: 60,
                 info: 'Enchaîne les deux exercices, puis 60 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'a-chest-press',
+                        muscles: ['pectoraux', 'epaules', 'triceps'],
+                        materiel: 'machine',
                         nom: 'Développé assis',
                         machine: 'Chest press (machine pectoraux)',
                         series: 3,
@@ -69,6 +128,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'a-lat-pulldown',
+                        muscles: ['dos', 'biceps'],
+                        materiel: 'poulie',
                         nom: 'Tirage vertical',
                         machine: 'Lat pulldown (poulie haute, barre large)',
                         series: 3,
@@ -83,10 +144,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Superset 2',
+                tours: 3,
+                repos: 60,
                 info: 'Enchaîne les deux exercices, puis 60 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'a-shoulder-press',
+                        muscles: ['epaules', 'triceps'],
+                        materiel: 'machine',
                         nom: 'Développé épaules',
                         machine: 'Shoulder press (machine épaules)',
                         series: 3,
@@ -96,6 +161,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'a-seated-row',
+                        muscles: ['dos', 'deltoides-arriere', 'biceps'],
+                        materiel: 'machine',
                         nom: 'Tirage horizontal',
                         machine: 'Seated row (rowing assis, machine ou poulie basse)',
                         series: 3,
@@ -107,10 +174,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Superset 3 (bras)',
+                tours: 3,
+                repos: 45,
                 info: 'Enchaîne les deux exercices, puis 45 s de repos. 2 à 3 tours.',
                 exercices: [
                     {
                         id: 'a-curl-poulie',
+                        muscles: ['biceps', 'avant-bras'],
+                        materiel: 'poulie',
                         nom: 'Curl biceps',
                         machine: 'Poulie basse avec barre droite',
                         series: 3,
@@ -120,6 +191,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'a-triceps-corde',
+                        muscles: ['triceps'],
+                        materiel: 'poulie',
                         nom: 'Extension triceps',
                         machine: 'Poulie haute avec corde',
                         series: 3,
@@ -135,6 +208,8 @@ export const PROGRAMME: SeanceProgramme[] = [
     {
         code: 'B',
         lieu: 'salle',
+        emoji: '🦵',
+        degrade: ['#063b26', '#0f9a5c'],
         titre: 'Bas du corps + abdos',
         court: 'Bas du corps et abdos',
         couleur: '#00c46a',
@@ -143,10 +218,14 @@ export const PROGRAMME: SeanceProgramme[] = [
         blocs: [
             {
                 titre: 'Superset 1',
+                tours: 3,
+                repos: 60,
                 info: 'Enchaîne les deux exercices, puis 60 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'b-leg-press',
+                        muscles: ['quadriceps', 'fessiers'],
+                        materiel: 'machine',
                         nom: 'Presse à cuisses',
                         machine: 'Leg press',
                         series: 3,
@@ -159,6 +238,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'b-leg-curl',
+                        muscles: ['ischios'],
+                        materiel: 'machine',
                         nom: 'Leg curl',
                         machine: 'Leg curl (ischios, assis ou allongé)',
                         series: 3,
@@ -170,10 +251,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Superset 2',
+                tours: 3,
+                repos: 60,
                 info: 'Enchaîne les deux exercices, puis 60 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'b-leg-extension',
+                        muscles: ['quadriceps'],
+                        materiel: 'machine',
                         nom: 'Leg extension',
                         machine: 'Leg extension (quadriceps)',
                         series: 3,
@@ -183,6 +268,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'b-mollets',
+                        muscles: ['mollets'],
+                        materiel: 'machine',
                         nom: 'Mollets',
                         machine: 'Presse à cuisses, pointes de pieds en bas du plateau',
                         series: 3,
@@ -194,10 +281,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Gainage',
+                tours: 3,
+                repos: 45,
                 info: 'Enchaîne les deux exercices, puis 45 s de repos. 2 à 3 tours.',
                 exercices: [
                     {
                         id: 'b-crunch',
+                        muscles: ['abdos'],
+                        materiel: 'machine',
                         nom: 'Crunch',
                         machine: 'Machine abdominaux (ou poulie haute avec corde, à genoux)',
                         series: 3,
@@ -207,6 +298,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'b-planche',
+                        muscles: ['abdos', 'obliques', 'lombaires'],
+                        materiel: 'corps',
                         nom: 'Planche',
                         machine: 'Tapis, zone d’étirement',
                         series: 3,
@@ -222,6 +315,8 @@ export const PROGRAMME: SeanceProgramme[] = [
     {
         code: 'C',
         lieu: 'salle',
+        emoji: '🔥',
+        degrade: ['#4a0d05', '#d9481e'],
         titre: 'Cardio',
         court: 'Cardio (fractionné + marche inclinée)',
         couleur: '#ff5a36',
@@ -230,10 +325,14 @@ export const PROGRAMME: SeanceProgramme[] = [
         blocs: [
             {
                 titre: 'Fractionné',
+                tours: 1,
+                repos: 0,
                 info: 'Vélo, rameur ou elliptique (zone cardio Matrix).',
                 exercices: [
                     {
                         id: 'c-fractionne',
+                        muscles: ['cardio', 'quadriceps'],
+                        materiel: 'cardio',
                         nom: '8 × (1 min rapide + 1 min lent)',
                         machine: 'Vélo, rameur ou elliptique',
                         series: 8,
@@ -248,9 +347,13 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Endurance',
+                tours: 1,
+                repos: 0,
                 exercices: [
                     {
                         id: 'c-marche-inclinee',
+                        muscles: ['cardio', 'fessiers', 'mollets'],
+                        materiel: 'cardio',
                         nom: 'Marche inclinée',
                         machine: 'Tapis de course',
                         series: 1,
@@ -266,6 +369,8 @@ export const PROGRAMME: SeanceProgramme[] = [
     {
         code: 'D',
         lieu: 'maison',
+        emoji: '🏠',
+        degrade: ['#2b0a45', '#8b2fd6'],
         titre: 'Maison : épaules, posture, fessiers',
         court: 'À la maison (élastiques) : épaules, posture, fessiers, gainage',
         couleur: '#cc44ff',
@@ -275,10 +380,14 @@ export const PROGRAMME: SeanceProgramme[] = [
         blocs: [
             {
                 titre: 'Superset 1 (épaules et posture)',
+                tours: 3,
+                repos: 45,
                 info: 'Enchaîne les deux exercices, puis 45 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'd-elevations-laterales',
+                        muscles: ['epaules'],
+                        materiel: 'elastique',
                         nom: 'Élévations latérales',
                         machine: 'Élastique sous les pieds',
                         series: 3,
@@ -288,6 +397,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'd-face-pull',
+                        muscles: ['deltoides-arriere', 'trapezes'],
+                        materiel: 'elastique',
                         nom: 'Face pull',
                         machine: 'Élastique accroché à hauteur du visage (poignée de porte)',
                         series: 3,
@@ -299,10 +410,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Superset 2 (trapèzes et pectoraux)',
+                tours: 3,
+                repos: 45,
                 info: 'Enchaîne les deux exercices, puis 45 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'd-haussements',
+                        muscles: ['trapezes'],
+                        materiel: 'elastique',
                         nom: 'Haussements d’épaules',
                         machine: 'Élastique sous les pieds',
                         series: 3,
@@ -312,6 +427,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'd-pompes',
+                        muscles: ['pectoraux', 'triceps', 'epaules'],
+                        materiel: 'corps',
                         nom: 'Pompes',
                         machine: 'Poids du corps (sur les genoux si besoin)',
                         series: 3,
@@ -323,10 +440,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Superset 3 (fessiers)',
+                tours: 3,
+                repos: 45,
                 info: 'Enchaîne les deux exercices, puis 45 s de repos. 3 tours.',
                 exercices: [
                     {
                         id: 'd-pont-fessier',
+                        muscles: ['fessiers', 'ischios'],
+                        materiel: 'elastique',
                         nom: 'Pont fessier',
                         machine: 'Au sol, élastique au-dessus des genoux',
                         series: 3,
@@ -336,6 +457,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'd-abduction',
+                        muscles: ['moyen-fessier'],
+                        materiel: 'elastique',
                         nom: 'Pas latéraux',
                         machine: 'Élastique autour des chevilles ou au-dessus des genoux',
                         series: 3,
@@ -347,10 +470,14 @@ export const PROGRAMME: SeanceProgramme[] = [
             },
             {
                 titre: 'Gainage et avant-bras',
+                tours: 2,
+                repos: 30,
                 info: '2 tours, 30 s de repos.',
                 exercices: [
                     {
                         id: 'd-superman',
+                        muscles: ['lombaires', 'fessiers'],
+                        materiel: 'corps',
                         nom: 'Superman',
                         machine: 'Allongé sur le ventre, au sol',
                         series: 2,
@@ -360,6 +487,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'd-gainage-lateral',
+                        muscles: ['obliques'],
+                        materiel: 'corps',
                         nom: 'Gainage latéral',
                         machine: 'Au sol, sur l’avant-bras',
                         series: 2,
@@ -369,6 +498,8 @@ export const PROGRAMME: SeanceProgramme[] = [
                     },
                     {
                         id: 'd-finger-grip',
+                        muscles: ['avant-bras'],
+                        materiel: 'elastique',
                         nom: 'Finger grip',
                         machine: 'Élastique autour des doigts (ou serre une balle)',
                         series: 2,

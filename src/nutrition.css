@@ -1,0 +1,569 @@
+/* Onglet Nutrition — lisible, visuel, en tableaux */
+
+.nu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nu-hero {
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0f9a5c, #16a34a 45%, #84cc16);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.25);
+}
+.nu-hero h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.5px;
+}
+.nu-hero p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.nu-carte {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.nu-carte h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #111827;
+}
+.nu-sous {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.nu-ligne-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.nu-petit {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+}
+
+/* Liste de la semaine */
+.nu-carte-tete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.nu-carte-titre p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.nu-anneau {
+  --p: 0%;
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: conic-gradient(#16a34a var(--p), #e5e7eb 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nu-anneau span {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #166534;
+}
+.nu-filtre {
+  margin: 0 0 8px;
+}
+.nu-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nu-liste li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f1f3;
+}
+.nu-liste li:last-child {
+  border-bottom: none;
+}
+.nu-liste li.fini {
+  opacity: 0.55;
+}
+.nu-liste-emoji {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.nu-liste-texte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nu-liste-texte b {
+  font-size: 15px;
+  color: #111827;
+}
+.nu-liste-texte > span {
+  font-size: 12px;
+  color: #6b7280;
+}
+.nu-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+.nu-point {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+.nu-point.ok {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.nu-reste {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 46px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
+}
+.nu-reste small {
+  font-size: 9px;
+  font-weight: 600;
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.nu-reste.ok {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.nu-vide {
+  justify-content: center;
+  color: #16a34a;
+  font-weight: 600;
+}
+.nu-refaire {
+  margin-top: 8px;
+}
+
+/* Saisie d'un repas */
+.nu-saisie {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.nu-saisie textarea {
+  font-size: 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  resize: vertical;
+  background: #fff;
+  color: #111827;
+}
+.nu-saisie .btn-primary {
+  margin-top: 0;
+}
+
+/* Résultats (analyse et bilan) */
+.nu-resultat {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nu-resultat h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #111827;
+}
+.nu-phrase {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #374151;
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.nu-deux {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.nu-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+}
+.nu-col-ok {
+  background: #f0fdf4;
+}
+.nu-col-manque {
+  background: #fff7ed;
+}
+.nu-col-titre {
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
+  letter-spacing: 0.3px;
+}
+.nu-pastille {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 999px;
+  line-height: 1.3;
+}
+.nu-pastille.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.nu-pastille.manque {
+  background: #ffedd5;
+  color: #9a3412;
+}
+.nu-pastille.info {
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 11px;
+}
+.nu-suggestions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.nu-sugg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+.nu-sugg-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.nu-sugg b {
+  font-size: 14px;
+  color: #111827;
+}
+.nu-sugg > span:not(.nu-pastille):not(.nu-sugg-emoji) {
+  font-size: 12.5px;
+  color: #4b5563;
+}
+.nu-coches {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Tableau de la semaine */
+.nu-tableau-scroll {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+.nu-tableau {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 12.5px;
+}
+.nu-tableau thead th {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b7280;
+  padding: 2px 0 4px;
+}
+.nu-tableau thead th.auj {
+  color: #16a34a;
+}
+.nu-tableau tbody th {
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  padding-right: 6px;
+}
+.nu-tableau tbody th span {
+  display: inline-block;
+  width: 18px;
+}
+.nu-tableau td {
+  text-align: center;
+  padding: 0;
+}
+.nu-case {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #f3f4f6;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+}
+.nu-tableau td.auj .nu-case {
+  outline: 2px solid #86efac;
+}
+.nu-tableau td.futur .nu-case {
+  background: #fafafa;
+  border: 1px dashed #e5e7eb;
+}
+.nu-case.ok {
+  background: #22c55e;
+}
+
+/* Plan du bilan */
+.nu-plan {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.nu-plan th {
+  text-align: left;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 800;
+  padding: 0 6px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.nu-plan td {
+  padding: 8px 6px;
+  vertical-align: top;
+  border-top: 1px solid #f0f1f3;
+}
+.nu-plan-jour {
+  font-weight: 800;
+  color: #166534;
+  background: #f0fdf4;
+  border-radius: 8px;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.nu-plan-repas {
+  color: #6b7280;
+  white-space: nowrap;
+}
+.nu-plan td b {
+  display: block;
+  color: #111827;
+  font-weight: 600;
+}
+.nu-plan-pour {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #4f46e5;
+}
+
+/* Priorités */
+.nu-objectifs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.nu-objectif {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 999px;
+  padding: 7px 12px 7px 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+}
+.nu-objectif-rang {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+.nu-objectif.top {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #166534;
+}
+.nu-objectif.top .nu-objectif-rang {
+  background: #16a34a;
+  color: #fff;
+}
+
+/* Journal */
+.nu-journal {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 13.5px;
+}
+.nu-journal td {
+  padding: 8px 4px;
+  vertical-align: top;
+  border-top: 1px solid #f0f1f3;
+}
+.nu-journal-jour td {
+  font-weight: 800;
+  font-size: 12px;
+  color: #166534;
+  text-transform: capitalize;
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+.nu-journal-moment {
+  width: 76px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.nu-journal-moment span {
+  display: block;
+  font-size: 18px;
+}
+.nu-journal-nutri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.nu-journal-x {
+  width: 34px;
+  text-align: right;
+}
+
+@media (prefers-color-scheme: dark) {
+  .nu-carte {
+    background: #161618;
+    box-shadow: none;
+  }
+  .nu-carte h2,
+  .nu-resultat h3,
+  .nu-liste-texte b,
+  .nu-sugg b,
+  .nu-plan td b {
+    color: #f5f5f7;
+  }
+  .nu-phrase {
+    background: #1f1f22;
+    color: #d1d5db;
+  }
+  .nu-col-ok,
+  .nu-liste-emoji,
+  .nu-plan-jour,
+  .nu-journal-jour td {
+    background: #0f2a1a;
+  }
+  .nu-col-manque {
+    background: #2a1a0e;
+  }
+  .nu-col-titre,
+  .nu-tableau tbody th {
+    color: #d1d5db;
+  }
+  .nu-sugg,
+  .nu-objectif,
+  .nu-point,
+  .nu-saisie textarea {
+    background: #0b0b0d;
+    border-color: #2a2a2d;
+    color: #f5f5f7;
+  }
+  .nu-case {
+    background: #26262a;
+  }
+  .nu-tableau td.futur .nu-case {
+    background: #1b1b1e;
+    border-color: #2a2a2d;
+  }
+  .nu-liste li,
+  .nu-plan td,
+  .nu-journal td {
+    border-color: #2a2a2d;
+  }
+  .nu-anneau span {
+    background: #161618;
+    color: #86efac;
+  }
+  .nu-objectif-rang {
+    background: #2a2a2d;
+    color: #e5e7eb;
+  }
+  .nu-objectif.top {
+    background: #0f2a1a;
+    color: #86efac;
+  }
+  .nu-sugg > span:not(.nu-pastille):not(.nu-sugg-emoji),
+  .nu-coches {
+    color: #c4c4cc;
+  }
+  .nu-pastille.info {
+    background: #24264a;
+    color: #c7d2fe;
+  }
+}

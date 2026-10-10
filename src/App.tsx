@@ -68,7 +68,7 @@ function App() {
     }
 
     return (
-        <div className="page">
+        <div className={`page ${onglet === 'muscu' ? 'page-muscu' : ''}`}>
             <header className="topbar">
                 <div className="brand">
                     <span className="brand-dot" />
