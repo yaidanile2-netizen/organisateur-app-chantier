@@ -5,6 +5,15 @@ import { getCategories, type Categorie } from './api'
 import DayView from './DayView'
 import SportPlanner from './SportPlanner'
 import NutritionCoach from './NutritionCoach'
+import MuscuView from './MuscuView'
+
+type Onglet = 'agenda' | 'muscu' | 'nutrition'
+
+const ONGLETS: { cle: Onglet; libelle: string; icone: string }[] = [
+    { cle: 'agenda', libelle: 'Agenda', icone: '📅' },
+    { cle: 'muscu', libelle: 'Muscu', icone: '🏋️' },
+    { cle: 'nutrition', libelle: 'Nutrition', icone: '🥗' },
+]
 
 const todayLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
@@ -12,96 +21,139 @@ const todayLabel = new Intl.DateTimeFormat('fr-FR', {
     month: 'long',
 }).format(new Date())
 
+function ongletInitial(): Onglet {
+    try {
+        const o = localStorage.getItem('app.onglet')
+        if (o === 'agenda' || o === 'muscu' || o === 'nutrition') return o
+    } catch {
+        // stockage indisponible : onglet Agenda
+    }
+    return 'agenda'
+}
+
 function App() {
+    const [onglet, setOnglet] = useState<Onglet>(ongletInitial)
     const [etat, setEtat] = useState<EtatNotifications | 'chargement'>('chargement')
     const [categories, setCategories] = useState<Categorie[]>([])
     const [version, setVersion] = useState(0)
 
-  useEffect(() => {
+    useEffect(() => {
         if (!notificationsDisponibles()) {
-                setEtat('indisponible')
-                return
+            setEtat('indisponible')
+            return
         }
         etatNotifications().then(setEtat)
-  }, [])
+    }, [])
 
-  useEffect(() => {
-        getCategories().then(setCategories).catch(() => setCategories([]))
-  }, [])
+    useEffect(() => {
+        getCategories()
+            .then(setCategories)
+            .catch(() => setCategories([]))
+    }, [])
 
-  async function handleActiver() {
+    function choisir(o: Onglet) {
+        setOnglet(o)
+        window.scrollTo({ top: 0 })
+        try {
+            localStorage.setItem('app.onglet', o)
+        } catch {
+            // stockage indisponible
+        }
+    }
+
+    async function handleActiver() {
         setEtat('chargement')
         const resultat = await activerNotifications()
         setEtat(resultat)
-  }
+    }
 
-  return (
+    return (
         <div className="page">
-              <header className="topbar">
-                      <div className="brand">
-                                <span className="brand-dot" />
-                                Organisateur
-                      </div>
-                      <span className="today">{capitalize(todayLabel)}</span>
-              </header>
+            <header className="topbar">
+                <div className="brand">
+                    <span className="brand-dot" />
+                    Organisateur
+                </div>
+                <span className="today">{capitalize(todayLabel)}</span>
+            </header>
 
-              <main className="content">
-                      <DayView rafraichir={version} />
+            <main className="content">
+                {onglet === 'agenda' && (
+                    <>
+                        <DayView rafraichir={version} />
 
-                      <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
+                        <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 
-                      <NutritionCoach />
-
-                      <section className="card">
-                                <h2>Notifications</h2>
-                        {etat === 'chargement' && <p className="muted">Vérification…</p>}
-                        {etat === 'indisponible' && (
-                      <p className="muted">
-                                    Les notifications ne sont pas disponibles ici — sur iPhone,
-                                    installe d'abord l'app sur l'écran d'accueil (bouton Partager →
-                                    Sur l'écran d'accueil), puis reviens sur cette page.
-                      </p>
-                                )}
-                        {etat === 'refuse' && (
-                      <p className="muted">
-                                    Les notifications sont bloquées pour cette app. Active-les dans
-                                    Réglages → Notifications → Organisateur pour recevoir tes
-                                    rappels.
-                      </p>
-                                )}
-                        {etat === 'inactif' && (
-                      <>
+                        <section className="card">
+                            <h2>Notifications</h2>
+                            {etat === 'chargement' && <p className="muted">Vérification…</p>}
+                            {etat === 'indisponible' && (
+                                <p className="muted">
+                                    Les notifications ne sont pas disponibles ici — sur iPhone, installe d'abord l'app sur
+                                    l'écran d'accueil (bouton Partager → Sur l'écran d'accueil), puis reviens sur cette page.
+                                </p>
+                            )}
+                            {etat === 'refuse' && (
+                                <p className="muted">
+                                    Les notifications sont bloquées pour cette app. Active-les dans Réglages → Notifications
+                                    → Organisateur pour recevoir tes rappels.
+                                </p>
+                            )}
+                            {etat === 'inactif' && (
+                                <>
                                     <p className="muted">
-                                                    Active les notifications pour recevoir un rappel au bon
-                                                    moment, sans avoir à demander à l'assistant.
+                                        Active les notifications pour recevoir un rappel au bon moment, sans avoir à
+                                        demander à l'assistant.
                                     </p>
                                     <button className="btn-primary" onClick={handleActiver}>
-                                                    Activer les notifications
+                                        Activer les notifications
                                     </button>
-                      </>
-                    )}
-                        {etat === 'actif' && <p className="status">✅ Notifications activées.</p>}
-                      </section>
+                                </>
+                            )}
+                            {etat === 'actif' && <p className="status">✅ Notifications activées.</p>}
+                        </section>
 
-                      {categories.length > 0 && (
-                    <section className="card">
+                        {categories.length > 0 && (
+                            <section className="card">
                                 <h2>Catégories</h2>
                                 <ul className="categories">
-                                  {categories.map((c) => (
-                        <li key={c.id} className="chip" style={{ '--chip-color': c.couleur } as React.CSSProperties}>
-                          {c.nom}
-                        </li>
-                      ))}
+                                    {categories.map((c) => (
+                                        <li
+                                            key={c.id}
+                                            className="chip"
+                                            style={{ '--chip-color': c.couleur } as React.CSSProperties}
+                                        >
+                                            {c.nom}
+                                        </li>
+                                    ))}
                                 </ul>
-                      </section>
+                            </section>
                         )}
+                    </>
+                )}
 
-                      <p className="status">
-                                ✅ Vue jour, séances de sport automatiques et coach nutrition — en place.
-                      </p>
-              </main>
+                {onglet === 'muscu' && <MuscuView />}
+
+                {onglet === 'nutrition' && <NutritionCoach />}
+            </main>
+
+            <nav className="tabbar" aria-label="Sections">
+                {ONGLETS.map((o) => (
+                    <button
+                        key={o.cle}
+                        className={`tabbar-bouton ${onglet === o.cle ? 'actif' : ''}`}
+                        onClick={() => choisir(o.cle)}
+                        aria-current={onglet === o.cle ? 'page' : undefined}
+                    >
+                        <span className="tabbar-icone" aria-hidden="true">
+                            {o.icone}
+                        </span>
+                        {o.libelle}
+                    </button>
+                ))}
+            </nav>
         </div>
-      )
+    )
 }
 
 function capitalize(s: string) {

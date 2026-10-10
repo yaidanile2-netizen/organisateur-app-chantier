@@ -7,14 +7,17 @@ import {
     supprimerTache,
     type Tache,
 } from './api'
+import { PROGRAMME, SALLE } from './programme'
 import {
-    DUREE_MIN,
     MARQUEUR,
-    SEANCES,
     debutDeSemaine,
     descriptionSeance,
+    enregistrerReglages,
+    lireReglages,
     planifierSemaine,
+    titreSeance,
     type Creneau,
+    type Reglages,
 } from './sport'
 
 type Semaine = 'courante' | 'prochaine'
@@ -46,22 +49,29 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
     const [propositions, setPropositions] = useState<Creneau[]>([])
     const [existantes, setExistantes] = useState<Tache[]>([])
     const [erreur, setErreur] = useState<string | null>(null)
+    const [reglages, setReglages] = useState<Reglages>(() => lireReglages())
+    const [voirReglages, setVoirReglages] = useState(false)
 
     const lundi = lundiDe(semaine)
     const dimanche = finDeSemaine(lundi)
+    const occupe = etape === 'calcul' || etape === 'enregistrement'
+
+    function changerReglage<K extends keyof Reglages>(cle: K, valeur: Reglages[K]) {
+        const r = { ...reglages, [cle]: valeur }
+        setReglages(r)
+        enregistrerReglages(r)
+        setEtape('repos')
+    }
 
     async function proposer() {
         setEtape('calcul')
         setErreur(null)
         try {
-            const [cours, taches] = await Promise.all([
-                getCoursEntre(lundi, dimanche),
-                getTachesEntre(lundi, dimanche),
-            ])
+            const [cours, taches] = await Promise.all([getCoursEntre(lundi, dimanche), getTachesEntre(lundi, dimanche)])
             const dejaAuto = taches.filter((t) => t.description?.includes(MARQUEUR))
             const autres = taches.filter((t) => !t.description?.includes(MARQUEUR))
             setExistantes(dejaAuto)
-            setPropositions(planifierSemaine(lundi, cours, autres))
+            setPropositions(planifierSemaine(lundi, cours, autres, reglages))
             setEtape('apercu')
         } catch (err) {
             setErreur(err instanceof Error ? err.message : 'Une erreur est survenue.')
@@ -78,13 +88,14 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
             for (const t of existantes) {
                 await supprimerTache(t.id)
             }
+            // La tâche couvre tout l'aller-retour : le rappel arrive avant de partir.
             for (const p of propositions) {
                 await creerTache({
-                    titre: `Séance ${p.seance.code} · ${p.seance.titre}`,
-                    description: descriptionSeance(p.seance),
+                    titre: titreSeance(p.seance),
+                    description: descriptionSeance(p),
                     categorie_id: sport ? sport.id : null,
-                    date_debut: p.debut.toISOString(),
-                    date_fin: p.fin.toISOString(),
+                    date_debut: p.depart.toISOString(),
+                    date_fin: p.retour.toISOString(),
                     toute_la_journee: false,
                     statut: 'a_faire',
                     priorite: 'normale',
@@ -100,11 +111,71 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
 
     return (
         <section className="card sport-planner">
-            <h2>Séances de sport</h2>
+            <h2>Séances à la salle</h2>
             <p className="muted">
-                {SEANCES.length} séances de ~{DUREE_MIN} min par semaine (programme élastiques),
-                placées automatiquement autour de tes cours et de tes tâches.
+                {PROGRAMME.length} séances de {reglages.duree} min par semaine au {SALLE.nom}, placées autour de tes cours
+                en comptant les trajets.
             </p>
+
+            <button className="btn-link sport-reglages-lien" onClick={() => setVoirReglages((v) => !v)}>
+                {voirReglages ? 'Masquer mes contraintes' : 'Mes contraintes (trajets, horaires)'}
+            </button>
+            {voirReglages && (
+                <div className="task-form sport-reglages">
+                    <div className="form-row">
+                        <label>
+                            Trajet IUT → maison (min)
+                            <input
+                                type="number"
+                                min={0}
+                                value={reglages.trajetIut}
+                                onChange={(e) => changerReglage('trajetIut', Number(e.target.value) || 0)}
+                            />
+                        </label>
+                        <label>
+                            Trajet maison → salle (min)
+                            <input
+                                type="number"
+                                min={0}
+                                value={reglages.trajetSalle}
+                                onChange={(e) => changerReglage('trajetSalle', Number(e.target.value) || 0)}
+                            />
+                        </label>
+                    </div>
+                    <div className="form-row">
+                        <label>
+                            Durée de séance (min)
+                            <input
+                                type="number"
+                                min={15}
+                                step={5}
+                                value={reglages.duree}
+                                onChange={(e) => changerReglage('duree', Number(e.target.value) || 30)}
+                            />
+                        </label>
+                        <label>
+                            Rentré avant
+                            <input
+                                type="time"
+                                value={reglages.retourAvant}
+                                onChange={(e) => changerReglage('retourAvant', e.target.value || '20:00')}
+                            />
+                        </label>
+                        <label>
+                            Pas de départ avant
+                            <input
+                                type="time"
+                                value={reglages.departAuPlusTot}
+                                onChange={(e) => changerReglage('departAuPlusTot', e.target.value || '08:00')}
+                            />
+                        </label>
+                    </div>
+                    <p className="muted sport-periode">
+                        Le trajet vers la salle compte à l’aller et au retour. Après un cours, l’app compte le trajet
+                        IUT → maison avant de te faire partir à la salle.
+                    </p>
+                </div>
+            )}
 
             <div className="segmented" role="group" aria-label="Semaine">
                 <button
@@ -113,7 +184,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                         setSemaine('courante')
                         setEtape('repos')
                     }}
-                    disabled={etape === 'calcul' || etape === 'enregistrement'}
+                    disabled={occupe}
                 >
                     Cette semaine
                 </button>
@@ -123,7 +194,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                         setSemaine('prochaine')
                         setEtape('repos')
                     }}
-                    disabled={etape === 'calcul' || etape === 'enregistrement'}
+                    disabled={occupe}
                 >
                     Semaine prochaine
                 </button>
@@ -143,29 +214,28 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
             {(etape === 'apercu' || etape === 'enregistrement') && (
                 <>
                     {propositions.length === 0 ? (
-                        <p className="muted">
-                            Aucun créneau libre de {DUREE_MIN} min trouvé sur cette période.
-                        </p>
+                        <p className="muted">Aucun créneau possible cette semaine avec ces contraintes.</p>
                     ) : (
                         <ul className="sport-liste">
                             {propositions.map((p) => (
                                 <li key={p.seance.code} className="sport-item">
-                                    <span className="sport-quand">
+                                    <span className="sport-quand" style={{ color: p.seance.couleur }}>
                                         {jourFormat.format(p.debut)}
                                         <br />
                                         {heureFormat.format(p.debut)}–{heureFormat.format(p.fin)}
                                     </span>
                                     <span className="sport-quoi">
-                                        <strong>Séance {p.seance.code}</strong> · {p.seance.titre}
+                                        <strong>Séance {p.seance.code}</strong> · {p.seance.court}
+                                        <span className="muted sport-trajet">
+                                            Départ {heureFormat.format(p.depart)} · retour {heureFormat.format(p.retour)}
+                                        </span>
                                     </span>
                                 </li>
                             ))}
                         </ul>
                     )}
-                    {propositions.length > 0 && propositions.length < SEANCES.length && (
-                        <p className="muted">
-                            Seulement {propositions.length} créneau(x) libre(s) cette semaine.
-                        </p>
+                    {propositions.length > 0 && propositions.length < PROGRAMME.length && (
+                        <p className="muted">Seulement {propositions.length} créneau(x) possible(s) cette semaine.</p>
                     )}
                     {existantes.length > 0 && (
                         <p className="muted">
@@ -173,11 +243,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                         </p>
                     )}
                     <div className="modal-actions">
-                        <button
-                            className="btn-secondary"
-                            onClick={() => setEtape('repos')}
-                            disabled={etape === 'enregistrement'}
-                        >
+                        <button className="btn-secondary" onClick={() => setEtape('repos')} disabled={etape === 'enregistrement'}>
                             Annuler
                         </button>
                         {propositions.length > 0 && (
@@ -192,8 +258,8 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
             {etape === 'fait' && (
                 <>
                     <p className="status">
-                        ✅ {propositions.length} séance(s) ajoutée(s) à ton agenda, avec rappel avant chaque séance si les
-                        notifications sont activées.
+                        ✅ {propositions.length} séance(s) ajoutée(s) à ton agenda, trajets compris. Le rappel arrive avant
+                        l’heure de départ si les notifications sont activées.
                     </p>
                     <button className="btn-secondary sport-refaire" onClick={() => setEtape('repos')}>
                         Reprogrammer

@@ -40,7 +40,7 @@
 
 .content {
   flex: 1;
-  padding: 16px 20px 40px;
+  padding: 16px 20px calc(90px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -637,5 +637,298 @@
   }
   .coach-journal li {
     border-bottom-color: #2a2a2d;
+  }
+}
+
+/* Barre d'onglets */
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px max(env(safe-area-inset-bottom), 8px);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #e5e5ea;
+  z-index: 50;
+}
+
+.tabbar-bouton {
+  appearance: none;
+  border: none;
+  background: none;
+  flex: 1;
+  max-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+.tabbar-bouton.actif {
+  color: #4f46e5;
+  background: #eef2ff;
+}
+.tabbar-icone {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Réglages de la planification */
+
+.sport-reglages-lien {
+  margin-top: 6px;
+}
+.sport-reglages {
+  margin-top: 10px;
+}
+.sport-reglages input[type='number'],
+.sport-reglages input[type='time'] {
+  font-size: 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #1c1c1e;
+  min-width: 0;
+}
+.sport-trajet {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Onglet Muscu */
+
+.muscu-prochaine {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #1c1c1e;
+}
+
+.muscu-onglets {
+  display: flex;
+  gap: 8px;
+}
+.muscu-onglet {
+  appearance: none;
+  flex: 1;
+  border: 1px solid #e5e5ea;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  color: #1c1c1e;
+  font-family: inherit;
+}
+.muscu-onglet.actif {
+  border-color: var(--chip-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-color) 30%, transparent);
+}
+.muscu-onglet-code {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--chip-color);
+}
+.muscu-onglet-titre {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.muscu-seance h2 {
+  color: var(--chip-color) !important;
+}
+
+.muscu-progression {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.muscu-barre {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #eef0f2;
+  overflow: hidden;
+}
+.muscu-barre > div {
+  height: 100%;
+  background: var(--chip-color);
+  transition: width 0.2s;
+}
+
+.muscu-sous-titre {
+  font-size: 14px;
+  margin: 16px 0 6px;
+  color: #374151;
+}
+.muscu-info {
+  margin: -2px 0 8px;
+  font-size: 13px;
+}
+.muscu-liste,
+.muscu-consignes {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.muscu-exo {
+  border: 1px solid #eef0f2;
+  border-left: 4px solid var(--chip-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.muscu-exo-tete {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+}
+.muscu-cible {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--chip-color);
+  white-space: nowrap;
+}
+.muscu-machine {
+  margin: 2px 0 6px;
+  font-size: 12px;
+}
+.muscu-alternative {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.muscu-suivi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.muscu-charge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #6b7280;
+}
+.muscu-charge input {
+  width: 64px;
+  font-size: 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: inherit;
+  background: #ffffff;
+  color: #1c1c1e;
+}
+.muscu-series {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.muscu-serie {
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-weight: 700;
+  cursor: pointer;
+}
+.muscu-serie.fait {
+  background: var(--chip-color);
+  border-color: var(--chip-color);
+  color: #ffffff;
+}
+
+.muscu-conseil {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.muscu-actions {
+  margin-top: 14px;
+}
+
+.muscu-historique {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.muscu-historique li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #eef0f2;
+  text-transform: capitalize;
+}
+.muscu-historique li:last-child {
+  border-bottom: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tabbar {
+    background: rgba(22, 22, 24, 0.94);
+    border-top-color: #2a2a2d;
+  }
+  .tabbar-bouton.actif {
+    background: #1e1b4b;
+    color: #a5b4fc;
+  }
+  .sport-reglages input[type='number'],
+  .sport-reglages input[type='time'],
+  .muscu-charge input,
+  .muscu-serie {
+    background: #0b0b0d;
+    border-color: #2a2a2d;
+    color: #f5f5f7;
+  }
+  .muscu-onglet {
+    background: #161618;
+    border-color: #2a2a2d;
+    color: #f5f5f7;
+  }
+  .muscu-prochaine,
+  .muscu-liste,
+  .muscu-consignes {
+    color: #d1d5db;
+  }
+  .muscu-sous-titre {
+    color: #d1d5db;
+  }
+  .muscu-exo,
+  .muscu-historique li {
+    border-color: #2a2a2d;
+  }
+  .muscu-barre {
+    background: #2a2a2d;
   }
 }
