@@ -61,30 +61,44 @@ function debutEtFinDeJournee(date: Date): { debut: string; fin: string } {
     return { debut: debut.toISOString(), fin: fin.toISOString() }
 }
 
-async function lireJson<T>(res: Response, messageErreur: string): Promise<T> {
+async function lireJson<T>(res: Response, messageErreur: string, siVide: T): Promise<T> {
     if (!res.ok) {
         throw new Error(`${messageErreur} (${res.status})`)
     }
-    return res.json() as Promise<T>
+    // n8n renvoie une réponse vide (pas « [] ») quand la requête SQL ne trouve
+    // aucune ligne — par exemple un jour sans cours.
+    const texte = await res.text()
+    if (!texte.trim()) return siVide
+    return JSON.parse(texte) as T
+}
+
+function dansLaJournee(iso: string | null, debut: string, fin: string): boolean {
+    if (!iso) return false
+    const t = new Date(iso).getTime()
+    return t >= new Date(debut).getTime() && t <= new Date(fin).getTime()
 }
 
 export async function getTaches(date: Date): Promise<Tache[]> {
     const { debut, fin } = debutEtFinDeJournee(date)
     const url = `${BASE_URL}/taches?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`
     const res = await fetch(url)
-    return lireJson<Tache[]>(res, 'Impossible de charger les tâches')
+    const taches = await lireJson<Tache[]>(res, 'Impossible de charger les tâches', [])
+    // Filet de sécurité : on ne garde que les tâches de ce jour-là, même si le
+    // webhook renvoie plus large.
+    return taches.filter((t) => dansLaJournee(t.date_debut, debut, fin))
 }
 
 export async function getCours(date: Date): Promise<Cours[]> {
     const { debut, fin } = debutEtFinDeJournee(date)
     const url = `${BASE_URL}/cours?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`
     const res = await fetch(url)
-    return lireJson<Cours[]>(res, 'Impossible de charger les cours')
+    const cours = await lireJson<Cours[]>(res, 'Impossible de charger les cours', [])
+    return cours.filter((c) => dansLaJournee(c.date_debut, debut, fin))
 }
 
 export async function getCategories(): Promise<Categorie[]> {
     const res = await fetch(`${BASE_URL}/categories`)
-    return lireJson<Categorie[]>(res, 'Impossible de charger les catégories')
+    return lireJson<Categorie[]>(res, 'Impossible de charger les catégories', [])
 }
 
 export async function creerTache(data: NouvelleTache): Promise<Tache> {
@@ -93,7 +107,7 @@ export async function creerTache(data: NouvelleTache): Promise<Tache> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    const rows = await lireJson<Tache[]>(res, 'Impossible de créer la tâche')
+    const rows = await lireJson<Tache[]>(res, 'Impossible de créer la tâche', [])
     return rows[0]
 }
 
@@ -103,7 +117,7 @@ export async function modifierTache(data: ModificationTache): Promise<Tache> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
     })
-    const rows = await lireJson<Tache[]>(res, 'Impossible de modifier la tâche')
+    const rows = await lireJson<Tache[]>(res, 'Impossible de modifier la tâche', [])
     return rows[0]
 }
 
