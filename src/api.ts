@@ -31,6 +31,8 @@ export type Cours = {
     lieu: string | null
     date_debut: string
     date_fin: string
+    type?: string | null // CM, TD, TP, Contrôle continu TD, Travail en autonomie…
+    groupes?: string | null
 }
 
 export type Categorie = {

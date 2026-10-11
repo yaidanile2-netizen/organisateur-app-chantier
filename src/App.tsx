@@ -3,6 +3,7 @@ import './App.css'
 import { activerNotifications, etatNotifications, notificationsDisponibles, type EtatNotifications } from './push'
 import { getCategories, type Categorie } from './api'
 import DayView from './DayView'
+import EtudesPlanner from './EtudesPlanner'
 import SportPlanner from './SportPlanner'
 import NutritionCoach from './NutritionCoach'
 import MuscuView from './MuscuView'
@@ -83,6 +84,8 @@ function App() {
                         <DayView rafraichir={version} onVoirSeance={() => choisir('muscu')} />
 
                         <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
+
+                        <EtudesPlanner version={version} onPlanifie={() => setVersion((v) => v + 1)} />
 
                         <section className="card">
                             <h2>Notifications</h2>

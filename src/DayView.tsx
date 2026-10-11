@@ -14,6 +14,8 @@ import {
 } from './api'
 import EventDetail, { type Item } from './EventDetail'
 import { duree } from './temps'
+import { LEGENDE, nomModule, typeDe } from './coursType'
+import { MARQUEUR_ETUDE } from './etudes'
 import { seanceParCode } from './programme'
 import { MARQUEUR, codeDeTache, debutDeSemaine } from './sport'
 import TaskForm from './TaskForm'
@@ -34,12 +36,16 @@ function memeJour(a: Date, b: Date): boolean {
 
 // Couleur et emoji d'un événement dans la bande de la semaine.
 function visuel(it: Item): { couleur: string; emoji: string } {
-    if (it.type === 'cours') return { couleur: '#64748b', emoji: '📚' }
+    if (it.type === 'cours') {
+        const t = typeDe(it.data)
+        return { couleur: t.couleur, emoji: t.court }
+    }
     const code = it.data.description?.includes(MARQUEUR) ? codeDeTache(it.data) : null
     if (code) {
         const s = seanceParCode(code)
         return { couleur: s.couleur, emoji: s.emoji }
     }
+    if (it.data.description?.includes(MARQUEUR_ETUDE)) return { couleur: '#6366f1', emoji: '📖' }
     return { couleur: it.data.categorie_couleur || '#4f46e5', emoji: '📌' }
 }
 
@@ -203,7 +209,7 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                                         }}
                                         title={it.data.titre}
                                     >
-                                        <span>{v.emoji}</span>
+                                        <span className={it.type === 'cours' ? 'sem-type' : ''}>{v.emoji}</span>
                                         <small>{it.debut ? heureCourte(it.debut) : ''}</small>
                                     </button>
                                 )
@@ -216,6 +222,14 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                         </div>
                     )
                 })}
+            </div>
+
+            <div className="legende-types" aria-label="Légende des cours">
+                {LEGENDE.map((t) => (
+                    <span key={t.cle} style={{ '--t': t.couleur } as React.CSSProperties}>
+                        {t.libelle}
+                    </span>
+                ))}
             </div>
 
             {chargement && <p className="muted">Chargement…</p>}
@@ -232,9 +246,11 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                             key={`${item.type}-${item.data.id}`}
                             className={`day-item ${item.type === 'cours' ? 'day-item-cours' : ''}`}
                             style={
-                                item.type === 'tache' && item.data.categorie_couleur
-                                    ? ({ '--chip-color': item.data.categorie_couleur } as React.CSSProperties)
-                                    : undefined
+                                item.type === 'cours'
+                                    ? ({ '--chip-color': typeDe(item.data).couleur } as React.CSSProperties)
+                                    : item.data.categorie_couleur
+                                      ? ({ '--chip-color': item.data.categorie_couleur } as React.CSSProperties)
+                                      : undefined
                             }
                             onClick={() => ouvrirDetail(item)}
                         >
@@ -244,7 +260,14 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                             </span>
                             <span className="day-item-barre" />
                             <span className="day-item-corps">
-                                <span className="day-item-titre">{item.data.titre}</span>
+                                <span className="day-item-titre">
+                                    {item.type === 'cours' && (
+                                        <span className="type-badge" style={{ '--t': typeDe(item.data).couleur } as React.CSSProperties}>
+                                            {typeDe(item.data).court}
+                                        </span>
+                                    )}
+                                    {item.type === 'cours' ? nomModule(item.data.titre) : item.data.titre}
+                                </span>
                                 {item.type === 'tache' && item.data.categorie_nom && (
                                     <span className="day-item-categorie">{item.data.categorie_nom}</span>
                                 )}

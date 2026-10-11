@@ -1,5 +1,6 @@
 // Fiche détaillée d'un événement de la vue Jour (cours, tâche ou séance de sport).
 import type { Cours, Priorite, Statut, Tache } from './api'
+import { codeModule, detailsCours, nomModule, typeDe } from './coursType'
 import { seanceParCode } from './programme'
 import { MARQUEUR, codeDeTache, lireReglages } from './sport'
 import { duree } from './temps'
@@ -31,14 +32,14 @@ function etapesDe(item: Item, jour: Item[]): Etape[] {
         if (index === 0) {
             etapes.push({ heure: new Date(debut.getTime() - r.trajetIut * MIN), emoji: '🚌', texte: 'Pars de chez toi', detail: `${duree(r.trajetIut)} de trajet` })
         }
-        etapes.push({ heure: debut, emoji: '📚', texte: 'Début du cours', detail: item.data.lieu || undefined, principal: true })
+        etapes.push({ heure: debut, emoji: '📚', texte: `Début : ${typeDe(item.data).libelle}`, detail: item.data.lieu || undefined, principal: true })
         etapes.push({ heure: fin, emoji: '🔔', texte: 'Fin du cours', principal: true })
         const suivant = coursDuJour[index + 1]
         if (suivant) {
             etapes.push({
                 heure: suivant.debut,
                 emoji: '⏭️',
-                texte: `Cours suivant : ${suivant.data.titre}`,
+                texte: `Ensuite : ${typeDe(suivant.data).court} ${nomModule(suivant.data.titre)}`,
                 detail: `pause de ${duree((suivant.debut.getTime() - fin.getTime()) / MIN)}`,
             })
         } else {
@@ -114,13 +115,20 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
     const tache = item.type === 'tache' ? item.data : null
     const code = tache?.description?.includes(MARQUEUR) ? codeDeTache(tache) : null
     const seance = code ? seanceParCode(code) : null
-    const couleur =
-        item.type === 'cours' ? '#64748b' : seance ? seance.couleur : tache?.categorie_couleur || '#4f46e5'
-    const emoji = item.type === 'cours' ? '📚' : seance ? seance.emoji : '📌'
-    const sousTitre = item.type === 'cours' ? 'Cours IUT' : seance ? `Séance de sport · ${seance.lieu === 'salle' ? 'Basic-Fit' : 'maison'}` : tache?.categorie_nom || 'Tâche'
+    const typeCours = item.type === 'cours' ? typeDe(item.data) : null
+    const infosCours = item.type === 'cours' ? detailsCours(item.data) : null
+    const couleur = typeCours ? typeCours.couleur : seance ? seance.couleur : tache?.categorie_couleur || '#4f46e5'
+    const emoji = typeCours ? (typeCours.cle === 'ds' ? '📝' : '📚') : seance ? seance.emoji : '📌'
+    const sousTitre = typeCours ? `${typeCours.libelle} · Cours IUT` : seance ? `Séance de sport · ${seance.lieu === 'salle' ? 'Basic-Fit' : 'maison'}` : tache?.categorie_nom || 'Tâche'
+    const titre = item.type === 'cours' ? nomModule(item.data.titre) : item.data.titre
     const rebours = compteARebours(debut, fin, maintenant)
     const etapes = etapesDe(item, jour)
-    const description = item.type === 'cours' ? lignesDescription(item.data.description) : seance ? [] : lignesDescription(tache?.description ?? null)
+    const description =
+        item.type === 'cours'
+            ? lignesDescription((item.data.description || '').split('\n').slice(1).join('\n'))
+            : seance
+              ? []
+              : lignesDescription(tache?.description ?? null)
 
     return (
         <div className="modal-overlay" onClick={onFermer}>
@@ -129,7 +137,7 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
                     <span className="ev-emoji">{emoji}</span>
                     <div className="ev-titres">
                         <span className="ev-sous">{sousTitre}</span>
-                        <h2>{item.data.titre}</h2>
+                        <h2>{titre}</h2>
                     </div>
                     <button className="ev-fermer" onClick={onFermer} aria-label="Fermer">
                         ×
@@ -156,6 +164,35 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
                             <tr>
                                 <th>⏱️ Durée</th>
                                 <td>{duree((fin.getTime() - debut.getTime()) / MIN)}{seance?.lieu === 'salle' ? ' (trajets compris)' : ''}</td>
+                            </tr>
+                        )}
+                        {typeCours && (
+                            <tr>
+                                <th>🏷️ Type</th>
+                                <td>
+                                    <span className="type-badge" style={{ '--t': typeCours.couleur } as React.CSSProperties}>
+                                        {typeCours.court}
+                                    </span>{' '}
+                                    {typeCours.libelle}
+                                </td>
+                            </tr>
+                        )}
+                        {item.type === 'cours' && codeModule(item.data.titre) && (
+                            <tr>
+                                <th>📘 Module</th>
+                                <td>{codeModule(item.data.titre)}</td>
+                            </tr>
+                        )}
+                        {infosCours?.profs && (
+                            <tr>
+                                <th>👤 Enseignant</th>
+                                <td>{infosCours.profs}</td>
+                            </tr>
+                        )}
+                        {infosCours?.groupes && (
+                            <tr>
+                                <th>👥 Groupe</th>
+                                <td>{infosCours.groupes}</td>
                             </tr>
                         )}
                         {item.type === 'cours' && item.data.lieu && (
