@@ -181,7 +181,7 @@ export type Suggestion = { emoji?: string; aliment: string; nutriment?: string; 
 
 export type LignePlan = { jour: string; repas?: string; idee: string; pour?: string }
 
-export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number; quantite?: string }
+export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number; quantite?: string; equivalent?: string }
 
 export type ReponseNutrition = {
     intent: 'repas' | 'bilan' | 'objectifs' | 'liste' | 'question'

@@ -299,6 +299,7 @@ export default function NutritionCoach() {
                                                         <div>
                                                             <b>{c.aliment}</b>
                                                             {c.quantite && <small>{c.quantite}</small>}
+                                                            {c.equivalent && <small className="nu-equiv">≈ {c.equivalent}</small>}
                                                         </div>
                                                     </td>
                                                     <td>
