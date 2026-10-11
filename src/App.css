@@ -220,7 +220,7 @@
   background: #f7f7f9;
 }
 .day-item-cours {
-  cursor: default;
+  --chip-color: #94a3b8;
 }
 
 .day-item-heure {
@@ -229,6 +229,27 @@
   width: 42px;
   flex-shrink: 0;
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.day-item-heure b {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+.day-item-heure small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+.day-item-corps {
+  flex: 1;
+}
+.day-item-chevron {
+  color: #c7c7cc;
+  font-size: 20px;
+  line-height: 1;
+  padding-right: 2px;
 }
 
 .day-item-barre {
@@ -945,4 +966,360 @@
 }
 .muscu-onglet {
   min-width: 0;
+}
+
+/* Fiche détaillée d'un événement (vue Jour) */
+.ev {
+  border-top: 6px solid var(--ev);
+}
+.ev-tete {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ev-emoji {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 2px solid var(--ev);
+  background: color-mix(in srgb, var(--ev) 12%, transparent);
+}
+.ev-titres {
+  flex: 1;
+  min-width: 0;
+}
+.ev-sous {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--ev);
+}
+.ev .ev-titres h2 {
+  margin: 2px 0 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+.ev-fermer {
+  border: none;
+  background: #f2f2f7;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ev-rebours {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ev-rebours.avenir {
+  background: #eef2ff;
+  color: #3730a3;
+}
+.ev-rebours.encours {
+  background: #dcfce7;
+  color: #166534;
+}
+.ev-rebours.passe {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.ev-infos {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.ev-infos th,
+.ev-infos td {
+  padding: 9px 4px;
+  border-top: 1px solid #eef0f2;
+  text-align: left;
+  vertical-align: top;
+}
+.ev-infos th {
+  width: 38%;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}
+.ev-infos td {
+  font-weight: 600;
+  color: #1c1c1e;
+}
+.ev-infos td::first-letter {
+  text-transform: uppercase;
+}
+.ev-pastille {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.ev-h3 {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+.ev-frise {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.ev-frise li {
+  display: grid;
+  grid-template-columns: 46px 30px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 6px 0;
+  position: relative;
+}
+.ev-frise li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(46px + 8px + 14px);
+  top: 34px;
+  bottom: -6px;
+  width: 2px;
+  background: #e5e7eb;
+}
+.ev-heure {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: right;
+  padding-top: 5px;
+}
+.ev-point {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  position: relative;
+  z-index: 1;
+}
+.ev-frise li.principal .ev-point {
+  border-color: var(--ev);
+  background: color-mix(in srgb, var(--ev) 12%, #fff);
+}
+.ev-frise li.principal .ev-heure {
+  color: #1c1c1e;
+}
+.ev-texte {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c1c1e;
+  padding-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ev-texte small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+.ev-description {
+  background: #f7f7f9;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #374151;
+}
+.ev-description p {
+  margin: 2px 0;
+}
+.ev-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.ev-actions .btn-primary,
+.ev-actions .btn-secondary {
+  flex: 1;
+  margin-top: 0;
+  min-width: 140px;
+}
+.ev-actions .muted {
+  margin: 0;
+  width: 100%;
+  font-size: 12.5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .day-item-heure b,
+  .ev-infos td,
+  .ev-texte,
+  .ev-frise li.principal .ev-heure {
+    color: #f5f5f7;
+  }
+  .day-item-chevron {
+    color: #48484a;
+  }
+  .ev-fermer {
+    background: #2a2a2d;
+    color: #c4c4cc;
+  }
+  .ev-infos th,
+  .ev-infos td {
+    border-color: #2a2a2d;
+  }
+  .ev-infos th,
+  .ev-heure,
+  .ev-texte small,
+  .ev-h3 {
+    color: #9ca3af;
+  }
+  .ev-point {
+    background: #161618;
+    border-color: #2a2a2d;
+  }
+  .ev-frise li.principal .ev-point {
+    background: color-mix(in srgb, var(--ev) 20%, #161618);
+  }
+  .ev-frise li:not(:last-child)::after {
+    background: #2a2a2d;
+  }
+  .ev-description {
+    background: #1f1f22;
+    color: #d1d5db;
+  }
+  .ev-rebours.avenir {
+    background: #24264a;
+    color: #c7d2fe;
+  }
+  .ev-rebours.encours {
+    background: #0f2a1a;
+    color: #86efac;
+  }
+  .ev-rebours.passe {
+    background: #2a2a2d;
+    color: #9ca3af;
+  }
+}
+
+/* Bande de la semaine (vue Jour) : tous les événements, touchables */
+.sem {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin: 4px 0 12px;
+}
+.sem-jour {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px 3px 6px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: #f7f7f9;
+  min-width: 0;
+}
+.sem-jour.choisi {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+.sem-tete {
+  appearance: none;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0;
+  cursor: pointer;
+  color: #6b7280;
+  font-family: inherit;
+}
+.sem-tete span {
+  font-size: 10px;
+  font-weight: 700;
+}
+.sem-tete b {
+  font-size: 15px;
+  color: #1c1c1e;
+}
+.sem-jour.auj .sem-tete b {
+  color: #fff;
+  background: #4f46e5;
+  border-radius: 999px;
+  min-width: 24px;
+  line-height: 24px;
+}
+.sem-ev {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 3px 0;
+  border-radius: 8px;
+  border: 1.5px solid var(--ev);
+  background: color-mix(in srgb, var(--ev) 12%, #fff);
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.1;
+}
+.sem-ev span {
+  font-size: 13px;
+}
+.sem-ev small {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #374151;
+}
+.sem-ev.fait {
+  opacity: 0.5;
+}
+.sem-plus {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sem-jour {
+    background: #1c1c1e;
+  }
+  .sem-jour.choisi {
+    background: #1e1b4b;
+  }
+  .sem-tete b {
+    color: #f5f5f7;
+  }
+  .sem-ev {
+    background: color-mix(in srgb, var(--ev) 18%, #161618);
+  }
+  .sem-ev small {
+    color: #d1d5db;
+  }
 }

@@ -56,22 +56,23 @@ const DOS: [Muscle, Forme][] = [
 ]
 
 function Dessin({ f, fill, opacite }: { f: Forme; fill: string; opacite?: number }) {
-    if (f.t === 'e') return <ellipse cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} fill={fill} opacity={opacite} />
-    if (f.t === 'r') return <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} fill={fill} opacity={opacite} />
-    return <path d={f.d} fill={fill} opacity={opacite} />
+    // fill passe par style pour accepter les variables CSS (thème clair / sombre).
+    if (f.t === 'e') return <ellipse cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} style={{ fill }} opacity={opacite} />
+    if (f.t === 'r') return <rect x={f.x} y={f.y} width={f.w} height={f.h} rx={f.rx} style={{ fill }} opacity={opacite} />
+    return <path d={f.d} style={{ fill }} opacity={opacite} />
 }
 
 function Vue({ zones, muscles, couleur, coeur }: { zones: [Muscle, Forme][]; muscles: Muscle[]; couleur: string; coeur: boolean }) {
     return (
         <svg viewBox="0 0 120 208" className="bodymap-vue" aria-hidden="true">
             {CORPS.map((f, i) => (
-                <Dessin key={`c${i}`} f={f} fill="rgba(255,255,255,0.10)" />
+                <Dessin key={`c${i}`} f={f} fill="var(--mu-corps)" />
             ))}
             {zones.map(([m, f], i) => (
                 <Dessin
                     key={`z${i}`}
                     f={f}
-                    fill={muscles.includes(m) ? couleur : 'rgba(255,255,255,0.10)'}
+                    fill={muscles.includes(m) ? couleur : 'var(--mu-corps)'}
                     opacite={muscles.includes(m) ? 0.95 : 1}
                 />
             ))}

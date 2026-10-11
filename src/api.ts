@@ -258,3 +258,29 @@ export async function cocherListe(id: string, fait: number): Promise<ItemListe[]
     const r = await lireJson<{ items: ItemListe[] }>(res, 'Impossible de mettre à jour la liste', { items: [] })
     return Array.isArray(r.items) ? r.items : []
 }
+
+// Suivi muscu synchronisé (charges et historique des séances).
+export type Ressenti = 'dur' | 'bien' | 'facile'
+export type ExoFait = { id: string; faites: number; total: number; kg: number | null; ressenti: Ressenti }
+export type SeanceFaite = { id: string; code: 'A' | 'B' | 'C' | 'D'; date: string; exercices: ExoFait[] }
+export type EtatMuscu = { charges: Record<string, number>; seances: SeanceFaite[] }
+
+export type DemandeMuscu =
+    | { action: 'etat' }
+    | { action: 'charge'; id: string; kg: number | null }
+    | { action: 'seance'; code: string; date: string; exercices: ExoFait[]; charges: Record<string, number | null> }
+    | { action: 'supprimer'; id: string }
+    | { action: 'import'; charges: Record<string, number | null>; seances: { code: string; date: string; exercices: ExoFait[] }[] }
+
+export async function envoyerMuscu(demande: DemandeMuscu): Promise<EtatMuscu> {
+    const res = await fetch(`${BASE_URL}/muscu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(demande),
+    })
+    const r = await lireJson<EtatMuscu>(res, 'Impossible de synchroniser le suivi muscu', { charges: {}, seances: [] })
+    return {
+        charges: r && typeof r.charges === 'object' && r.charges ? r.charges : {},
+        seances: Array.isArray(r?.seances) ? r.seances : [],
+    }
+}

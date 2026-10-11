@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     creerTache,
     getCategories,
-    getCours,
-    getTaches,
+    getCoursEntre,
+    getTachesEntre,
     modifierTache,
     supprimerTache,
     type Categorie,
@@ -12,11 +12,11 @@ import {
     type NouvelleTache,
     type Tache,
 } from './api'
+import EventDetail, { type Item } from './EventDetail'
+import { duree } from './temps'
+import { seanceParCode } from './programme'
+import { MARQUEUR, codeDeTache, debutDeSemaine } from './sport'
 import TaskForm from './TaskForm'
-
-type Item =
-    | { type: 'tache'; data: Tache; debut: Date | null; fin: Date | null }
-    | { type: 'cours'; data: Cours; debut: Date; fin: Date }
 
 const heureFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
 const dateLabelFormat = new Intl.DateTimeFormat('fr-FR', {
@@ -24,6 +24,24 @@ const dateLabelFormat = new Intl.DateTimeFormat('fr-FR', {
     day: 'numeric',
     month: 'long',
 })
+
+const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+const heureCourte = (d: Date) => `${d.getHours()}h${d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''}`
+
+function memeJour(a: Date, b: Date): boolean {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+// Couleur et emoji d'un événement dans la bande de la semaine.
+function visuel(it: Item): { couleur: string; emoji: string } {
+    if (it.type === 'cours') return { couleur: '#64748b', emoji: '📚' }
+    const code = it.data.description?.includes(MARQUEUR) ? codeDeTache(it.data) : null
+    if (code) {
+        const s = seanceParCode(code)
+        return { couleur: s.couleur, emoji: s.emoji }
+    }
+    return { couleur: it.data.categorie_couleur || '#4f46e5', emoji: '📌' }
+}
 
 function estAujourdhui(date: Date): boolean {
     const auj = new Date()
@@ -34,7 +52,7 @@ function estAujourdhui(date: Date): boolean {
     )
 }
 
-export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
+export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?: number; onVoirSeance?: () => void }) {
     const [date, setDate] = useState(() => new Date())
     const [taches, setTaches] = useState<Tache[]>([])
     const [cours, setCours] = useState<Cours[]>([])
@@ -43,12 +61,20 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
     const [erreur, setErreur] = useState<string | null>(null)
     const [formOuvert, setFormOuvert] = useState(false)
     const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null)
+    const [detail, setDetail] = useState<{ item: Item; maintenant: number } | null>(null)
+
+    // On charge toute la semaine du jour affiché : la bande « semaine » et la liste du jour s'en servent.
+    const cleSemaine = debutDeSemaine(date).toDateString()
+    const lundi = useMemo(() => new Date(cleSemaine), [cleSemaine])
 
     async function recharger() {
         setChargement(true)
         setErreur(null)
         try {
-            const [t, c, cat] = await Promise.all([getTaches(date), getCours(date), getCategories()])
+            const dimanche = new Date(lundi)
+            dimanche.setDate(lundi.getDate() + 6)
+            dimanche.setHours(23, 59, 59, 999)
+            const [t, c, cat] = await Promise.all([getTachesEntre(lundi, dimanche), getCoursEntre(lundi, dimanche), getCategories()])
             setTaches(t)
             setCours(c)
             setCategories(cat)
@@ -62,7 +88,7 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
     useEffect(() => {
         recharger()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [date, rafraichir])
+    }, [lundi, rafraichir])
 
     function changerJour(delta: number) {
         setDate((d) => {
@@ -72,7 +98,7 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
         })
     }
 
-    const items: Item[] = [
+    const toutes: Item[] = [
         ...taches.map(
             (t): Item => ({
                 type: 'tache',
@@ -89,6 +115,17 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
         const tb = b.debut ? b.debut.getTime() : Infinity
         return ta - tb
     })
+    const itemsDe = (jour: Date) => toutes.filter((i) => i.debut && memeJour(i.debut, jour))
+    const items = itemsDe(date)
+    const semaine = Array.from({ length: 7 }, (_, i) => {
+        const jour = new Date(lundi)
+        jour.setDate(lundi.getDate() + i)
+        return { jour, items: itemsDe(jour) }
+    })
+
+    function ouvrirDetail(item: Item) {
+        setDetail({ item, maintenant: Date.now() })
+    }
 
     async function handleEnregistrer(data: NouvelleTache | ModificationTache) {
         if ('id' in data) {
@@ -114,8 +151,15 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
     }
 
     function ouvrirEdition(t: Tache) {
+        setDetail(null)
         setTacheEnEdition(t)
         setFormOuvert(true)
+    }
+
+    async function basculerFait(t: Tache) {
+        setDetail(null)
+        await modifierTache({ id: t.id, statut: t.statut === 'fait' ? 'a_faire' : 'fait' })
+        await recharger()
     }
 
     return (
@@ -137,6 +181,43 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
                 </button>
             </div>
 
+            <div className="sem" role="list" aria-label="Semaine">
+                {semaine.map(({ jour, items: duJour }) => {
+                    const choisi = memeJour(jour, date)
+                    return (
+                        <div key={jour.toDateString()} className={`sem-jour ${choisi ? 'choisi' : ''} ${estAujourdhui(jour) ? 'auj' : ''}`} role="listitem">
+                            <button className="sem-tete" onClick={() => setDate(new Date(jour))} aria-label={dateLabelFormat.format(jour)}>
+                                <span>{JOURS[(jour.getDay() + 6) % 7]}</span>
+                                <b>{jour.getDate()}</b>
+                            </button>
+                            {duJour.slice(0, 4).map((it) => {
+                                const v = visuel(it)
+                                return (
+                                    <button
+                                        key={`${it.type}-${it.data.id}`}
+                                        className={`sem-ev ${it.type === 'tache' && it.data.statut === 'fait' ? 'fait' : ''}`}
+                                        style={{ '--ev': v.couleur } as React.CSSProperties}
+                                        onClick={() => {
+                                            setDate(new Date(jour))
+                                            ouvrirDetail(it)
+                                        }}
+                                        title={it.data.titre}
+                                    >
+                                        <span>{v.emoji}</span>
+                                        <small>{it.debut ? heureCourte(it.debut) : ''}</small>
+                                    </button>
+                                )
+                            })}
+                            {duJour.length > 4 && (
+                                <button className="sem-plus" onClick={() => setDate(new Date(jour))}>
+                                    +{duJour.length - 4}
+                                </button>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+
             {chargement && <p className="muted">Chargement…</p>}
             {erreur && <p className="form-error">{erreur}</p>}
 
@@ -155,10 +236,11 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
                                     ? ({ '--chip-color': item.data.categorie_couleur } as React.CSSProperties)
                                     : undefined
                             }
-                            onClick={() => item.type === 'tache' && ouvrirEdition(item.data)}
+                            onClick={() => ouvrirDetail(item)}
                         >
                             <span className="day-item-heure">
-                                {item.debut ? heureFormat.format(item.debut) : '—'}
+                                <b>{item.debut ? heureFormat.format(item.debut) : '—'}</b>
+                                {item.fin && <small>{heureFormat.format(item.fin)}</small>}
                             </span>
                             <span className="day-item-barre" />
                             <span className="day-item-corps">
@@ -166,12 +248,19 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
                                 {item.type === 'tache' && item.data.categorie_nom && (
                                     <span className="day-item-categorie">{item.data.categorie_nom}</span>
                                 )}
-                                {item.type === 'cours' && item.data.lieu && (
-                                    <span className="day-item-categorie">{item.data.lieu}</span>
+                                {item.type === 'cours' && (
+                                    <span className="day-item-categorie">
+                                        {[item.data.lieu && `📍 ${item.data.lieu}`, duree((item.fin.getTime() - item.debut.getTime()) / 60000)]
+                                            .filter(Boolean)
+                                            .join(' · ')}
+                                    </span>
                                 )}
                                 {item.type === 'tache' && item.data.statut === 'fait' && (
                                     <span className="day-item-fait">✓ fait</span>
                                 )}
+                            </span>
+                            <span className="day-item-chevron" aria-hidden>
+                                ›
                             </span>
                         </li>
                     ))}
@@ -181,6 +270,25 @@ export default function DayView({ rafraichir = 0 }: { rafraichir?: number }) {
             <button className="btn-primary" onClick={ouvrirCreation}>
                 + Ajouter une tâche
             </button>
+
+            {detail && (
+                <EventDetail
+                    item={detail.item}
+                    jour={detail.item.debut ? itemsDe(detail.item.debut) : items}
+                    maintenant={detail.maintenant}
+                    onFermer={() => setDetail(null)}
+                    onModifier={ouvrirEdition}
+                    onBasculerFait={basculerFait}
+                    onVoirSeance={
+                        onVoirSeance
+                            ? () => {
+                                  setDetail(null)
+                                  onVoirSeance()
+                              }
+                            : undefined
+                    }
+                />
+            )}
 
             {formOuvert && (
                 <TaskForm

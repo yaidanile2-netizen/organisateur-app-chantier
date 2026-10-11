@@ -80,7 +80,7 @@ function App() {
             <main className="content">
                 {onglet === 'agenda' && (
                     <>
-                        <DayView rafraichir={version} />
+                        <DayView rafraichir={version} onVoirSeance={() => choisir('muscu')} />
 
                         <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 

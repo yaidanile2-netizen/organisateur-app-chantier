@@ -1,24 +1,73 @@
-/* Onglet Muscu — thème sombre inspiré du site « Programme élastiques » */
+/* Onglet Muscu — inspiré du site « Programme élastiques » */
+
+/* Thème de l'onglet Muscu : clair par défaut, sombre quand le téléphone est en mode sombre. */
+.page-muscu {
+  --mu-bg: #f2f3f8;
+  --mu-surface: #ffffff;
+  --mu-ink: #1e2440;
+  --mu-creux: #cbd5e1;
+  --mu-txt: #141a33;
+  --mu-txt2: #4b5470;
+  --mu-txt3: #646c88;
+  --mu-txt4: #9aa1b8;
+  --mu-accent: #0284c7;
+  --mu-ok: #059669;
+  --mu-warn: #c2410c;
+  --mu-barre: rgba(255, 255, 255, 0.94);
+  --mu-flottant: rgba(255, 255, 255, 0.97);
+  --mu-corps: rgba(30, 36, 64, 0.1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  .page-muscu {
+    --mu-bg: #07080f;
+    --mu-surface: #0d0f1a;
+    --mu-ink: #ffffff;
+    --mu-creux: #000000;
+    --mu-txt: #eef1fb;
+    --mu-txt2: #a7b0c8;
+    --mu-txt3: #8a93ad;
+    --mu-txt4: #6a7390;
+    --mu-accent: #4cc9ff;
+    --mu-ok: #00e07a;
+    --mu-warn: #ffb020;
+    --mu-barre: rgba(10, 11, 20, 0.92);
+    --mu-flottant: rgba(15, 17, 30, 0.96);
+    --mu-corps: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
+  }
+}
+/* En clair : cartes blanches avec une ombre légère, et couleurs de séance un peu foncées pour rester lisibles sur fond blanc. */
+@media (prefers-color-scheme: light) {
+  .page-muscu .mu-carte {
+    background: var(--mu-surface);
+    box-shadow: 0 1px 3px rgba(20, 26, 51, 0.08);
+  }
+  .page-muscu :is(.mu-prochaine-label, .mu-pastille, .mu-badge, .mu-cs-code, .mu-cible, .mu-btn, .mu-bilan h3, .mu-pct) {
+    color: color-mix(in srgb, var(--c) 72%, #000);
+  }
+}
+
 
 .page-muscu {
-  background: #07080f !important;
-  color: #eef1fb !important;
+  background: var(--mu-bg) !important;
+  color: var(--mu-txt) !important;
 }
 .page-muscu .topbar,
 .page-muscu .tabbar {
-  background: rgba(10, 11, 20, 0.92);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #eef1fb;
+  background: var(--mu-barre);
+  border-color: color-mix(in srgb, var(--mu-ink) 8%, transparent);
+  color: var(--mu-txt);
 }
 .page-muscu .today {
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .page-muscu .tabbar-bouton {
-  color: #8a93ad;
+  color: var(--mu-txt3);
 }
 .page-muscu .tabbar-bouton.actif {
-  background: rgba(76, 201, 255, 0.14);
-  color: #4cc9ff;
+  background: color-mix(in srgb, var(--mu-accent) 14%, transparent);
+  color: var(--mu-accent);
 }
 
 .mu {
@@ -26,7 +75,7 @@
   flex-direction: column;
   gap: 14px;
   font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-  color: #eef1fb;
+  color: var(--mu-txt);
 }
 .mu button {
   font-family: inherit;
@@ -45,12 +94,12 @@
   letter-spacing: 3px;
   line-height: 0.9;
   margin: 0;
-  color: #4cc9ff;
+  color: var(--mu-accent);
 }
 .mu-sous {
   margin: 4px 0 0;
   font-size: 12px;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
   letter-spacing: 0.5px;
 }
 .mu-prochaine {
@@ -59,7 +108,7 @@
   gap: 3px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--mu-ink) 5%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
   box-shadow: 0 0 24px color-mix(in srgb, var(--c) 25%, transparent);
 }
@@ -76,8 +125,8 @@
 
 /* Cartes génériques */
 .mu-carte {
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--mu-ink) 4.5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 8%, transparent);
   border-radius: 18px;
   padding: 14px;
 }
@@ -87,7 +136,7 @@
   letter-spacing: 2px;
   margin: 0;
   font-weight: 400;
-  color: #eef1fb;
+  color: var(--mu-txt);
 }
 .mu-entete-ligne {
   display: flex;
@@ -99,9 +148,9 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #eef1fb;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 12%, transparent);
+  background: color-mix(in srgb, var(--mu-ink) 6%, transparent);
+  color: var(--mu-txt);
   font-size: 18px;
   cursor: pointer;
 }
@@ -109,14 +158,14 @@
   opacity: 0.3;
 }
 .mu-gris {
-  color: #8a93ad;
+  color: var(--mu-txt3);
   font-size: 13px;
   margin: 10px 0 0;
 }
 .mu-message {
   margin: 10px 0 0;
   font-size: 13px;
-  color: #00ff88;
+  color: var(--mu-ok);
 }
 .mu-erreur {
   color: #ff6b81;
@@ -137,17 +186,17 @@
   gap: 4px;
   padding: 8px 2px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--mu-ink) 3%, transparent);
   min-height: 92px;
 }
 .mu-jour.auj {
-  outline: 2px solid #4cc9ff;
-  background: rgba(76, 201, 255, 0.08);
+  outline: 2px solid var(--mu-accent);
+  background: color-mix(in srgb, var(--mu-accent) 8%, transparent);
 }
 .mu-jour-lettre {
   font-size: 11px;
   font-weight: 700;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .mu-jour-date {
   font-family: 'Bebas Neue', sans-serif;
@@ -155,7 +204,7 @@
   line-height: 1;
 }
 .mu-jour-vide {
-  color: #3d4459;
+  color: var(--mu-txt4);
   font-size: 22px;
   line-height: 1;
 }
@@ -164,7 +213,7 @@
   height: 38px;
   border-radius: 50%;
   border: 2px solid var(--c);
-  background: color-mix(in srgb, var(--c) 14%, #0d0f1a);
+  background: color-mix(in srgb, var(--c) 14%, var(--mu-surface));
   color: var(--c);
   font-size: 15px;
   display: flex;
@@ -181,9 +230,9 @@
   margin-top: 1px;
 }
 .mu-pastille.fait {
-  border-color: #00e07a;
-  color: #00e07a;
-  background: rgba(0, 224, 122, 0.12);
+  border-color: var(--mu-ok);
+  color: var(--mu-ok);
+  background: color-mix(in srgb, var(--mu-ok) 12%, transparent);
 }
 
 /* Tableaux */
@@ -198,13 +247,13 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #6a7390;
+  color: var(--mu-txt4);
   padding: 0 6px 6px;
   text-transform: uppercase;
 }
 .mu-table td {
   padding: 9px 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid color-mix(in srgb, var(--mu-ink) 7%, transparent);
   vertical-align: middle;
   line-height: 1.35;
 }
@@ -213,7 +262,7 @@
 }
 .mu-droite {
   text-align: right;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .mu-badge {
   display: inline-flex;
@@ -233,9 +282,9 @@
   white-space: nowrap;
 }
 .mu-mini {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  color: #eef1fb;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 14%, transparent);
+  background: color-mix(in srgb, var(--mu-ink) 7%, transparent);
+  color: var(--mu-txt);
   border-radius: 9px;
   padding: 6px 8px;
   font-size: 12px;
@@ -244,12 +293,12 @@
   margin-left: 4px;
 }
 .mu-mini-ok {
-  background: rgba(0, 255, 136, 0.15);
-  border-color: rgba(0, 255, 136, 0.4);
-  color: #00ff88;
+  background: color-mix(in srgb, var(--mu-ok) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mu-ok) 40%, transparent);
+  color: var(--mu-ok);
 }
 .mu-ok {
-  color: #00ff88;
+  color: var(--mu-ok);
   font-weight: 700;
   font-size: 12px;
 }
@@ -260,15 +309,15 @@
   padding-top: 0;
 }
 .mu-dep {
-  background: rgba(76, 201, 255, 0.07);
-  border: 1px solid rgba(76, 201, 255, 0.25);
+  background: color-mix(in srgb, var(--mu-accent) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mu-accent) 25%, transparent);
   border-radius: 14px;
   padding: 10px;
 }
 .mu-dep-titre {
   margin: 0 0 8px;
   font-size: 12px;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .mu-dep-grille {
   display: grid;
@@ -282,16 +331,16 @@
   gap: 2px;
   padding: 8px 4px;
   border-radius: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: #eef1fb;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 12%, transparent);
+  background: color-mix(in srgb, var(--mu-ink) 6%, transparent);
+  color: var(--mu-txt);
   cursor: pointer;
   font-size: 11px;
   text-transform: capitalize;
 }
 .mu-dep-jour b {
   font-size: 15px;
-  color: #4cc9ff;
+  color: var(--mu-accent);
 }
 .mu-dep-jour:disabled {
   opacity: 0.3;
@@ -304,17 +353,16 @@
   flex-wrap: wrap;
   margin-top: 10px;
   font-size: 12px;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .mu-dep-manuel input {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #eef1fb;
+  background: color-mix(in srgb, var(--mu-creux) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  color: var(--mu-txt);
   border-radius: 8px;
   padding: 6px 8px;
   font-family: inherit;
   font-size: 13px;
-  color-scheme: dark;
 }
 
 /* Cartes des 4 séances */
@@ -332,8 +380,8 @@
   padding: 14px 13px 12px;
   border-radius: 18px;
   border: 2px solid color-mix(in srgb, var(--c) 55%, transparent);
-  background: #0d0f1a;
-  color: #eef1fb;
+  background: var(--mu-surface);
+  color: var(--mu-txt);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -342,7 +390,7 @@
 }
 .mu-carte-seance.actif {
   border-color: var(--c);
-  background: color-mix(in srgb, var(--c) 12%, #0d0f1a);
+  background: color-mix(in srgb, var(--c) 12%, var(--mu-surface));
   box-shadow: 0 0 18px color-mix(in srgb, var(--c) 35%, transparent);
 }
 .mu-cs-emoji {
@@ -376,7 +424,7 @@
 .mu-detail {
   border-radius: 20px;
   border: 2px solid var(--c);
-  background: #0d0f1a;
+  background: var(--mu-surface);
   overflow: hidden;
   padding-bottom: 14px;
 }
@@ -419,7 +467,7 @@
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: conic-gradient(var(--c) var(--p), rgba(255, 255, 255, 0.12) 0);
+  background: conic-gradient(var(--c) var(--p), color-mix(in srgb, var(--mu-ink) 12%, transparent) 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -428,7 +476,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #0d0f1a;
+  background: var(--mu-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -487,7 +535,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--c) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
-  color: #eef1fb;
+  color: var(--mu-txt);
 }
 
 .mu-etape {
@@ -496,7 +544,7 @@
   margin: 12px 14px 0;
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--mu-ink) 4%, transparent);
 }
 .mu-etape b {
   font-size: 12px;
@@ -505,7 +553,7 @@
 .mu-etape p {
   margin: 3px 0 0;
   font-size: 13px;
-  color: #c3cadc;
+  color: var(--mu-txt2);
 }
 .mu-etape-num {
   flex-shrink: 0;
@@ -544,20 +592,20 @@
   letter-spacing: 0.5px;
   padding: 3px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #c3cadc;
+  background: color-mix(in srgb, var(--mu-ink) 8%, transparent);
+  color: var(--mu-txt2);
 }
 .mu-bloc-info {
   margin: 6px 0 0 36px;
   font-size: 11px;
-  color: #8a93ad;
+  color: var(--mu-txt3);
 }
 
 .mu-exo {
   margin: 8px 0 0;
   padding: 11px 12px 9px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--mu-ink) 5%, transparent);
   border-left: 4px solid var(--c);
 }
 .mu-exo-haut {
@@ -588,7 +636,7 @@
 }
 .mu-exo-nom span {
   font-size: 11px;
-  color: #8a93ad;
+  color: var(--mu-txt3);
 }
 .mu-cible {
   font-family: 'Bebas Neue', sans-serif;
@@ -618,9 +666,9 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.25);
-  color: #a7b0c8;
+  border: 2px solid color-mix(in srgb, var(--mu-ink) 18%, transparent);
+  background: color-mix(in srgb, var(--mu-creux) 25%, transparent);
+  color: var(--mu-txt2);
   font-weight: 800;
   font-size: 15px;
   cursor: pointer;
@@ -640,24 +688,24 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #8a93ad;
+  color: var(--mu-txt3);
 }
 .mu-charge button {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.07);
-  color: #eef1fb;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  background: color-mix(in srgb, var(--mu-ink) 7%, transparent);
+  color: var(--mu-txt);
   font-size: 17px;
   cursor: pointer;
 }
 .mu-charge input {
   width: 56px;
   text-align: center;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #eef1fb;
+  background: color-mix(in srgb, var(--mu-creux) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  color: var(--mu-txt);
   border-radius: 9px;
   padding: 6px 4px;
   font-family: 'Bebas Neue', sans-serif;
@@ -668,7 +716,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: #8a93ad;
+  color: var(--mu-txt3);
   font-size: 11px;
   cursor: pointer;
   text-align: left;
@@ -676,7 +724,7 @@
 .mu-conseils {
   margin-top: 6px;
   font-size: 12.5px;
-  color: #c3cadc;
+  color: var(--mu-txt2);
   line-height: 1.5;
 }
 .mu-conseils ul {
@@ -690,7 +738,7 @@
 .mu-progression {
   margin: 14px 14px 0;
   font-size: 12px;
-  color: #a7b0c8;
+  color: var(--mu-txt2);
 }
 .mu-boutons {
   display: flex;
@@ -713,9 +761,9 @@
   background: color-mix(in srgb, var(--c) 14%, transparent);
 }
 .mu-btn-sec {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: #eef1fb;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  background: color-mix(in srgb, var(--mu-ink) 6%, transparent);
+  color: var(--mu-txt);
 }
 
 /* Minuteur de repos collant */
@@ -727,8 +775,8 @@
   max-width: 616px;
   margin: 0 auto;
   border-radius: 16px;
-  background: rgba(15, 17, 30, 0.96);
-  border: 1px solid rgba(76, 201, 255, 0.5);
+  background: var(--mu-flottant);
+  border: 1px solid color-mix(in srgb, var(--mu-accent) 50%, transparent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
@@ -742,7 +790,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  background: rgba(76, 201, 255, 0.16);
+  background: color-mix(in srgb, var(--mu-accent) 16%, transparent);
   transition: width 1s linear;
 }
 .mu-repos-texte {
@@ -750,15 +798,298 @@
   font-family: 'Bebas Neue', sans-serif;
   font-size: 26px;
   letter-spacing: 2px;
-  color: #4cc9ff;
+  color: var(--mu-accent);
 }
 .mu-repos button {
   position: relative;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #eef1fb;
+  background: color-mix(in srgb, var(--mu-ink) 10%, transparent);
+  color: var(--mu-txt);
   border-radius: 10px;
   padding: 8px 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* Suivi synchronisé : dernière fois + conseil de progression */
+.mu-passe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--mu-txt2);
+}
+.mu-conseil {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  font-weight: 700;
+  font-size: 12px;
+}
+.mu-conseil.monte {
+  color: var(--mu-ok);
+  background: color-mix(in srgb, var(--mu-ok) 10%, transparent);
+}
+.mu-conseil.descend {
+  color: var(--mu-warn);
+  background: color-mix(in srgb, var(--mu-warn) 10%, transparent);
+}
+.mu-conseil.garde {
+  color: var(--mu-txt3);
+  padding-right: 10px;
+}
+.mu-conseil button {
+  border: none;
+  border-radius: 999px;
+  background: var(--mu-ok);
+  color: #07080f;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.mu-conseil.descend button {
+  background: var(--mu-warn);
+}
+
+/* Bilan de fin de séance */
+.mu-bilan {
+  margin: 14px 14px 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 2px solid var(--c);
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+}
+.mu-bilan h3 {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--c);
+}
+.mu-bilan .mu-gris {
+  margin-top: 4px;
+}
+.mu-bilan .mu-boutons {
+  margin: 14px 0 0;
+}
+.mu-table-bilan td b {
+  display: block;
+  font-size: 13px;
+}
+.mu-table-bilan td small {
+  color: var(--mu-txt3);
+  font-size: 11.5px;
+}
+.mu-ressenti {
+  display: inline-flex;
+  gap: 5px;
+}
+.mu-ressenti button {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--mu-ink) 12%, transparent);
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.45;
+  padding: 0;
+}
+.mu-ressenti button.actif {
+  opacity: 1;
+}
+.mu-ressenti button.dur.actif {
+  border-color: #ff5a36;
+  background: rgba(255, 90, 54, 0.15);
+}
+.mu-ressenti button.bien.actif {
+  border-color: var(--mu-accent);
+  background: color-mix(in srgb, var(--mu-accent) 15%, transparent);
+}
+.mu-ressenti button.facile.actif {
+  border-color: var(--mu-ok);
+  background: color-mix(in srgb, var(--mu-ok) 15%, transparent);
+}
+
+/* Progression */
+.mu-synchro {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.mu-synchro.ok {
+  color: var(--mu-ok);
+}
+.mu-synchro.chargement {
+  color: var(--mu-txt3);
+}
+.mu-synchro.hors-ligne {
+  color: var(--mu-warn);
+}
+.mu-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mu-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--mu-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--mu-accent) 6%, transparent);
+}
+.mu-stat b {
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--mu-accent);
+}
+.mu-stat span {
+  font-size: 10.5px;
+  color: var(--mu-txt2);
+  text-align: center;
+}
+.mu-table-prog td b {
+  font-size: 15px;
+}
+.mu-prog-nom {
+  font-size: 12.5px !important;
+  font-weight: 700;
+}
+.mu-gris-cell {
+  color: var(--mu-txt3);
+}
+.mu-gain {
+  color: var(--mu-ok);
+  font-weight: 700;
+}
+.mu-courbe {
+  display: block;
+}
+.mu-courbe-vide {
+  color: var(--mu-txt4);
+}
+.mu-ressentis {
+  display: block;
+  color: var(--mu-txt3);
+  font-size: 11px;
+  margin-top: 2px;
+}
+.mu-pct {
+  display: inline-block;
+  min-width: 46px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--c);
+  color: var(--c);
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 22%, transparent) var(--p), transparent var(--p));
+}
+.mu-suppr {
+  border: none;
+  background: transparent;
+  color: var(--mu-txt4);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Charges conseillées selon le profil */
+.mu-reco {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--mu-accent);
+  background: color-mix(in srgb, var(--mu-accent) 8%, transparent);
+  color: var(--mu-accent);
+  font-weight: 700;
+  font-size: 12px;
+}
+.mu-reco button {
+  border: none;
+  border-radius: 999px;
+  background: var(--mu-accent);
+  color: #07080f;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.mu-reco-texte {
+  color: var(--mu-txt2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Profil */
+.mu-profil-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.mu-profil-tuiles div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--mu-accent) 35%, transparent);
+}
+.mu-profil-tuiles b {
+  font-size: 15px;
+  color: var(--mu-txt);
+  white-space: nowrap;
+}
+.mu-profil-tuiles span {
+  font-size: 10.5px;
+  color: var(--mu-txt3);
+  text-align: center;
+}
+.mu-profil-calculs td b {
+  color: var(--mu-txt);
+}
+.mu-profil-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mu-profil-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--mu-txt2);
+}
+.mu-profil-form input,
+.mu-profil-form select {
+  background: var(--mu-surface);
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  border-radius: 10px;
+  color: var(--mu-txt);
+  padding: 10px;
+  font-size: 15px;
+  font-family: inherit;
+}
+.mu-profil-large {
+  grid-column: 1 / -1;
 }

@@ -1,6 +1,22 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import './muscu.css'
-import { getCoursEntre, getTachesEntre, modifierTache, type Tache } from './api'
+import { envoyerMuscu, getCoursEntre, getTachesEntre, modifierTache, type EtatMuscu, type ExoFait, type Ressenti, type SeanceFaite, type Tache } from './api'
+import ProfilMuscu from './ProfilMuscu'
+import ProgressionMuscu from './ProgressionMuscu'
+import { enregistrerProfil, lireProfil, recommandation, type Profil } from './profil'
+import {
+    PAS_KG,
+    RESSENTIS,
+    avecCharge,
+    conseilPour,
+    ecrireCache,
+    fmtKg,
+    lireCache,
+    mettreEnAttente,
+    passesDe,
+    synchroniser,
+    versKg,
+} from './suiviMuscu'
 import BodyMap from './BodyMap'
 import {
     MATERIEL,
@@ -24,9 +40,9 @@ import {
     type Creneau,
 } from './sport'
 
-type Historique = { date: string; code: CodeSeance }[]
+const enTexte = (c: Record<string, number>) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, String(v)]))
 
-// Suivi personnel (charges, séries cochées, historique) gardé sur l'appareil.
+// Séries cochées de la séance en cours : gardées sur l'appareil.
 function lire<T>(cle: string, defaut: T): T {
     try {
         const brut = localStorage.getItem(cle)
@@ -93,9 +109,13 @@ export default function MuscuView() {
     const [chargement, setChargement] = useState(true)
     const [code, setCode] = useState<CodeSeance>('A')
     const [deplacement, setDeplacement] = useState<Deplacement | null>(null)
-    const [charges, setCharges] = useState<Record<string, string>>(() => lire('muscu.charges', {}))
+    const [suivi, setSuivi] = useState<EtatMuscu>(() => lireCache())
+    const [synchro, setSynchro] = useState<'chargement' | 'ok' | 'hors-ligne'>('chargement')
+    const [charges, setCharges] = useState<Record<string, string>>(() => enTexte(lireCache().charges))
     const [series, setSeries] = useState<Record<string, boolean[]>>(() => lire('muscu.series', {}))
-    const [historique, setHistorique] = useState<Historique>(() => lire('muscu.historique', []))
+    const [bilan, setBilan] = useState<ExoFait[] | null>(null)
+    const [profil, setProfil] = useState<Profil>(() => lireProfil())
+    const minuteurs = useRef<Record<string, number>>({})
     const [conseils, setConseils] = useState<string | null>(null)
     const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
     const [message, setMessage] = useState<string | null>(null)
@@ -132,6 +152,16 @@ export default function MuscuView() {
     }
 
     useEffect(() => {
+        synchroniser()
+            .then((etat) => {
+                setSuivi(etat)
+                setCharges(enTexte(etat.charges))
+                setSynchro('ok')
+            })
+            .catch(() => setSynchro('hors-ligne'))
+    }, [])
+
+    useEffect(() => {
         chargerSemaine(decalage === 0)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [lundi])
@@ -153,9 +183,24 @@ export default function MuscuView() {
     const prochaine = taches.find((x) => x.statut !== 'fait' && new Date(x.date_fin || x.date_debut || 0) >= new Date())
 
     function changerCharge(id: string, valeur: string) {
-        const c = { ...charges, [id]: valeur }
-        setCharges(c)
-        ecrire('muscu.charges', c)
+        setCharges((c) => ({ ...c, [id]: valeur }))
+        const kg = versKg(valeur)
+        const nouvelles = { ...suivi.charges }
+        if (kg === null) delete nouvelles[id]
+        else nouvelles[id] = kg
+        const etat = { ...suivi, charges: nouvelles }
+        setSuivi(etat)
+        ecrireCache(etat)
+        // Envoi groupé : on attend que la valeur arrête de bouger.
+        window.clearTimeout(minuteurs.current[id])
+        minuteurs.current[id] = window.setTimeout(() => {
+            envoyerMuscu({ action: 'charge', id, kg })
+                .then(() => setSynchro('ok'))
+                .catch(() => {
+                    mettreEnAttente({ charges: { [id]: kg } })
+                    setSynchro('hors-ligne')
+                })
+        }, 900)
     }
 
     function ajusterCharge(id: string, delta: number) {
@@ -185,15 +230,45 @@ export default function MuscuView() {
         }
     }
 
-    async function terminer() {
-        const h = [{ date: new Date().toISOString(), code }, ...historique].slice(0, 30)
-        setHistorique(h)
-        ecrire('muscu.historique', h)
+    function terminer() {
+        setBilan(
+            exercices.flatMap((e) => {
+                const faitesExo = (series[e.id] || []).filter(Boolean).length
+                if (faitesExo === 0) return []
+                const ressenti: Ressenti = faitesExo >= e.series ? 'bien' : 'dur'
+                return [{ id: e.id, faites: faitesExo, total: e.series, kg: avecCharge(e) ? versKg(charges[e.id]) : null, ressenti }]
+            })
+        )
+        setRepos(null)
+        window.setTimeout(() => document.querySelector('.mu-bilan')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+    }
+
+    function noter(id: string, ressenti: Ressenti) {
+        setBilan((b) => (b ? b.map((e) => (e.id === id ? { ...e, ressenti } : e)) : b))
+    }
+
+    async function enregistrerBilan() {
+        if (!bilan) return
+        const date = new Date().toISOString()
+        const exos = bilan
+        const locale: SeanceFaite = { id: `local-${Date.now()}`, code, date, exercices: exos }
+        const provisoire = { ...suivi, seances: [locale, ...suivi.seances] }
+        setSuivi(provisoire)
+        ecrireCache(provisoire)
+        setBilan(null)
+        try {
+            const etat = await envoyerMuscu({ action: 'seance', code, date, exercices: exos, charges: {} })
+            setSuivi(etat)
+            ecrireCache(etat)
+            setSynchro('ok')
+        } catch {
+            mettreEnAttente({ seances: [{ code, date, exercices: exos }] })
+            setSynchro('hors-ligne')
+        }
         const s = { ...series }
         for (const e of exercices) delete s[e.id]
         setSeries(s)
         ecrire('muscu.series', s)
-        setRepos(null)
         const duJour = taches.find(
             (t) => t.date_debut && memeJour(new Date(t.date_debut), new Date()) && codeDeTache(t) === code && t.statut !== 'fait'
         )
@@ -202,6 +277,17 @@ export default function MuscuView() {
             setMessage(`Séance ${code} terminée et cochée dans ton agenda. Bravo 💪`)
         } else {
             setMessage(`Séance ${code} terminée. Bravo 💪`)
+        }
+    }
+
+    async function supprimerSeance(h: SeanceFaite) {
+        if (!window.confirm(`Retirer la séance ${h.code} du ${new Date(h.date).toLocaleDateString('fr-FR')} ?`)) return
+        try {
+            const etat = await envoyerMuscu({ action: 'supprimer', id: h.id })
+            setSuivi(etat)
+            ecrireCache(etat)
+        } catch {
+            setMessage('Impossible de retirer cette séance pour l’instant.')
         }
     }
 
@@ -508,6 +594,10 @@ export default function MuscuView() {
                         {bloc.exercices.map((e) => {
                             const faitesExo = series[e.id] || []
                             const ouvert = conseils === e.id
+                            const passes = passesDe(e.id, suivi.seances)
+                            const dernier = passes[0]
+                            const conseil = conseilPour(e, passes, versKg(charges[e.id]))
+                            const reco = recommandation(e, profil, new Date())
                             return (
                                 <div key={e.id} className="mu-exo">
                                     <div className="mu-exo-haut">
@@ -558,6 +648,37 @@ export default function MuscuView() {
                                             </div>
                                         ) : null}
                                     </div>
+                                    {reco?.type === 'charge' && !dernier && (
+                                        <div className="mu-passe">
+                                            <span className="mu-reco">
+                                                🎯 Pour toi : {reco.min === reco.max ? `≈ ${fmtKg(reco.min)}` : `${fmtKg(reco.min)}–${fmtKg(reco.max)}`} kg
+                                                {versKg(charges[e.id]) === null && (
+                                                    <button onClick={() => changerCharge(e.id, String(reco.min))}>Utiliser {fmtKg(reco.min)} kg</button>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {reco?.type === 'texte' && (
+                                        <div className="mu-passe">
+                                            <span className="mu-reco-texte">{reco.texte}</span>
+                                        </div>
+                                    )}
+                                    {dernier && (
+                                        <div className="mu-passe">
+                                            <span>
+                                                Dernière fois : {dernier.kg !== null ? `${fmtKg(dernier.kg)} kg · ` : ''}
+                                                {dernier.faites}/{dernier.total} · {RESSENTIS[dernier.ressenti].emoji}
+                                            </span>
+                                            {conseil && (
+                                                <span className={`mu-conseil ${conseil.sens}`}>
+                                                    {conseil.sens === 'monte' ? '⬆' : conseil.sens === 'descend' ? '⬇' : '='} {conseil.texte}
+                                                    {conseil.kg !== undefined && versKg(charges[e.id]) !== conseil.kg && (
+                                                        <button onClick={() => changerCharge(e.id, String(conseil.kg))}>Appliquer</button>
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                     <button className="mu-conseils-lien" onClick={() => setConseils(ouvert ? null : e.id)}>
                                         {ouvert ? '▾ Masquer les conseils' : '▸ Conseils'} · {e.muscles.map((m) => MUSCLES[m]).join(', ')}
                                     </button>
@@ -595,40 +716,77 @@ export default function MuscuView() {
                           : '📈 Toutes les séries réussies en haut de la fourchette ? Monte d’un cran (+2,5 kg) la prochaine fois.'}
                 </p>
 
-                <div className="mu-boutons">
-                    <button className="mu-btn-sec" onClick={() => setRepos({ restant: 60, total: 60 })}>
-                        ⏱ REPOS 60 S
-                    </button>
-                    <button className="mu-btn" onClick={terminer}>
-                        SÉANCE TERMINÉE
-                    </button>
-                </div>
+                {bilan ? (
+                    <div className="mu-bilan">
+                        <h3>BILAN DE LA SÉANCE</h3>
+                        <p className="mu-gris">
+                            {bilan.length > 0
+                                ? `Comment c’était pour chaque exercice ? Ça sert à te dire quand monter de ${fmtKg(PAS_KG)} kg.`
+                                : 'Aucune série cochée : la séance sera notée sans détail. La prochaine fois, touche les ronds de séries pendant la séance.'}
+                        </p>
+                        <table className="mu-table mu-table-bilan">
+                            <tbody>
+                                {bilan.map((b) => {
+                                    const exo = exercices.find((x) => x.id === b.id)
+                                    return (
+                                        <tr key={b.id}>
+                                            <td>
+                                                <b>{exo?.nom ?? b.id}</b>
+                                                <small>
+                                                    {b.faites}/{b.total} séries{b.kg !== null ? ` · ${fmtKg(b.kg)} kg` : ''}
+                                                </small>
+                                            </td>
+                                            <td className="mu-droite">
+                                                <div className="mu-ressenti">
+                                                    {(['dur', 'bien', 'facile'] as const).map((r) => (
+                                                        <button
+                                                            key={r}
+                                                            className={`${r} ${b.ressenti === r ? 'actif' : ''}`}
+                                                            onClick={() => noter(b.id, r)}
+                                                            aria-label={RESSENTIS[r].libelle}
+                                                            title={RESSENTIS[r].libelle}
+                                                        >
+                                                            {RESSENTIS[r].emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                        <div className="mu-boutons">
+                            <button className="mu-btn-sec" onClick={() => setBilan(null)}>
+                                RETOUR
+                            </button>
+                            <button className="mu-btn" onClick={enregistrerBilan}>
+                                ENREGISTRER
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="mu-boutons">
+                        <button className="mu-btn-sec" onClick={() => setRepos({ restant: 60, total: 60 })}>
+                            ⏱ REPOS 60 S
+                        </button>
+                        <button className="mu-btn" onClick={terminer}>
+                            SÉANCE TERMINÉE
+                        </button>
+                    </div>
+                )}
             </section>
 
-            {historique.length > 0 && (
-                <section className="mu-carte">
-                    <h2 className="mu-h2">MES DERNIÈRES SÉANCES</h2>
-                    <table className="mu-table">
-                        <tbody>
-                            {historique.slice(0, 6).map((h) => {
-                                const s = seanceParCode(h.code)
-                                return (
-                                    <tr key={h.date}>
-                                        <td>
-                                            <span className="mu-badge" style={{ '--c': s.couleur } as React.CSSProperties}>
-                                                {s.code}
-                                            </span>{' '}
-                                            {s.emoji}
-                                        </td>
-                                        <td>{s.titre.replace(/^Maison : /, '')}</td>
-                                        <td className="mu-droite">{jourCourt.format(new Date(h.date))}</td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </section>
-            )}
+            <ProfilMuscu
+                profil={profil}
+                aujourdhui={new Date()}
+                onChange={(p) => {
+                    setProfil(p)
+                    enregistrerProfil(p)
+                }}
+            />
+
+            <ProgressionMuscu seances={suivi.seances} lundi={debutDeSemaine(new Date())} synchro={synchro} onSupprimer={supprimerSeance} />
 
             {repos && (
                 <div className="mu-repos" role="timer">
