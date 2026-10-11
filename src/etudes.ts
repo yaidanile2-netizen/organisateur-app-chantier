@@ -149,6 +149,7 @@ export function echeances(cours: Cours[], taches: Tache[], maintenant: Date, jus
         })
 
     const liste: Echeance[] = []
+    const tdParJour = new Map<string, { matiere: string; date: Date }>()
     const dansFenetre = (d: Date) => d.getTime() > maintenant.getTime() && d.getTime() <= jusquA.getTime()
 
     for (const c of cours) {
@@ -167,12 +168,18 @@ export function echeances(cours: Cours[], taches: Tache[], maintenant: Date, jus
             liste.push({ cle, type: 'tp', matiere, date, source: 'edt', etapes: etats(cle, 'tp') })
         } else if (k === 'td') {
             // Révision courte après chaque TD (le soir même ou dans les 3 jours).
+            // Deux TD de la même matière le même jour = une seule révision.
             const fin = new Date(c.date_fin)
             if (fin.getTime() + 3 * JOUR < maintenant.getTime() || fin > jusquA) continue
             if (/anglais|communication/i.test(matiere)) continue
-            const cle = `d${hash(c.id)}`
-            liste.push({ cle, type: 'td', matiere, date: fin, source: 'td', etapes: etats(cle, 'td') })
+            const id = `${matiere}|${fin.toDateString()}`
+            const deja = tdParJour.get(id)
+            if (!deja || fin > deja.date) tdParJour.set(id, { matiere, date: fin })
         }
+    }
+    for (const [id, td] of tdParJour) {
+        const cle = `d${hash(id)}`
+        liste.push({ cle, type: 'td', matiere: td.matiere, date: td.date, source: 'td', etapes: etats(cle, 'td') })
     }
 
     for (const t of taches) {
