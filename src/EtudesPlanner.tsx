@@ -254,7 +254,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
             )}
             {(tds.length > 0 || tps.length > 0) && (
                 <p className="et-prep">
-                    + {tds.length} révision{tds.length > 1 ? 's' : ''} de TD ({Math.min(30, Math.max(15, reglages.dureeTD))} min, le soir du TD ou dans les 3 jours)
+                    + {tds.length} TD à préparer la veille ({Math.min(30, Math.max(15, reglages.dureeTD))} min chacun)
                     {tps.length ? ` et ${tps.length} TP à préparer (30 min la veille)` : ''}.
                 </p>
             )}

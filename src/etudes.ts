@@ -87,7 +87,14 @@ export function programme(type: TypeEcheance, r: ReglagesEtudes): EtapeProgramme
         case 'tp':
             return [{ nom: 'Préparer', duree: 30, avant: 1, consignes: ['Lis l’énoncé du TP', 'Revois la théorie et les formules utiles', 'Prépare les tableaux de mesures et les questions préparatoires'] }]
         case 'td':
-            return [{ nom: 'Revoir', duree: Math.min(30, Math.max(15, r.dureeTD)), avant: 0, consignes: ['Refais un exercice du TD sans la correction', 'Écris la méthode clé en 2 lignes dans ta fiche'] }]
+            return [
+                {
+                    nom: 'Préparer',
+                    duree: Math.min(30, Math.max(15, r.dureeTD)),
+                    avant: 1,
+                    consignes: ['Relis le cours lié au TD de demain', 'Refais un exercice du TD précédent de cette matière', 'Lis l’énoncé du TD si tu l’as et note tes questions'],
+                },
+            ]
     }
 }
 
@@ -167,14 +174,14 @@ export function echeances(cours: Cours[], taches: Tache[], maintenant: Date, jus
             const cle = `p${hash(c.id)}`
             liste.push({ cle, type: 'tp', matiere, date, source: 'edt', etapes: etats(cle, 'tp') })
         } else if (k === 'td') {
-            // Révision courte après chaque TD (le soir même ou dans les 3 jours).
-            // Deux TD de la même matière le même jour = une seule révision.
-            const fin = new Date(c.date_fin)
-            if (fin.getTime() + 3 * JOUR < maintenant.getTime() || fin > jusquA) continue
+            // Révision courte la veille de chaque TD (« les TD du lendemain »).
+            // Deux TD de la même matière le même jour = une seule révision, avant le premier.
+            const debut = new Date(c.date_debut)
+            if (!dansFenetre(debut)) continue
             if (/anglais|communication/i.test(matiere)) continue
-            const id = `${matiere}|${fin.toDateString()}`
+            const id = `${matiere}|${debut.toDateString()}`
             const deja = tdParJour.get(id)
-            if (!deja || fin > deja.date) tdParJour.set(id, { matiere, date: fin })
+            if (!deja || debut < deja.date) tdParJour.set(id, { matiere, date: debut })
         }
     }
     for (const [id, td] of tdParJour) {
@@ -313,9 +320,10 @@ export function planifierEtudes(
             let limite: number
             let ideal: number
             if (e.type === 'td') {
-                ouverture = e.date.getTime() + 15 * MIN
-                limite = aHeure(new Date(debutJour(e.date.getTime()) + 3 * JOUR), r.fin) // jusqu'au soir du 3e jour
-                ideal = e.date.getTime()
+                // La veille au soir (au plus tôt l'avant-veille), et fini 1 h avant le TD.
+                ouverture = debutJour(e.date.getTime()) - 2 * JOUR
+                limite = e.date.getTime() - 60 * MIN
+                ideal = e.date.getTime() - JOUR
             } else {
                 limite = e.date.getTime() - 60 * MIN
                 ideal = e.date.getTime() - etape.avant * JOUR
@@ -384,7 +392,7 @@ export function titreBloc(b: BlocEtude, r: ReglagesEtudes): string {
     const t = TYPES_ECHEANCE[e.type]
     const prog = programme(e.type, r)
     const etape = prog[b.etape]
-    if (e.type === 'td') return `${t.emoji} Revoir le TD · ${e.matiere}`
+    if (e.type === 'td') return `${t.emoji} Préparer le TD de demain · ${e.matiere}`
     if (e.type === 'tp') return `${t.emoji} Préparer le TP · ${e.matiere}`
     return `${t.emoji} ${t.court} ${e.matiere} · ${b.etape + 1}/${prog.length} ${etape.nom}`
 }
@@ -394,7 +402,7 @@ export function descriptionBloc(b: BlocEtude, r: ReglagesEtudes): string {
     const t = TYPES_ECHEANCE[e.type]
     const prog = programme(e.type, r)
     const etape = prog[b.etape]
-    const quoi = e.type === 'td' ? `TD de ${e.matiere} (fini ${dateLongue.format(e.date)})` : `${t.libelle} ${e.matiere}, ${dateLongue.format(e.date)}`
+    const quoi = e.type === 'td' ? `TD de ${e.matiere}, ${dateLongue.format(e.date)}` : `${t.libelle} ${e.matiere}, ${dateLongue.format(e.date)}`
     return [
         `Étape ${b.etape + 1}/${prog.length} — ${etape.nom} (${etape.duree} min) · ${quoi}`,
         ...etape.consignes.map((c) => `☐ ${c}`),
