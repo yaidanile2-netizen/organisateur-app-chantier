@@ -1,4 +1,5 @@
-// Carte « Révisions » de l'onglet Agenda : échéances à venir, ajout d'une échéance, et placement des heures d'étude.
+// Carte « Révisions » de l'onglet Agenda : échéances à venir avec leur programme (Réviser → Appliquer → Valider),
+// ajout d'une échéance, et placement des créneaux d'étude le soir.
 import { useEffect, useState } from 'react'
 import { creerTache, getCategories, getCoursEntre, getTachesEntre, supprimerTache, type Tache } from './api'
 import {
@@ -10,6 +11,7 @@ import {
     enregistrerReglagesEtudes,
     lireReglagesEtudes,
     planifierEtudes,
+    programme,
     titreBloc,
     type BlocEtude,
     type Echeance,
@@ -37,12 +39,20 @@ async function categorieCours(): Promise<number | null> {
     return (cats.find((c) => /cours|[ée]tude/i.test(c.nom)) ?? null)?.id ?? null
 }
 
-function Points({ faits, total, couleur }: { faits: number; total: number; couleur: string }) {
+// Les étapes d'une échéance en pastilles : ✓ validée, ● prévue, ○ à placer.
+function Etapes({ e, r }: { e: Echeance; r: ReglagesEtudes }) {
+    const prog = programme(e.type, r)
     return (
-        <span className="et-points" style={{ '--t': couleur } as React.CSSProperties} aria-label={`${faits} sur ${total} blocs prévus`}>
-            {Array.from({ length: total }, (_, i) => (
-                <i key={i} className={i < faits ? 'ok' : ''} />
-            ))}
+        <span className="et-etapes" style={{ '--t': TYPES_ECHEANCE[e.type].couleur } as React.CSSProperties}>
+            {prog.map((p, i) => {
+                const s = e.etapes[i]?.statut ?? 'manque'
+                return (
+                    <span key={i} className={`et-etape ${s}`} title={`${i + 1}. ${p.nom} : ${s === 'fait' ? 'validée' : s === 'prevu' ? 'prévue' : 'à placer'}`}>
+                        {s === 'fait' ? '✓' : i + 1}
+                        <small>{p.nom.split(' ')[0]}</small>
+                    </span>
+                )
+            })}
         </span>
     )
 }
@@ -52,21 +62,22 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
     const [etape, setEtape] = useState<Etape>('repos')
     const [aVenir, setAVenir] = useState<Echeance[] | null>(null)
     const [propositions, setPropositions] = useState<BlocEtude[]>([])
-    const [manques, setManques] = useState<{ echeance: Echeance; manque: number }[]>([])
+    const [manques, setManques] = useState<{ echeance: Echeance; etape: number }[]>([])
     const [aRemplacer, setARemplacer] = useState<Tache[]>([])
     const [erreur, setErreur] = useState<string | null>(null)
     const [reglages, setReglages] = useState<ReglagesEtudes>(() => lireReglagesEtudes())
     const [voirReglages, setVoirReglages] = useState(false)
-    const [ajout, setAjout] = useState<{ type: TypeEcheance; matiere: string; date: string; heure: string; blocs: number } | null>(null)
+    const [voirProgramme, setVoirProgramme] = useState(false)
+    const [ajout, setAjout] = useState<{ type: TypeEcheance; matiere: string; date: string; heure: string } | null>(null)
 
-    // Échéances des 3 prochaines semaines (pour le tableau « À venir »).
+    // Échéances des 3 prochaines semaines (tableau « À venir »).
     useEffect(() => {
         let annule = false
         const maintenant = new Date()
         const fin = new Date(maintenant.getTime() + 21 * JOUR)
-        Promise.all([getCoursEntre(maintenant, fin), getTachesEntre(new Date(maintenant.getTime() - 21 * JOUR), fin)])
+        Promise.all([getCoursEntre(new Date(maintenant.getTime() - 3 * JOUR), fin), getTachesEntre(new Date(maintenant.getTime() - 21 * JOUR), fin)])
             .then(([cours, taches]) => {
-                if (!annule) setAVenir(echeances(cours, taches, maintenant, fin))
+                if (!annule) setAVenir(echeances(cours, taches, maintenant, fin, reglages))
             })
             .catch(() => {
                 if (!annule) setAVenir([])
@@ -74,7 +85,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
         return () => {
             annule = true
         }
-    }, [version, etape])
+    }, [version, etape, reglages])
 
     const lundi = lundiDe(semaine)
     const dimanche = new Date(lundi.getTime() + 7 * JOUR - 1)
@@ -94,10 +105,10 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
             const maintenant = new Date()
             const finFenetre = new Date(dimanche.getTime() + 14 * JOUR)
             const [cours, taches] = await Promise.all([
-                getCoursEntre(lundi, finFenetre),
+                getCoursEntre(new Date(lundi.getTime() - 3 * JOUR), finFenetre),
                 getTachesEntre(new Date(lundi.getTime() - 21 * JOUR), finFenetre),
             ])
-            // Les blocs déjà placés cette semaine et pas encore faits sont recalculés.
+            // Les blocs à venir de la semaine qui ne sont pas encore validés sont recalculés.
             const remplacees = taches.filter(
                 (t) =>
                     t.description?.includes(MARQUEUR_ETUDE) &&
@@ -108,7 +119,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     new Date(t.date_debut) > maintenant,
             )
             const gardees = taches.filter((t) => !remplacees.includes(t))
-            const liste = echeances(cours, gardees, maintenant, finFenetre)
+            const liste = echeances(cours, gardees, maintenant, finFenetre, reglages)
             const { blocs, restants } = planifierEtudes(lundi, cours, gardees, liste, reglages, maintenant)
             setARemplacer(remplacees)
             setPropositions(blocs)
@@ -128,14 +139,14 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
             for (const t of aRemplacer) await supprimerTache(t.id)
             for (const b of propositions) {
                 await creerTache({
-                    titre: titreBloc(b.echeance),
-                    description: descriptionBloc(b),
+                    titre: titreBloc(b, reglages),
+                    description: descriptionBloc(b, reglages),
                     categorie_id: categorie,
                     date_debut: b.debut.toISOString(),
                     date_fin: b.fin.toISOString(),
                     toute_la_journee: false,
                     statut: 'a_faire',
-                    priorite: TYPES_ECHEANCE[b.echeance.type].priorite === 1 ? 'haute' : 'normale',
+                    priorite: b.echeance.type === 'ds' || b.echeance.type === 'soutenance' ? 'haute' : 'normale',
                 })
             }
             setEtape('fait')
@@ -152,16 +163,16 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
         try {
             const t = TYPES_ECHEANCE[ajout.type]
             const debut = new Date(`${ajout.date}T${ajout.heure || '08:00'}`)
-            const nom = { ds: 'DS', soutenance: 'Soutenance', projet: 'Projet', tp: 'TP', td: 'TD' }[ajout.type]
+            const nom = { ds: 'DS', soutenance: 'Oral', projet: 'Projet', tp: 'TP', td: 'TD' }[ajout.type]
             await creerTache({
                 titre: `${t.emoji} ${nom} · ${ajout.matiere.trim()}`,
-                description: `${MARQUEUR_ECHEANCE} ${ajout.type} prepa=${ajout.blocs}`,
+                description: `${MARQUEUR_ECHEANCE} ${ajout.type}`,
                 categorie_id: await categorieCours(),
                 date_debut: debut.toISOString(),
                 date_fin: new Date(debut.getTime() + 60 * 60000).toISOString(),
                 toute_la_journee: false,
                 statut: 'a_faire',
-                priorite: t.priorite === 1 ? 'haute' : 'normale',
+                priorite: 'haute',
             })
             setAjout(null)
             setEtape('repos')
@@ -171,28 +182,57 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
         }
     }
 
-    const importantes = (aVenir || []).filter((e) => e.source !== 'preparation')
-    const preparations = (aVenir || []).filter((e) => e.source === 'preparation')
+    const importantes = (aVenir || []).filter((e) => e.type !== 'td' && e.type !== 'tp')
+    const tds = (aVenir || []).filter((e) => e.type === 'td' && e.etapes[0]?.statut !== 'fait')
+    const tps = (aVenir || []).filter((e) => e.type === 'tp' && e.etapes[0]?.statut !== 'fait')
+    const prog = programme('ds', reglages)
 
     return (
         <section className="card etudes">
             <h2>📚 Révisions</h2>
             <p className="muted">
-                Des blocs de {reglages.bloc} min placés avant tes DS et soutenances d’abord, puis tes projets, TP et TD — au plus{' '}
-                {duree(reglages.maxJourCours)} un jour de cours.
+                Le soir de {reglages.debut.replace(':', 'h')} à {reglages.fin.replace(':', 'h')} (au plus {duree(reglages.maxJourCours)} un jour de cours). DS
+                d’abord, puis oraux, projets, TP et de courtes révisions de TD.
             </p>
+
+            <button className="btn-link" onClick={() => setVoirProgramme((v) => !v)}>
+                {voirProgramme ? 'Masquer le programme d’un DS' : 'Comment je prépare un DS ? (3 créneaux)'}
+            </button>
+            {voirProgramme && (
+                <ol className="et-programme">
+                    {prog.map((p, i) => (
+                        <li key={p.nom}>
+                            <b>
+                                {i + 1}. {p.nom}
+                            </b>{' '}
+                            <small>
+                                {p.duree} min · vers J−{p.avant}
+                            </small>
+                            <ul>
+                                {p.consignes.map((c) => (
+                                    <li key={c}>{c}</li>
+                                ))}
+                            </ul>
+                        </li>
+                    ))}
+                    <li className="et-programme-note">
+                        Coche le créneau « fait » quand l’étape est finie. Si le DS est dans moins de {reglages.urgenceJours} jours et qu’une étape n’est pas validée,
+                        l’app peut la placer en dehors du soir (pause, week-end).
+                    </li>
+                </ol>
+            )}
 
             <h3 className="et-h3">À venir (3 semaines)</h3>
             {aVenir === null ? (
                 <p className="muted">Chargement…</p>
             ) : importantes.length === 0 ? (
-                <p className="muted">Aucun DS ni soutenance dans les 3 prochaines semaines.</p>
+                <p className="muted">Aucun DS, oral ni projet dans les 3 prochaines semaines.</p>
             ) : (
                 <table className="et-table">
                     <tbody>
                         {importantes.map((e) => {
                             const t = TYPES_ECHEANCE[e.type]
-                            const jours = Math.max(0, Math.ceil((e.date.getTime() - Date.parse(new Date().toDateString())) / JOUR))
+                            const jours = Math.max(0, Math.round((new Date(e.date).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / JOUR))
                             return (
                                 <tr key={e.cle}>
                                     <td className="et-quand">
@@ -201,12 +241,10 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                                     </td>
                                     <td>
                                         <span className="type-badge" style={{ '--t': t.couleur } as React.CSSProperties}>
-                                            {e.type === 'soutenance' ? 'ORAL' : e.type.toUpperCase()}
+                                            {t.court}
                                         </span>
                                         {e.matiere}
-                                    </td>
-                                    <td className="et-droite">
-                                        <Points faits={Math.min(e.faits, e.blocs)} total={e.blocs} couleur={t.couleur} />
+                                        <Etapes e={e} r={reglages} />
                                     </td>
                                 </tr>
                             )
@@ -214,10 +252,10 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     </tbody>
                 </table>
             )}
-            {preparations.length > 0 && (
+            {(tds.length > 0 || tps.length > 0) && (
                 <p className="et-prep">
-                    + {preparations.filter((p) => p.type === 'tp').length} TP et {preparations.filter((p) => p.type === 'td').length} TD à préparer (1 bloc
-                    par matière et par semaine, s’il reste de la place).
+                    + {tds.length} révision{tds.length > 1 ? 's' : ''} de TD ({Math.min(30, Math.max(15, reglages.dureeTD))} min, le soir du TD ou dans les 3 jours)
+                    {tps.length ? ` et ${tps.length} TP à préparer (30 min la veille)` : ''}.
                 </p>
             )}
 
@@ -226,14 +264,8 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     <div className="form-row">
                         <label>
                             Type
-                            <select
-                                value={ajout.type}
-                                onChange={(e) => {
-                                    const type = e.target.value as TypeEcheance
-                                    setAjout({ ...ajout, type, blocs: TYPES_ECHEANCE[type].blocs })
-                                }}
-                            >
-                                {(Object.keys(TYPES_ECHEANCE) as TypeEcheance[]).map((k) => (
+                            <select value={ajout.type} onChange={(e) => setAjout({ ...ajout, type: e.target.value as TypeEcheance })}>
+                                {(['ds', 'soutenance', 'projet'] as TypeEcheance[]).map((k) => (
                                     <option key={k} value={k}>
                                         {TYPES_ECHEANCE[k].emoji} {TYPES_ECHEANCE[k].libelle}
                                     </option>
@@ -254,17 +286,11 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                             Heure
                             <input type="time" value={ajout.heure} onChange={(e) => setAjout({ ...ajout, heure: e.target.value })} />
                         </label>
-                        <label>
-                            Prépa
-                            <select value={ajout.blocs} onChange={(e) => setAjout({ ...ajout, blocs: Number(e.target.value) })}>
-                                {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
-                                    <option key={n} value={n}>
-                                        {n} × {reglages.bloc} min
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
                     </div>
+                    <p className="et-prep">
+                        Programme : {programme(ajout.type, reglages).map((p, i) => `${i + 1} ${p.nom}`).join(' → ')} (
+                        {programme(ajout.type, reglages).length} × {programme(ajout.type, reglages)[0].duree} min)
+                    </p>
                     <div className="modal-actions">
                         <button className="btn-secondary" onClick={() => setAjout(null)}>
                             Annuler
@@ -275,16 +301,26 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     </div>
                 </div>
             ) : (
-                <button className="btn-link" onClick={() => setAjout({ type: 'ds', matiere: '', date: '', heure: '08:00', blocs: TYPES_ECHEANCE.ds.blocs })}>
-                    + Ajouter un DS, une soutenance, un projet…
+                <button className="btn-link" onClick={() => setAjout({ type: 'soutenance', matiere: '', date: '', heure: '08:00' })}>
+                    + Ajouter un oral, un projet ou un DS
                 </button>
             )}
 
             <button className="btn-link sport-reglages-lien" onClick={() => setVoirReglages((v) => !v)}>
-                {voirReglages ? 'Masquer mes réglages' : 'Mes réglages (temps par jour, blocs)'}
+                {voirReglages ? 'Masquer mes réglages' : 'Mes réglages (créneau du soir, durées)'}
             </button>
             {voirReglages && (
                 <div className="task-form sport-reglages">
+                    <div className="form-row">
+                        <label>
+                            Je révise à partir de
+                            <input type="time" value={reglages.debut} onChange={(e) => changerReglage('debut', e.target.value)} />
+                        </label>
+                        <label>
+                            jusqu’à
+                            <input type="time" value={reglages.fin} onChange={(e) => changerReglage('fin', e.target.value)} />
+                        </label>
+                    </div>
                     <div className="form-row">
                         <label>
                             Max un jour de cours (min)
@@ -297,22 +333,40 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     </div>
                     <div className="form-row">
                         <label>
-                            Durée d’un bloc (min)
-                            <input type="number" min={15} step={5} value={reglages.bloc} onChange={(e) => changerReglage('bloc', Math.max(15, Number(e.target.value) || 45))} />
+                            Révision d’un TD (15 à 30 min)
+                            <input type="number" min={15} max={30} step={5} value={reglages.dureeTD} onChange={(e) => changerReglage('dureeTD', Number(e.target.value) || 20)} />
                         </label>
                         <label>
-                            Fini avant
-                            <input type="time" value={reglages.fin} onChange={(e) => changerReglage('fin', e.target.value)} />
+                            DS « très proche » (jours)
+                            <input type="number" min={0} max={7} value={reglages.urgenceJours} onChange={(e) => changerReglage('urgenceJours', Number(e.target.value) || 0)} />
                         </label>
                     </div>
+                    <label className="checkbox-row">
+                        <input type="checkbox" checked={reglages.midiOraux} onChange={(e) => changerReglage('midiOraux', e.target.checked)} />
+                        Oraux : utiliser aussi la pause de midi en semaine (12h45–13h45)
+                    </label>
                 </div>
             )}
 
             <div className="segmented">
-                <button className={semaine === 'courante' ? 'actif' : ''} onClick={() => { setSemaine('courante'); setEtape('repos') }} disabled={occupe}>
+                <button
+                    className={semaine === 'courante' ? 'actif' : ''}
+                    onClick={() => {
+                        setSemaine('courante')
+                        setEtape('repos')
+                    }}
+                    disabled={occupe}
+                >
                     Cette semaine
                 </button>
-                <button className={semaine === 'prochaine' ? 'actif' : ''} onClick={() => { setSemaine('prochaine'); setEtape('repos') }} disabled={occupe}>
+                <button
+                    className={semaine === 'prochaine' ? 'actif' : ''}
+                    onClick={() => {
+                        setSemaine('prochaine')
+                        setEtape('repos')
+                    }}
+                    disabled={occupe}
+                >
                     Semaine prochaine
                 </button>
             </div>
@@ -321,7 +375,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
 
             {(etape === 'repos' || etape === 'calcul' || etape === 'fait') && (
                 <>
-                    {etape === 'fait' && <p className="et-ok">✓ Tes heures d’étude sont dans ton agenda.</p>}
+                    {etape === 'fait' && <p className="et-ok">✓ Tes créneaux de révision sont dans ton agenda.</p>}
                     <button className="btn-primary" onClick={proposer} disabled={occupe}>
                         {etape === 'calcul' ? 'Calcul…' : etape === 'fait' ? 'Reprogrammer mes révisions' : 'Proposer mes révisions'}
                     </button>
@@ -337,8 +391,9 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                             <tbody>
                                 {propositions.map((b) => {
                                     const t = TYPES_ECHEANCE[b.echeance.type]
+                                    const p = programme(b.echeance.type, reglages)
                                     return (
-                                        <tr key={`${b.echeance.cle}-${b.debut.getTime()}`}>
+                                        <tr key={`${b.echeance.cle}-${b.etape}`}>
                                             <td className="et-quand">
                                                 <b>{jourFormat.format(b.debut)}</b>
                                                 <small>
@@ -347,31 +402,36 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                                             </td>
                                             <td>
                                                 <span className="type-badge" style={{ '--t': t.couleur } as React.CSSProperties}>
-                                                    {b.echeance.type === 'soutenance' ? 'ORAL' : b.echeance.type.toUpperCase()}
+                                                    {t.court}
                                                 </span>
-                                                {b.echeance.source === 'preparation' ? 'Préparer · ' : ''}
                                                 {b.echeance.matiere}
+                                                <small className="et-quoi">
+                                                    {p.length > 1 ? `${b.etape + 1}/${p.length} ` : ''}
+                                                    {p[b.etape].nom}
+                                                    {b.mode === 'urgence' ? ' · ⚡ hors du soir' : b.mode === 'midi' ? ' · pause de midi' : ''}
+                                                </small>
                                             </td>
-                                            <td className="et-droite">{b.aIut ? '🏫 IUT' : '🏠'}</td>
                                         </tr>
                                     )
                                 })}
                             </tbody>
                         </table>
                     )}
-                    {manques.filter((m) => TYPES_ECHEANCE[m.echeance.type].priorite < 3).map((m) => (
-                        <p key={m.echeance.cle} className="form-error et-manque">
-                            ⚠️ Pas assez de place pour {m.manque} bloc{m.manque > 1 ? 's' : ''} de « {m.echeance.matiere} » : augmente le maximum par jour ou libère
-                            un créneau.
-                        </p>
-                    ))}
-                    {aRemplacer.length > 0 && <p className="muted">{aRemplacer.length} bloc(s) déjà prévus cette semaine seront remplacés.</p>}
+                    {manques
+                        .filter((m) => m.echeance.type !== 'td')
+                        .map((m) => (
+                            <p key={`${m.echeance.cle}-${m.etape}`} className="form-error et-manque">
+                                ⚠️ Pas de place pour « {programme(m.echeance.type, reglages)[m.etape].nom} » ({TYPES_ECHEANCE[m.echeance.type].court} {m.echeance.matiere}) :
+                                libère une soirée ou augmente le maximum par jour.
+                            </p>
+                        ))}
+                    {aRemplacer.length > 0 && <p className="muted">{aRemplacer.length} créneau(x) déjà prévus cette semaine seront remplacés.</p>}
                     <div className="modal-actions">
                         <button className="btn-secondary" onClick={() => setEtape('repos')} disabled={etape === 'enregistrement'}>
                             Annuler
                         </button>
                         <button className="btn-primary" onClick={valider} disabled={etape === 'enregistrement' || (propositions.length === 0 && aRemplacer.length === 0)}>
-                            {etape === 'enregistrement' ? 'Ajout…' : `Ajouter ${propositions.length} bloc${propositions.length > 1 ? 's' : ''}`}
+                            {etape === 'enregistrement' ? 'Ajout…' : `Ajouter ${propositions.length} créneau${propositions.length > 1 ? 'x' : ''}`}
                         </button>
                     </div>
                 </>
@@ -379,4 +439,3 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
         </section>
     )
 }
-

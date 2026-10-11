@@ -1454,3 +1454,135 @@
     color: #9ca3af;
   }
 }
+
+/* Révisions : étapes (Réviser → Appliquer → Valider) */
+.et-etapes {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+.et-etape {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  border: 1.5px dashed color-mix(in srgb, var(--t) 70%, #9ca3af);
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b7280;
+}
+.et-etape small {
+  font-weight: 600;
+  font-size: 10.5px;
+}
+.et-etape.prevu {
+  border-style: solid;
+  border-color: var(--t);
+  color: color-mix(in srgb, var(--t) 60%, #000);
+}
+.et-etape.fait {
+  border-style: solid;
+  border-color: #16a34a;
+  background: #dcfce7;
+  color: #166534;
+}
+.et-quoi {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+}
+.et-programme {
+  margin: 8px 0 4px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 12px;
+  background: #f7f7f9;
+  list-style: none;
+  font-size: 13px;
+}
+.et-programme > li + li {
+  margin-top: 8px;
+}
+.et-programme small {
+  color: #6b7280;
+}
+.et-programme ul {
+  margin: 3px 0 0;
+  padding-left: 18px;
+  color: #374151;
+}
+.et-programme-note {
+  font-size: 12px;
+  color: #6b7280;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.ev-etapes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ev-etapes span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.ev-etapes span.avant {
+  border-color: #16a34a;
+  color: #166534;
+}
+.ev-etapes span.actuelle {
+  border-color: var(--ev);
+  background: color-mix(in srgb, var(--ev) 14%, transparent);
+  color: color-mix(in srgb, var(--ev) 70%, #000);
+}
+.ev-checklist {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 14px;
+}
+.ev-checklist li {
+  padding: 7px 0 7px 28px;
+  position: relative;
+  border-top: 1px solid #eef0f2;
+}
+.ev-checklist li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 2px solid var(--ev);
+}
+@media (prefers-color-scheme: dark) {
+  .et-etape.fait {
+    background: #0f2a1a;
+    color: #86efac;
+  }
+  .et-etape.prevu {
+    color: color-mix(in srgb, var(--t) 70%, #fff);
+  }
+  .et-programme {
+    background: #1f1f22;
+  }
+  .et-programme ul {
+    color: #d1d5db;
+  }
+  .ev-etapes span.actuelle {
+    color: color-mix(in srgb, var(--ev) 70%, #fff);
+  }
+  .ev-checklist li {
+    border-color: #2a2a2d;
+  }
+}

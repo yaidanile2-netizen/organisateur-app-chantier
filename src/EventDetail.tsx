@@ -1,6 +1,7 @@
 // Fiche détaillée d'un événement de la vue Jour (cours, tâche ou séance de sport).
 import type { Cours, Priorite, Statut, Tache } from './api'
 import { codeModule, detailsCours, nomModule, typeDe } from './coursType'
+import { lireBloc } from './etudes'
 import { seanceParCode } from './programme'
 import { MARQUEUR, codeDeTache, lireReglages } from './sport'
 import { duree } from './temps'
@@ -115,18 +116,25 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
     const tache = item.type === 'tache' ? item.data : null
     const code = tache?.description?.includes(MARQUEUR) ? codeDeTache(tache) : null
     const seance = code ? seanceParCode(code) : null
+    const bloc = tache ? lireBloc(tache) : null
     const typeCours = item.type === 'cours' ? typeDe(item.data) : null
     const infosCours = item.type === 'cours' ? detailsCours(item.data) : null
-    const couleur = typeCours ? typeCours.couleur : seance ? seance.couleur : tache?.categorie_couleur || '#4f46e5'
-    const emoji = typeCours ? (typeCours.cle === 'ds' ? '📝' : '📚') : seance ? seance.emoji : '📌'
-    const sousTitre = typeCours ? `${typeCours.libelle} · Cours IUT` : seance ? `Séance de sport · ${seance.lieu === 'salle' ? 'Basic-Fit' : 'maison'}` : tache?.categorie_nom || 'Tâche'
+    const couleur = typeCours ? typeCours.couleur : seance ? seance.couleur : bloc ? '#6366f1' : tache?.categorie_couleur || '#4f46e5'
+    const emoji = typeCours ? (typeCours.cle === 'ds' ? '📝' : '📚') : seance ? seance.emoji : bloc ? '📖' : '📌'
+    const sousTitre = typeCours
+        ? `${typeCours.libelle} · Cours IUT`
+        : seance
+          ? `Séance de sport · ${seance.lieu === 'salle' ? 'Basic-Fit' : 'maison'}`
+          : bloc
+            ? `Révision${bloc.total > 1 ? ` · étape ${bloc.etape}/${bloc.total}` : ''}`
+            : tache?.categorie_nom || 'Tâche'
     const titre = item.type === 'cours' ? nomModule(item.data.titre) : item.data.titre
     const rebours = compteARebours(debut, fin, maintenant)
     const etapes = etapesDe(item, jour)
     const description =
         item.type === 'cours'
             ? lignesDescription((item.data.description || '').split('\n').slice(1).join('\n'))
-            : seance
+            : seance || bloc
               ? []
               : lignesDescription(tache?.description ?? null)
 
@@ -230,6 +238,27 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
                     </tbody>
                 </table>
 
+                {bloc && (
+                    <>
+                        <h3 className="ev-h3">Programme de cette séance</h3>
+                        {bloc.noms.length > 1 && (
+                            <div className="ev-etapes">
+                                {bloc.noms.map((n, i) => (
+                                    <span key={i} className={i + 1 < bloc.etape ? 'avant' : i + 1 === bloc.etape ? 'actuelle' : ''}>
+                                        {i + 1}. {n}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <ul className="ev-checklist">
+                            {bloc.consignes.map((c) => (
+                                <li key={c}>{c}</li>
+                            ))}
+                        </ul>
+                        {bloc.urgence && <p className="muted">⚡ Placé hors de ton créneau du soir : l’échéance est très proche.</p>}
+                    </>
+                )}
+
                 {etapes.length > 0 && (
                     <>
                         <h3 className="ev-h3">Déroulé</h3>
@@ -269,7 +298,7 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
                     {tache && (
                         <>
                             <button className="btn-secondary" onClick={() => onBasculerFait(tache)}>
-                                {tache.statut === 'fait' ? '↺ Remettre à faire' : '✓ Marquer fait'}
+                                {tache.statut === 'fait' ? '↺ Remettre à faire' : bloc ? '✓ Étape validée' : '✓ Marquer fait'}
                             </button>
                             <button className="btn-primary" onClick={() => onModifier(tache)}>
                                 ✏️ Modifier
