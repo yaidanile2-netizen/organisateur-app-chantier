@@ -166,6 +166,8 @@ export type ItemListe = {
     pourquoi: string
     /** Ce que représente une pastille, ex. « 1 œuf », « 1 pot ». */
     portion?: string
+    /** repas = aliment de base, facile = sans cuisson / 5 min, grignoter = en-cas entre les repas. */
+    type?: 'repas' | 'facile' | 'grignoter'
     cible: number
     fait: number
 }

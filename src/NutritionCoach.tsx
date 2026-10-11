@@ -11,6 +11,8 @@ import {
     type Repas,
     type ReponseNutrition,
 } from './api'
+import { GUIDE, sansAccent } from './aliments'
+import GuideAliments from './GuideAliments'
 
 const OBJECTIFS: { cle: Objectif; libelle: string; emoji: string }[] = [
     { cle: 'musculation', libelle: 'Musculation', emoji: '💪' },
@@ -30,22 +32,10 @@ const MOMENTS: Record<Moment, { libelle: string; emoji: string }> = {
 }
 
 // Lignes du tableau de la semaine : un nutriment est « couvert » un jour donné si un repas
-// de ce jour l'apporte (d'après l'analyse du coach).
-const NUTRIMENTS: { libelle: string; emoji: string; motifs: RegExp }[] = [
-    { libelle: 'Protéines', emoji: '🥚', motifs: /protein/ },
-    { libelle: 'Glucides complexes', emoji: '🍚', motifs: /glucides complexes|feculent|complet/ },
-    { libelle: 'Fibres', emoji: '🥦', motifs: /fibre/ },
-    { libelle: 'Oméga-3', emoji: '🐟', motifs: /omega/ },
-    { libelle: 'Fer', emoji: '🫘', motifs: /\bfer\b/ },
-    { libelle: 'Calcium', emoji: '🥛', motifs: /calcium/ },
-    { libelle: 'Potassium', emoji: '🍌', motifs: /potassium/ },
-    { libelle: 'Magnésium', emoji: '🌰', motifs: /magnesium/ },
-    { libelle: 'Vitamine C', emoji: '🍊', motifs: /vitamine c\b|vit\.? c\b/ },
-    { libelle: 'Vitamine A', emoji: '🥕', motifs: /vitamine a\b|beta-?carotene/ },
-    { libelle: 'Zinc', emoji: '⚙️', motifs: /zinc/ },
-]
+// de ce jour l'apporte (d'après l'analyse du coach). Mêmes nutriments que le guide des aliments.
+const NUTRIMENTS = GUIDE
+const estEncas = (i: ItemListe) => i.type === 'facile' || i.type === 'grignoter'
 const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-const sansAccent = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const jourIndex = (d: Date) => (d.getDay() + 6) % 7
 const jourNom = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' })
 
@@ -54,7 +44,7 @@ export default function NutritionCoach() {
     const [prioritesServeur, setPrioritesServeur] = useState<Objectif[]>(PAR_DEFAUT)
     const [repas, setRepas] = useState<Repas[]>([])
     const [liste, setListe] = useState<ItemListe[]>([])
-    const [filtre, setFiltre] = useState<'reste' | 'tout'>('reste')
+    const [filtre, setFiltre] = useState<'reste' | 'encas' | 'tout'>('reste')
     const [texte, setTexte] = useState('')
     const [analyse, setAnalyse] = useState<ReponseNutrition | null>(null)
     const [bilan, setBilan] = useState<ReponseNutrition | null>(null)
@@ -127,7 +117,7 @@ export default function NutritionCoach() {
     const totalFait = liste.reduce((n, i) => n + Math.min(i.fait, i.cible), 0)
     const pourcent = totalCible ? Math.round((totalFait / totalCible) * 100) : 0
     const listeAffichee = [...liste]
-        .filter((i) => filtre === 'tout' || i.fait < i.cible)
+        .filter((i) => (filtre === 'tout' ? true : filtre === 'encas' ? estEncas(i) && i.fait < i.cible : i.fait < i.cible))
         .sort((a, b) => Number(a.fait >= a.cible) - Number(b.fait >= b.cible))
     const prioritesModifiees = priorites.join() !== prioritesServeur.join()
     const aujourdhui = jourIndex(new Date())
@@ -175,8 +165,13 @@ export default function NutritionCoach() {
                     <>
                         <div className="segmented nu-filtre" role="group" aria-label="Filtre">
                             <button className={filtre === 'reste' ? 'actif' : ''} onClick={() => setFiltre('reste')}>
-                                Reste à manger ({liste.filter((i) => i.fait < i.cible).length})
+                                À manger ({liste.filter((i) => i.fait < i.cible).length})
                             </button>
+                            {liste.some(estEncas) && (
+                                <button className={filtre === 'encas' ? 'actif' : ''} onClick={() => setFiltre('encas')}>
+                                    ⚡ Vite fait ({liste.filter((i) => estEncas(i) && i.fait < i.cible).length})
+                                </button>
+                            )}
                             <button className={filtre === 'tout' ? 'actif' : ''} onClick={() => setFiltre('tout')}>
                                 Tout ({liste.length})
                             </button>
@@ -188,7 +183,11 @@ export default function NutritionCoach() {
                                     <li key={i.id} className={fini ? 'fini' : ''}>
                                         <span className="nu-liste-emoji">{i.emoji}</span>
                                         <div className="nu-liste-texte">
-                                            <b>{i.aliment}</b>
+                                            <b>
+                                                {i.aliment}
+                                                {i.type === 'facile' && <em className="nu-type facile">⚡ facile</em>}
+                                                {i.type === 'grignoter' && <em className="nu-type grignoter">🥜 en-cas</em>}
+                                            </b>
                                             <span>{i.pourquoi}</span>
                                             {i.portion && <span className="nu-portion">● = {i.portion}</span>}
                                             <div className="nu-points">
@@ -372,6 +371,14 @@ export default function NutritionCoach() {
                 </div>
                 {repas.length === 0 && <p className="nu-sous">Note tes repas pour remplir le tableau.</p>}
             </section>
+
+            {/* Guide des aliments */}
+            <GuideAliments
+                nomsListe={liste.map((i) => i.aliment)}
+                manques={[...(analyse?.manques ?? []), ...(bilan?.manques ?? [])]}
+                joursCouverts={Object.fromEntries(couverture.map((n) => [n.libelle, n.jours.filter(Boolean).length]))}
+                aDesRepas={repas.length > 0}
+            />
 
             {/* Bilan */}
             <section className="nu-carte">

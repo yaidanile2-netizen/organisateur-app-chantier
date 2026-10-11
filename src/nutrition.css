@@ -689,3 +689,297 @@
     color: #c4b5fd;
   }
 }
+
+/* Guide des aliments */
+.gu-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 12px -16px 0;
+  padding: 2px 16px 6px;
+  scrollbar-width: none;
+}
+.gu-chips::-webkit-scrollbar {
+  display: none;
+}
+.gu-chip {
+  position: relative;
+  flex: 0 0 auto;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gu-chip.actif {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.gu-chip-snack {
+  border-color: #c4b5fd;
+  color: #6d28d9;
+  background: #f5f3ff;
+}
+.gu-chip-snack.actif {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+.gu-point {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f97316;
+  margin-left: 6px;
+  vertical-align: 1px;
+  box-shadow: 0 0 0 2px #fff;
+}
+.gu-legende {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #6b7280;
+}
+.gu-legende .gu-point {
+  margin: 0 4px 0 0;
+}
+.gu-role {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f0fdf4;
+}
+.gu-role-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.gu-role b {
+  font-size: 15px;
+  color: #14532d;
+}
+.gu-role p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: #374151;
+}
+.gu-role .gu-astuce {
+  color: #92400e;
+}
+.gu-colonnes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.gu-col {
+  --gc: #16a34a;
+  border: 2px solid color-mix(in srgb, var(--gc) 45%, transparent);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.gu-col-facile {
+  --gc: #f59e0b;
+}
+.gu-col-grignoter {
+  --gc: #8b5cf6;
+}
+.gu-col-tete {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--gc) 13%, transparent);
+}
+.gu-col-tete > span {
+  font-size: 20px;
+}
+.gu-col-tete b {
+  display: block;
+  font-size: 13.5px;
+  color: color-mix(in srgb, var(--gc) 70%, #000);
+}
+.gu-col-tete small {
+  font-size: 11px;
+  color: #6b7280;
+}
+.gu-col ul,
+.gu-snacks {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+.gu-col li,
+.gu-snacks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  color: #111827;
+}
+.gu-col li + li,
+.gu-snacks li + li {
+  border-top: 1px solid #f1f5f9;
+}
+.gu-emoji {
+  width: 24px;
+  text-align: center;
+  font-size: 17px;
+  flex: 0 0 auto;
+}
+.gu-nom {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.gu-nom small {
+  display: block;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: #6b7280;
+}
+.gu-ok {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #166534;
+  background: #dcfce7;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+li.dans-liste .gu-nom {
+  color: #166534;
+}
+.gu-snack-intro {
+  margin: 12px 0 6px;
+}
+.gu-snacks {
+  border: 2px solid color-mix(in srgb, #8b5cf6 45%, transparent);
+  border-radius: 14px;
+}
+.gu-snacks li {
+  flex-wrap: wrap;
+}
+.gu-apports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-basis: 100%;
+  padding-left: 32px;
+}
+.gu-apport {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+.gu-apport.manque {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gu-chip {
+    background: #0b0b0d;
+    border-color: #2a2a2d;
+    color: #e5e7eb;
+  }
+  .gu-chip.actif {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+  }
+  .gu-chip-snack {
+    border-color: #5b21b6;
+    color: #c4b5fd;
+  }
+  .gu-chip-snack.actif {
+    background: #7c3aed;
+    color: #fff;
+  }
+  .gu-point {
+    box-shadow: 0 0 0 2px #161618;
+  }
+  .gu-role {
+    background: #0f2a1a;
+  }
+  .gu-role b {
+    color: #86efac;
+  }
+  .gu-role p {
+    color: #d1d5db;
+  }
+  .gu-role .gu-astuce {
+    color: #fcd34d;
+  }
+  .gu-col-tete b {
+    color: color-mix(in srgb, var(--gc) 55%, #fff);
+  }
+  .gu-col li,
+  .gu-snacks li {
+    color: #f5f5f7;
+  }
+  .gu-col li + li,
+  .gu-snacks li + li {
+    border-color: #26262a;
+  }
+  .gu-nom small,
+  .gu-col-tete small,
+  .gu-legende {
+    color: #a1a1aa;
+  }
+  .gu-ok {
+    background: #14532d;
+    color: #bbf7d0;
+  }
+  li.dans-liste .gu-nom {
+    color: #86efac;
+  }
+  .gu-apport {
+    background: #26262a;
+    color: #d1d5db;
+  }
+  .gu-apport.manque {
+    background: #431407;
+    color: #fdba74;
+  }
+}
+.gu-plus {
+  display: block;
+  margin: 8px auto 0;
+}
+.nu-type {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-style: normal;
+  vertical-align: 2px;
+  background: #fef3c7;
+  color: #92400e;
+}
+.nu-type.grignoter {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+@media (prefers-color-scheme: dark) {
+  .nu-type {
+    background: #422006;
+    color: #fcd34d;
+  }
+  .nu-type.grignoter {
+    background: #2e1065;
+    color: #c4b5fd;
+  }
+}
