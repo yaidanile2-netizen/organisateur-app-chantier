@@ -1,5 +1,5 @@
 // Cartes repliables : on retient sur l'appareil quelles cartes sont ouvertes.
-// Par défaut (choix de Daniel), toutes les cartes sont repliées.
+// Par défaut (choix de Daniel, 12/10), toutes les cartes sont repliées.
 import { useSyncExternalStore } from 'react'
 
 const CLE = 'ui.cartes-ouvertes'
