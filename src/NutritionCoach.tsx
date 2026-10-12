@@ -13,6 +13,7 @@ import {
 } from './api'
 import { GUIDE, sansAccent } from './aliments'
 import GuideAliments from './GuideAliments'
+import ConseilCoach from './ConseilCoach'
 
 const OBJECTIFS: { cle: Objectif; libelle: string; emoji: string }[] = [
     { cle: 'musculation', libelle: 'Musculation', emoji: '💪' },
@@ -48,7 +49,8 @@ export default function NutritionCoach() {
     const [texte, setTexte] = useState('')
     const [analyse, setAnalyse] = useState<ReponseNutrition | null>(null)
     const [bilan, setBilan] = useState<ReponseNutrition | null>(null)
-    const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs' | 'liste'>(null)
+    const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs' | 'liste' | 'conseil'>(null)
+    const [conseil, setConseil] = useState<ReponseNutrition | null>(null)
     const [erreur, setErreur] = useState<string | null>(null)
 
     async function recharger() {
@@ -81,6 +83,7 @@ export default function NutritionCoach() {
                         ? await envoyerNutrition({ action: 'liste' })
                         : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
             if (type === 'bilan') setBilan(r)
+            else if (r.intent === 'conseil') setConseil(r)
             else if (type !== 'liste') setAnalyse(r)
             if (type === 'repas') setTexte('')
             await recharger()
@@ -336,6 +339,14 @@ export default function NutritionCoach() {
                     </div>
                 )}
             </section>
+
+            {/* Conseil personnalisé : quoi prendre, où, avec quel budget */}
+            <ConseilCoach
+                reponse={conseil}
+                onReponse={setConseil}
+                occupe={enCours !== null && enCours !== 'conseil'}
+                onOccupe={(o) => setEnCours(o ? 'conseil' : null)}
+            />
 
             {/* Tableau de la semaine */}
             <section className="nu-carte">

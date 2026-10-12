@@ -185,8 +185,17 @@ export type LignePlan = { jour: string; repas?: string; idee: string; pour?: str
 
 export type Coche = { id: string; aliment: string; emoji: string; avant: number; apres: number; quantite?: string; equivalent?: string }
 
+export type ArticleConseil = { emoji: string; aliment: string; detail: string; prix: string }
+export type OptionConseil = { titre: string; prix: string; pour: string; items: ArticleConseil[] }
+export type Conseil = { options: OptionConseil[]; astuces: string[]; eviter: string[] }
+
+export type MomentConseil = 'petit_dejeuner' | 'midi' | 'gouter' | 'soir'
+export type LieuConseil = 'supermarche' | 'boulangerie' | 'fast_food' | 'cafeteria' | 'maison'
+export type CuisineConseil = 'non' | 'micro_ondes' | 'oui'
+export type ContexteConseil = { moment: MomentConseil; lieu: LieuConseil; cuisine: CuisineConseil; budget: number | null }
+
 export type ReponseNutrition = {
-    intent: 'repas' | 'bilan' | 'objectifs' | 'liste' | 'question'
+    intent: 'repas' | 'bilan' | 'objectifs' | 'liste' | 'question' | 'conseil'
     titre: string
     reponse: string
     apports: string[]
@@ -198,6 +207,8 @@ export type ReponseNutrition = {
     objectifs: Objectif[] | null
     liste: ItemListe[] | null
     coches: Coche[]
+    /** Réponse personnalisée « quoi manger / acheter » (intent conseil). */
+    conseil?: Conseil | null
     detail: string
 }
 
@@ -206,6 +217,7 @@ export type DemandeNutrition =
     | { action: 'bilan' }
     | { action: 'liste' }
     | { action: 'objectifs'; objectifs: Objectif[] }
+    | { action: 'conseil'; texte: string; contexte: ContexteConseil }
 
 export async function getEtatNutrition(): Promise<EtatNutrition> {
     const res = await fetch(`${BASE_URL}/nutrition-etat`)
