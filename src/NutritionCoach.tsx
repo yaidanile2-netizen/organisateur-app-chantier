@@ -1,3 +1,5 @@
+import Repliable, { BoutonRepli } from './Repliable'
+import { definirOuvert, useRepli } from './repli'
 import { Fragment, useEffect, useState } from 'react'
 import './nutrition.css'
 import {
@@ -51,6 +53,7 @@ export default function NutritionCoach() {
     const [bilan, setBilan] = useState<ReponseNutrition | null>(null)
     const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs' | 'liste' | 'conseil'>(null)
     const [conseil, setConseil] = useState<ReponseNutrition | null>(null)
+    const [listeOuverte, basculerListe] = useRepli('nutri.liste')
     const [erreur, setErreur] = useState<string | null>(null)
 
     async function recharger() {
@@ -83,7 +86,10 @@ export default function NutritionCoach() {
                         ? await envoyerNutrition({ action: 'liste' })
                         : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
             if (type === 'bilan') setBilan(r)
-            else if (r.intent === 'conseil') setConseil(r)
+            else if (r.intent === 'conseil') {
+                setConseil(r)
+                definirOuvert('nutri.conseil', true)
+            }
             else if (type !== 'liste') setAnalyse(r)
             if (type === 'repas') setTexte('')
             await recharger()
@@ -145,13 +151,17 @@ export default function NutritionCoach() {
             {erreur && <p className="form-error">{erreur}</p>}
 
             {/* Liste de la semaine */}
-            <section className="nu-carte">
+            <section className={`nu-carte repliable${listeOuverte ? '' : ' replie'}`}>
                 <div className="nu-carte-tete">
                     <div className="nu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
                         <span>{pourcent}%</span>
                     </div>
                     <div className="nu-carte-titre">
-                        <h2>🛒 Ma liste de la semaine</h2>
+                        <h2>
+                            <BoutonRepli ouvert={listeOuverte} onClick={() => basculerListe()}>
+                                🛒 Ma liste de la semaine
+                            </BoutonRepli>
+                        </h2>
                         <p>
                             {liste.length
                                 ? `${totalFait} portions sur ${totalCible} · il en reste ${totalCible - totalFait}`
@@ -160,7 +170,7 @@ export default function NutritionCoach() {
                     </div>
                 </div>
 
-                {liste.length === 0 ? (
+                {listeOuverte && (liste.length === 0 ? (
                     <button className="btn-primary" onClick={() => demander('liste')} disabled={enCours !== null}>
                         {enCours === 'liste' ? 'Le coach prépare ta liste…' : '✨ Générer ma liste de la semaine'}
                     </button>
@@ -217,12 +227,11 @@ export default function NutritionCoach() {
                             {enCours === 'liste' ? 'Le coach refait ta liste…' : '↻ Refaire ma liste (garde ce qui est coché)'}
                         </button>
                     </>
-                )}
+                ))}
             </section>
 
             {/* Noter un repas */}
-            <section className="nu-carte">
-                <h2>🍽️ Qu’est-ce que tu as mangé ?</h2>
+            <Repliable cle="nutri.repas" className="nu-carte" titre="🍽️ Qu’est-ce que tu as mangé ?">
                 <form
                     className="nu-saisie"
                     onSubmit={(e) => {
@@ -338,7 +347,7 @@ export default function NutritionCoach() {
                         )}
                     </div>
                 )}
-            </section>
+            </Repliable>
 
             {/* Conseil personnalisé : quoi prendre, où, avec quel budget */}
             <ConseilCoach
@@ -349,8 +358,7 @@ export default function NutritionCoach() {
             />
 
             {/* Tableau de la semaine */}
-            <section className="nu-carte">
-                <h2>📊 Mon tableau de la semaine</h2>
+            <Repliable cle="nutri.tableau" className="nu-carte" titre="📊 Mon tableau de la semaine">
                 <p className="nu-sous">Les nutriments que tes repas ont apportés, jour par jour.</p>
                 <div className="nu-tableau-scroll">
                     <table className="nu-tableau">
@@ -381,7 +389,7 @@ export default function NutritionCoach() {
                     </table>
                 </div>
                 {repas.length === 0 && <p className="nu-sous">Note tes repas pour remplir le tableau.</p>}
-            </section>
+            </Repliable>
 
             {/* Guide des aliments */}
             <GuideAliments
@@ -392,13 +400,23 @@ export default function NutritionCoach() {
             />
 
             {/* Bilan */}
-            <section className="nu-carte">
-                <div className="nu-ligne-titre">
-                    <h2>🧭 Bilan de la semaine</h2>
-                    <button className="btn-secondary nu-petit" onClick={() => demander('bilan')} disabled={enCours !== null}>
+            <Repliable
+                cle="nutri.bilan"
+                className="nu-carte"
+                titre="🧭 Bilan de la semaine"
+                entete={
+                    <button
+                        className="btn-secondary nu-petit"
+                        onClick={() => {
+                            definirOuvert('nutri.bilan', true)
+                            demander('bilan')
+                        }}
+                        disabled={enCours !== null}
+                    >
                         {enCours === 'bilan' ? 'Bilan…' : bilan ? '↻ Refaire' : 'Faire le bilan'}
                     </button>
-                </div>
+                }
+            >
                 {!bilan && <p className="nu-sous">Ce qui est bien couvert, ce qui manque, et quoi manger les prochains jours.</p>}
                 {bilan && (
                     <div className="nu-resultat">
@@ -458,11 +476,10 @@ export default function NutritionCoach() {
                         )}
                     </div>
                 )}
-            </section>
+            </Repliable>
 
             {/* Priorités */}
-            <section className="nu-carte">
-                <h2>🎯 Mes priorités</h2>
+            <Repliable cle="nutri.priorites" className="nu-carte" titre="🎯 Mes priorités" resume={`n°1 : ${objectif(priorites[0]).emoji} ${objectif(priorites[0]).libelle}`}>
                 <p className="nu-sous">Touche un objectif pour le passer en n°1.</p>
                 <div className="nu-objectifs">
                     {priorites.map((o, k) => (
@@ -487,11 +504,10 @@ export default function NutritionCoach() {
                         </button>
                     </div>
                 )}
-            </section>
+            </Repliable>
 
             {/* Journal */}
-            <section className="nu-carte">
-                <h2>📖 Mon journal de la semaine</h2>
+            <Repliable cle="nutri.journal" className="nu-carte" titre="📖 Mon journal de la semaine" resume={`${repas.length} repas`}>
                 {repas.length === 0 ? (
                     <p className="nu-sous">Aucun repas noté depuis lundi.</p>
                 ) : (
@@ -535,7 +551,7 @@ export default function NutritionCoach() {
                         </tbody>
                     </table>
                 )}
-            </section>
+            </Repliable>
         </div>
     )
 }

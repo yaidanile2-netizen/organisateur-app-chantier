@@ -1,3 +1,4 @@
+import Repliable from './Repliable'
 import { useState } from 'react'
 import { GUIDE, dansLaListe, sansAccent, type Aliment, type GuideNutriment } from './aliments'
 
@@ -57,8 +58,7 @@ export default function GuideAliments(props: Props) {
     }
 
     return (
-        <section className="nu-carte gu">
-            <h2>🥗 Guide des aliments</h2>
+        <Repliable cle="nutri.guide" className="nu-carte gu" titre="🥗 Guide des aliments" resume={surveilles.length ? `${surveilles.length} à surveiller` : undefined}>
             <p className="nu-sous">Quoi manger pour chaque nutriment : aux repas, vite fait, ou en grignotant.</p>
 
             <div className="gu-chips" role="tablist">
@@ -157,6 +157,6 @@ export default function GuideAliments(props: Props) {
                     )}
                 </>
             )}
-        </section>
+        </Repliable>
     )
 }

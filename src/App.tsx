@@ -1,3 +1,5 @@
+import { definirOuvert } from './repli'
+import Repliable from './Repliable'
 import { useEffect, useState } from 'react'
 import './App.css'
 import { activerNotifications, etatNotifications, notificationsDisponibles, type EtatNotifications } from './push'
@@ -81,14 +83,16 @@ function App() {
             <main className="content">
                 {onglet === 'agenda' && (
                     <>
-                        <DayView rafraichir={version} onVoirSeance={() => choisir('muscu')} />
+                        <DayView rafraichir={version} onVoirSeance={() => {
+                                definirOuvert('muscu.seance', true)
+                                choisir('muscu')
+                            }} />
 
                         <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 
                         <EtudesPlanner version={version} onPlanifie={() => setVersion((v) => v + 1)} />
 
-                        <section className="card">
-                            <h2>Notifications</h2>
+                        <Repliable cle="agenda.notifications" className="card" titre="🔔 Notifications" resume={etat === 'actif' ? '✅ activées' : undefined}>
                             {etat === 'chargement' && <p className="muted">Vérification…</p>}
                             {etat === 'indisponible' && (
                                 <p className="muted">
@@ -114,11 +118,10 @@ function App() {
                                 </>
                             )}
                             {etat === 'actif' && <p className="status">✅ Notifications activées.</p>}
-                        </section>
+                        </Repliable>
 
                         {categories.length > 0 && (
-                            <section className="card">
-                                <h2>Catégories</h2>
+                            <Repliable cle="agenda.categories" className="card" titre="🏷️ Catégories" resume={`${categories.length}`}>
                                 <ul className="categories">
                                     {categories.map((c) => (
                                         <li
@@ -130,7 +133,7 @@ function App() {
                                         </li>
                                     ))}
                                 </ul>
-                            </section>
+                            </Repliable>
                         )}
                     </>
                 )}

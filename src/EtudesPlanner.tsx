@@ -1,3 +1,4 @@
+import Repliable from './Repliable'
 // Carte « Révisions » de l'onglet Agenda : échéances à venir avec leur programme (Réviser → Appliquer → Valider),
 // ajout d'une échéance, et placement des créneaux d'étude le soir.
 import { useEffect, useState } from 'react'
@@ -188,8 +189,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
     const prog = programme('ds', reglages)
 
     return (
-        <section className="card etudes">
-            <h2>📚 Révisions</h2>
+        <Repliable cle="agenda.etudes" className="card etudes" titre="📚 Révisions">
             <p className="muted">
                 Le soir de {reglages.debut.replace(':', 'h')} à {reglages.fin.replace(':', 'h')} (au plus {duree(reglages.maxJourCours)} un jour de cours). DS
                 d’abord, puis oraux, projets, TP et de courtes révisions de TD.
@@ -436,6 +436,6 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     </div>
                 </>
             )}
-        </section>
+        </Repliable>
     )
 }

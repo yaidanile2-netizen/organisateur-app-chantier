@@ -1,3 +1,5 @@
+import { BoutonRepli } from './Repliable'
+import { useRepli } from './repli'
 import { useEffect, useMemo, useState } from 'react'
 import {
     creerTache,
@@ -68,6 +70,7 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
     const [formOuvert, setFormOuvert] = useState(false)
     const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null)
     const [detail, setDetail] = useState<{ item: Item; maintenant: number } | null>(null)
+    const [ouvert, basculer] = useRepli('agenda.jour')
 
     // On charge toute la semaine du jour affiché : la bande « semaine » et la liste du jour s'en servent.
     const cleSemaine = debutDeSemaine(date).toDateString()
@@ -169,13 +172,22 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
     }
 
     return (
-        <section className="card day-view">
+        <section className={`card day-view repliable${ouvert ? '' : ' replie'}`}>
             <div className="day-view-header">
                 <button className="btn-icon" onClick={() => changerJour(-1)} aria-label="Jour précédent">
                     ‹
                 </button>
                 <div className="day-view-title">
-                    <h2>{capitalize(dateLabelFormat.format(date))}</h2>
+                    <h2>
+                        <BoutonRepli ouvert={ouvert} onClick={() => basculer()}>
+                            {capitalize(dateLabelFormat.format(date))}
+                        </BoutonRepli>
+                    </h2>
+                    {!ouvert && !chargement && (
+                        <span className="repli-resume">
+                            {items.length === 0 ? 'Rien de prévu' : `${items.length} élément${items.length > 1 ? 's' : ''}`}
+                        </span>
+                    )}
                     {!estAujourdhui(date) && (
                         <button className="btn-link" onClick={() => setDate(new Date())}>
                             Revenir à aujourd'hui
@@ -187,6 +199,8 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                 </button>
             </div>
 
+            {ouvert && (
+                <>
             <div className="sem" role="list" aria-label="Semaine">
                 {semaine.map(({ jour, items: duJour }) => {
                     const choisi = memeJour(jour, date)
@@ -293,6 +307,8 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
             <button className="btn-primary" onClick={ouvrirCreation}>
                 + Ajouter une tâche
             </button>
+                </>
+            )}
 
             {detail && (
                 <EventDetail

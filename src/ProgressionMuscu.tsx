@@ -1,3 +1,4 @@
+import Repliable from './Repliable'
 // Onglet Muscu : chiffres clés, progression des charges et historique des séances (synchronisés).
 import type { SeanceFaite } from './api'
 import { seanceParCode } from './programme'
@@ -55,13 +56,18 @@ export default function ProgressionMuscu({ seances, lundi, synchro, onSupprimer 
 
     return (
         <>
-            <section className="mu-carte">
-                <div className="mu-entete-ligne">
-                    <h2 className="mu-h2">📈 MA PROGRESSION</h2>
+            <Repliable
+                cle="muscu.progression"
+                className="mu-carte"
+                h2Class="mu-h2"
+                titre="📈 MA PROGRESSION"
+                resume={`${cetteSemaine}/4 cette semaine`}
+                entete={
                     <span className={`mu-synchro ${synchro}`}>
                         {synchro === 'ok' ? '☁ Synchronisé' : synchro === 'chargement' ? '… Synchro' : '⚠ Hors ligne'}
                     </span>
-                </div>
+                }
+            >
                 <div className="mu-stats">
                     <div className="mu-stat">
                         <b>{cetteSemaine}/4</b>
@@ -113,11 +119,10 @@ export default function ProgressionMuscu({ seances, lundi, synchro, onSupprimer 
                         </tbody>
                     </table>
                 )}
-            </section>
+            </Repliable>
 
             {seances.length > 0 && (
-                <section className="mu-carte">
-                    <h2 className="mu-h2">MES DERNIÈRES SÉANCES</h2>
+                <Repliable cle="muscu.historique" className="mu-carte" h2Class="mu-h2" titre="🗓️ MES DERNIÈRES SÉANCES" resume={`${seances.length}`}>
                     <table className="mu-table">
                         <tbody>
                             {seances.slice(0, 8).map((h) => {
@@ -164,7 +169,7 @@ export default function ProgressionMuscu({ seances, lundi, synchro, onSupprimer 
                             })}
                         </tbody>
                     </table>
-                </section>
+                </Repliable>
             )}
         </>
     )

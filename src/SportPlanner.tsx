@@ -1,3 +1,4 @@
+import Repliable from './Repliable'
 import { useState } from 'react'
 import {
     creerTache,
@@ -110,8 +111,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
     }
 
     return (
-        <section className="card sport-planner">
-            <h2>Séances de sport</h2>
+        <Repliable cle="agenda.sport" className="card sport-planner" titre="🏋️ Séances de sport">
             <p className="muted">
                 {SEANCES_SALLE.length} séances de {reglages.duree} min au {SALLE.nom}
                 {reglages.seanceMaison ? ' + 1 à la maison avec les élastiques' : ''}, placées autour de tes cours en
@@ -289,6 +289,6 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                     </button>
                 </>
             )}
-        </section>
+        </Repliable>
     )
 }

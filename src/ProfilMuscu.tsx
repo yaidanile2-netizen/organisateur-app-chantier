@@ -1,3 +1,5 @@
+import Repliable from './Repliable'
+import { definirOuvert } from './repli'
 // Carte « Mon profil » de l'onglet Muscu : sert à calculer les charges de départ conseillées.
 import { useState } from 'react'
 import { NIVEAUX, mesures, type Niveau, type Profil } from './profil'
@@ -24,19 +26,26 @@ export default function ProfilMuscu({ profil, aujourdhui, onChange }: Props) {
     }
 
     return (
-        <section className="mu-carte mu-profil" style={{ '--c': '#4cc9ff' } as React.CSSProperties}>
-            <div className="mu-entete-ligne">
-                <h2 className="mu-h2">👤 MON PROFIL</h2>
+        <Repliable
+            cle="muscu.profil"
+            className="mu-carte mu-profil"
+            style={{ '--c': '#4cc9ff' } as React.CSSProperties}
+            h2Class="mu-h2"
+            titre="👤 MON PROFIL"
+            resume={`${nombre(profil.tailleCm / 100, 2)} m · ${nombre(profil.poidsKg)} kg`}
+            entete={
                 <button
                     className="mu-mini"
                     onClick={() => {
                         setBrouillon(profil)
                         setOuvert((o) => !o)
+                        definirOuvert('muscu.profil', true)
                     }}
                 >
                     {ouvert ? 'Fermer' : '✏️ Modifier'}
                 </button>
-            </div>
+            }
+        >
 
             <div className="mu-profil-tuiles">
                 <div>
@@ -116,6 +125,6 @@ export default function ProfilMuscu({ profil, aujourdhui, onChange }: Props) {
                     </button>
                 </div>
             )}
-        </section>
+        </Repliable>
     )
 }

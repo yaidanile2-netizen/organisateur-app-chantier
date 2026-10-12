@@ -1,3 +1,5 @@
+import { BoutonRepli } from './Repliable'
+import { useRepli } from './repli'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import './muscu.css'
 import { envoyerMuscu, getCoursEntre, getTachesEntre, modifierTache, type EtatMuscu, type ExoFait, type Ressenti, type SeanceFaite, type Tache } from './api'
@@ -108,6 +110,8 @@ export default function MuscuView() {
     const [taches, setTaches] = useState<Tache[]>([])
     const [chargement, setChargement] = useState(true)
     const [code, setCode] = useState<CodeSeance>('A')
+    const [semaineOuverte, basculerSemaine] = useRepli('muscu.semaine')
+    const [detailOuvert, basculerDetail] = useRepli('muscu.seance')
     const [deplacement, setDeplacement] = useState<Deplacement | null>(null)
     const [suivi, setSuivi] = useState<EtatMuscu>(() => lireCache())
     const [synchro, setSynchro] = useState<'chargement' | 'ok' | 'hors-ligne'>('chargement')
@@ -369,17 +373,23 @@ export default function MuscuView() {
             </section>
 
             {/* Planning de la semaine */}
-            <section className="mu-carte">
+            <section className={`mu-carte repliable${semaineOuverte ? '' : ' replie'}`}>
                 <div className="mu-entete-ligne">
                     <button className="mu-fleche" onClick={() => setDecalage((d) => Math.max(0, d - 1))} disabled={decalage === 0} aria-label="Semaine précédente">
                         ‹
                     </button>
-                    <h2 className="mu-h2">{decalage === 0 ? 'CETTE SEMAINE' : 'SEMAINE PROCHAINE'}</h2>
+                    <h2 className="mu-h2">
+                        <BoutonRepli ouvert={semaineOuverte} onClick={() => basculerSemaine()}>
+                            {decalage === 0 ? 'CETTE SEMAINE' : 'SEMAINE PROCHAINE'}
+                        </BoutonRepli>
+                    </h2>
                     <button className="mu-fleche" onClick={() => setDecalage((d) => Math.min(1, d + 1))} disabled={decalage === 1} aria-label="Semaine suivante">
                         ›
                     </button>
                 </div>
 
+                {semaineOuverte && (
+                    <>
                 <div className="mu-semaine">
                     {parJour.map(({ jour, seances }, i) => {
                         const auj = memeJour(jour, new Date())
@@ -397,7 +407,10 @@ export default function MuscuView() {
                                                 key={t.id}
                                                 className={`mu-pastille ${t.statut === 'fait' ? 'fait' : ''}`}
                                                 style={{ '--c': s.couleur } as React.CSSProperties}
-                                                onClick={() => setCode(s.code)}
+                                                onClick={() => {
+                                                    setCode(s.code)
+                                                    basculerDetail(true)
+                                                }}
                                                 title={`Séance ${s.code}`}
                                             >
                                                 {t.statut === 'fait' ? '✓' : s.emoji}
@@ -512,6 +525,8 @@ export default function MuscuView() {
                     </table>
                 )}
                 {message && <p className="mu-message">{message}</p>}
+                    </>
+                )}
             </section>
 
             {/* Choix de la séance */}
@@ -526,6 +541,7 @@ export default function MuscuView() {
                             onClick={() => {
                                 setCode(s.code)
                                 setConseils(null)
+                                basculerDetail(true)
                             }}
                         >
                             <span className="mu-cs-emoji">{s.emoji}</span>
@@ -541,14 +557,16 @@ export default function MuscuView() {
 
             {/* Détail de la séance */}
             <section
-                className="mu-detail"
+                className={`mu-detail repliable${detailOuvert ? '' : ' replie'}`}
                 style={{ '--c': seance.couleur } as React.CSSProperties}
             >
                 <div className="mu-detail-hero">
                     <div className="mu-detail-texte">
                         <span className="mu-detail-lieu">{seance.lieu === 'maison' ? '🏠 À LA MAISON' : '🏋️ EN SALLE'}</span>
                         <h2 className="mu-detail-titre">
-                            {seance.emoji} SÉANCE {seance.code}
+                            <BoutonRepli ouvert={detailOuvert} onClick={() => basculerDetail()}>
+                                {seance.emoji} SÉANCE {seance.code}
+                            </BoutonRepli>
                         </h2>
                         <p className="mu-detail-sous">{seance.titre.replace(/^Maison : /, '')}</p>
                         <div className="mu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
@@ -560,6 +578,8 @@ export default function MuscuView() {
                     </div>
                     <BodyMap muscles={musclesDe(exercices)} couleur={seance.couleur} />
                 </div>
+                {detailOuvert && (
+                    <>
                 <div className="mu-muscles">
                     {musclesDe(exercices).map((m) => (
                         <span key={m} className="mu-muscle">
@@ -774,6 +794,8 @@ export default function MuscuView() {
                             SÉANCE TERMINÉE
                         </button>
                     </div>
+                )}
+                    </>
                 )}
             </section>
 

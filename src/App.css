@@ -1586,3 +1586,93 @@
     border-color: #2a2a2d;
   }
 }
+
+/* Cartes repliables (titre cliquable + chevron) */
+.repli-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.repli-tete > h2 {
+  flex: 1 1 auto;
+  min-width: 55%;
+  margin: 0 !important;
+}
+.repliable:not(.replie) > .repli-tete {
+  margin-bottom: 12px;
+}
+.repli-bouton {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+.repli-tete > h2 > .repli-bouton {
+  width: 100%;
+}
+.repli-texte {
+  min-width: 0;
+}
+.repli-chevron {
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: 0.8em;
+  line-height: 1;
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+.repli-bouton[aria-expanded='false'] .repli-chevron {
+  transform: rotate(-90deg);
+}
+.repli-bouton:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.repli-resume {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: inherit;
+  opacity: 0.75;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  white-space: nowrap;
+}
+.replie .mu-entete-ligne,
+.replie .nu-carte-tete,
+.replie .day-view-header {
+  margin-bottom: 0;
+}
+.day-view-title .repli-resume {
+  display: inline-block;
+  margin-top: 2px;
+}
+
+/* Titres longs (séance Muscu, date du jour) : le chevron suit le texte */
+.mu-detail-titre .repli-bouton,
+.day-view-title .repli-bouton {
+  display: inline;
+}
+.mu-detail-titre .repli-chevron,
+.day-view-title .repli-chevron {
+  margin-left: 6px;
+  vertical-align: middle;
+}

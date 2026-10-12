@@ -1,3 +1,4 @@
+import Repliable from './Repliable'
 import { useState } from 'react'
 import {
     envoyerNutrition,
@@ -89,8 +90,7 @@ export default function ConseilCoach({ reponse, onReponse, occupe, onOccupe }: P
     const conseil = reponse?.conseil
 
     return (
-        <section className="nu-carte co">
-            <h2>💬 Demande au coach</h2>
+        <Repliable cle="nutri.conseil" className="nu-carte co" titre="💬 Demande au coach">
             <p className="nu-sous">Il te conseille quoi prendre selon ta semaine, l’endroit et ton budget.</p>
 
             <form
@@ -221,6 +221,6 @@ export default function ConseilCoach({ reponse, onReponse, occupe, onOccupe }: P
                     <p className="nu-gris-petit">Prix et Nutri-Score donnés à titre indicatif : vérifie en rayon.</p>
                 </div>
             )}
-        </section>
+        </Repliable>
     )
 }
