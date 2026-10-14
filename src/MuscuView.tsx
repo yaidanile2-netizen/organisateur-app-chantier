@@ -1,3 +1,5 @@
+import ExoIllustration from './ExoIllustration'
+import { aUneIllustration, legendeDe } from './illustrations'
 import { BoutonRepli } from './Repliable'
 import { useRepli } from './repli'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
@@ -121,6 +123,7 @@ export default function MuscuView() {
     const [profil, setProfil] = useState<Profil>(() => lireProfil())
     const minuteurs = useRef<Record<string, number>>({})
     const [conseils, setConseils] = useState<string | null>(null)
+    const [zoom, setZoom] = useState<string | null>(null)
     const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
     const [message, setMessage] = useState<string | null>(null)
 
@@ -621,9 +624,20 @@ export default function MuscuView() {
                             return (
                                 <div key={e.id} className="mu-exo">
                                     <div className="mu-exo-haut">
-                                        <span className="mu-exo-icone" title={MATERIEL[e.materiel].libelle}>
-                                            {MATERIEL[e.materiel].emoji}
-                                        </span>
+                                        {aUneIllustration(e.id) ? (
+                                            <button
+                                                className={`mu-exo-ill${zoom === e.id ? ' actif' : ''}`}
+                                                onClick={() => setZoom(zoom === e.id ? null : e.id)}
+                                                aria-label={`Voir l’exercice ${e.nom} en grand`}
+                                                aria-expanded={zoom === e.id}
+                                            >
+                                                <ExoIllustration id={e.id} titre={`${e.nom} : ${legendeDe(e.id)}`} />
+                                            </button>
+                                        ) : (
+                                            <span className="mu-exo-icone" title={MATERIEL[e.materiel].libelle}>
+                                                {MATERIEL[e.materiel].emoji}
+                                            </span>
+                                        )}
                                         <div className="mu-exo-nom">
                                             <b>{e.nom.toUpperCase()}</b>
                                             <span>{e.machine}</span>
@@ -633,6 +647,17 @@ export default function MuscuView() {
                                             {e.reps}
                                         </span>
                                     </div>
+                                    {zoom === e.id && (
+                                        <figure className="mu-exo-zoom">
+                                            <ExoIllustration id={e.id} grand titre={`${e.nom} : ${legendeDe(e.id)}`} />
+                                            <figcaption>
+                                                <b>{legendeDe(e.id)}</b>
+                                                <span>
+                                                    {MATERIEL[e.materiel].emoji} {e.machine}
+                                                </span>
+                                            </figcaption>
+                                        </figure>
+                                    )}
                                     <div className="mu-exo-bas">
                                         <div className="mu-series">
                                             {Array.from({ length: e.series }, (_, i) => (

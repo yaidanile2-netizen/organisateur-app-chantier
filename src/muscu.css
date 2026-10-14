@@ -1093,3 +1093,103 @@
 .mu-profil-large {
   grid-column: 1 / -1;
 }
+
+/* Illustrations animées des exercices */
+.mu-ill {
+  --ill-accent: color-mix(in srgb, var(--c, #4d9fff) 82%, #000);
+}
+@media (prefers-color-scheme: dark) {
+  .mu-ill {
+    --ill-accent: var(--c, #4d9fff);
+  }
+}
+.mu-exo-ill {
+  flex-shrink: 0;
+  width: 104px;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 1.5px solid color-mix(in srgb, var(--c) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 9%, var(--mu-carte-fond, transparent));
+  cursor: zoom-in;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.mu-exo-ill.actif {
+  cursor: zoom-out;
+  border-color: var(--c);
+}
+.mu-exo-ill:focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: 2px;
+}
+.mu-ill {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.mu-ill line {
+  fill: none;
+}
+.mu-ill .ill-corps {
+  stroke: var(--mu-txt);
+  fill: var(--mu-txt);
+}
+.mu-ill .ill-loin {
+  stroke: color-mix(in srgb, var(--mu-txt) 38%, transparent);
+  fill: color-mix(in srgb, var(--mu-txt) 38%, transparent);
+}
+.mu-ill .ill-accent {
+  stroke: var(--ill-accent);
+  fill: var(--ill-accent);
+}
+.mu-ill .ill-machine {
+  stroke: color-mix(in srgb, var(--mu-txt) 30%, transparent);
+  fill: color-mix(in srgb, var(--mu-txt) 30%, transparent);
+}
+.mu-ill .ill-piece {
+  stroke: color-mix(in srgb, var(--mu-txt) 52%, transparent);
+  fill: color-mix(in srgb, var(--mu-txt) 52%, transparent);
+}
+.mu-ill .ill-cable {
+  stroke: color-mix(in srgb, var(--mu-txt) 60%, transparent);
+  fill: color-mix(in srgb, var(--mu-txt) 60%, transparent);
+}
+.mu-ill .ill-elastique {
+  stroke: #f59e0b;
+  fill: #f59e0b;
+}
+.mu-ill .ill-sol {
+  stroke: color-mix(in srgb, var(--mu-txt) 16%, transparent);
+}
+.mu-ill circle.vide {
+  fill: none;
+  stroke-width: 2;
+}
+.mu-exo-zoom {
+  margin: 10px 0 4px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--c) 35%, transparent);
+  background: color-mix(in srgb, var(--c) 7%, transparent);
+}
+.mu-exo-zoom .mu-ill {
+  max-width: 380px;
+  height: auto;
+  margin: 0 auto;
+}
+.mu-exo-zoom figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  margin-top: 4px;
+}
+.mu-exo-zoom figcaption b {
+  font-size: 14px;
+  color: var(--mu-txt);
+}
+.mu-exo-zoom figcaption span {
+  font-size: 12px;
+  color: var(--mu-txt3);
+}
