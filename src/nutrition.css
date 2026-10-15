@@ -1391,3 +1391,34 @@ li.dans-liste .gu-nom {
     color: #d1d5db;
   }
 }
+
+/* Portions mangées en plus de la cible */
+.nu-point.bonus.ok {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+.nu-point-plus {
+  border-style: dashed;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.nu-reste.plus {
+  background: #f3e8ff;
+  color: #6d28d9;
+}
+@media (prefers-color-scheme: dark) {
+  .nu-point-plus {
+    background: transparent;
+    border-color: #52525b;
+    color: #a1a1aa;
+  }
+  .nu-reste.plus {
+    background: #2e1065;
+    color: #c4b5fd;
+  }
+}

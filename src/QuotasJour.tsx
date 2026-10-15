@@ -84,7 +84,7 @@ export default function QuotasJour({ apports, sante, priorite }: Props) {
                             ? 'Parfait, tu es sous le repère idéal.'
                             : nivSucres === 'attention'
                               ? `Au-dessus de l’idéal, reste sous ${SUCRES_MAX} g.`
-                              : 'Journée chargée en sucre : pas grave, on rattrape demain.'}
+                              : `Limite dépassée de ${g(a.sucres - SUCRES_MAX)} : pas grave, on rattrape demain.`}
                     </p>
                 </div>
                 <div className="qj-ligne">
@@ -95,6 +95,9 @@ export default function QuotasJour({ apports, sante, priorite }: Props) {
                         </b>
                     </div>
                     <Jauge valeur={a.gras} max={q.gras * 1.2} repere={q.gras} niveau={nivGras} />
+                    {a.gras > q.gras && (
+                        <p className="qj-note">Repère dépassé de {g(a.gras - q.gras)} : un repas plus léger en fromage, beurre ou friture suffit.</p>
+                    )}
                 </div>
             </div>
 

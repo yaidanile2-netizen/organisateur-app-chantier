@@ -40,6 +40,8 @@ const MOMENTS: Record<Moment, { libelle: string; emoji: string }> = {
 // Lignes du tableau de la semaine : un nutriment est « couvert » un jour donné si un repas
 // de ce jour l'apporte (d'après l'analyse du coach). Mêmes nutriments que le guide des aliments.
 const NUTRIMENTS = GUIDE
+/** On peut cocher plus que la cible (9 bananes au lieu de 7) : jusqu'à 30 portions. */
+const MAX_FAIT = 30
 const estEncas = (i: ItemListe) => i.type === 'facile' || i.type === 'grignoter'
 const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const jourIndex = (d: Date) => (d.getDay() + 6) % 7
@@ -215,19 +217,29 @@ export default function NutritionCoach() {
                                             <span>{i.pourquoi}</span>
                                             {i.portion && <span className="nu-portion">● = {i.portion}</span>}
                                             <div className="nu-points">
-                                                {Array.from({ length: i.cible }, (_, k) => (
+                                                {Array.from({ length: Math.max(i.cible, i.fait) }, (_, k) => (
                                                     <button
                                                         key={k}
-                                                        className={`nu-point ${k < i.fait ? 'ok' : ''}`}
+                                                        className={`nu-point ${k < i.fait ? 'ok' : ''} ${k >= i.cible ? 'bonus' : ''}`}
                                                         onClick={() => cocher(i, k < i.fait ? k : k + 1)}
-                                                        aria-label={`${i.aliment} : ${k + 1} portion(s)`}
+                                                        aria-label={`${i.aliment} : ${k + 1} portion(s)${k >= i.cible ? ' (en plus)' : ''}`}
                                                     />
                                                 ))}
+                                                {fini && i.fait < MAX_FAIT && (
+                                                    <button
+                                                        className="nu-point nu-point-plus"
+                                                        onClick={() => cocher(i, i.fait + 1)}
+                                                        aria-label={`${i.aliment} : j’en ai mangé une portion de plus`}
+                                                        title="J’en ai mangé plus que prévu"
+                                                    >
+                                                        +
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
-                                        <span className={`nu-reste ${fini ? 'ok' : ''}`}>
-                                            {fini ? '✓' : `${i.cible - i.fait}`}
-                                            <small>{fini ? 'fait' : 'reste'}</small>
+                                        <span className={`nu-reste ${fini ? 'ok' : ''} ${i.fait > i.cible ? 'plus' : ''}`}>
+                                            {i.fait > i.cible ? `+${i.fait - i.cible}` : fini ? '✓' : `${i.cible - i.fait}`}
+                                            <small>{i.fait > i.cible ? 'en plus' : fini ? 'fait' : 'reste'}</small>
                                         </span>
                                     </li>
                                 )
@@ -343,8 +355,8 @@ export default function NutritionCoach() {
                                                                 {ajoute >= 0 ? `+${ajoute}` : ajoute}
                                                             </b>
                                                             <button
-                                                                onClick={() => item && cocher(item, Math.min(cible, fait + 1))}
-                                                                disabled={!item || fait >= cible}
+                                                                onClick={() => item && cocher(item, Math.min(MAX_FAIT, fait + 1))}
+                                                                disabled={!item || fait >= MAX_FAIT}
                                                                 aria-label="Une portion de plus"
                                                             >
                                                                 +
