@@ -1201,3 +1201,193 @@ li.dans-liste .gu-nom {
     color: #d1d5db;
   }
 }
+
+/* Quotas du jour */
+.qj-lignes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.qj-tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #374151;
+}
+.qj-tete b {
+  font-size: 16px;
+  color: #111827;
+}
+.qj-tete small {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.qj-jauge {
+  position: relative;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+.qj-rempli {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: #22c55e;
+  transition: width 0.4s ease;
+}
+.qj-jauge.encours .qj-rempli {
+  background: #38bdf8;
+}
+.qj-jauge.attention .qj-rempli {
+  background: #f59e0b;
+}
+.qj-jauge.trop .qj-rempli {
+  background: #ef4444;
+}
+.qj-repere {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #111827;
+  opacity: 0.55;
+}
+.qj-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+.qj-semaine {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+.qj-semaine-titre {
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
+  letter-spacing: 0.3px;
+}
+.qj-jours {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.qj-jour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+.qj-jour i {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.qj-jour.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.qj-jour.attention {
+  background: #fef3c7;
+  color: #92400e;
+}
+.qj-jour.trop {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.qj-jour.futur {
+  background: transparent;
+  border: 1.5px dashed #e5e7eb;
+  min-height: 34px;
+}
+.qj-jour.auj {
+  outline: 2px solid #16a34a;
+  outline-offset: 1px;
+}
+.qj-calcul {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+.nu-estimation {
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+.nu-journal-kcal {
+  display: block;
+  font-size: 11.5px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .qj-tete {
+    color: #d1d5db;
+  }
+  .qj-tete b {
+    color: #f5f5f7;
+  }
+  .qj-tete small,
+  .qj-note,
+  .qj-calcul,
+  .nu-journal-kcal {
+    color: #a1a1aa;
+  }
+  .qj-jauge {
+    background: #26262a;
+  }
+  .qj-repere {
+    background: #f5f5f7;
+  }
+  .qj-semaine {
+    border-color: #26262a;
+  }
+  .qj-semaine-titre {
+    color: #d1d5db;
+  }
+  .qj-jour {
+    background: #1f1f22;
+    color: #71717a;
+  }
+  .qj-jour.ok {
+    background: #14532d;
+    color: #bbf7d0;
+  }
+  .qj-jour.attention {
+    background: #422006;
+    color: #fcd34d;
+  }
+  .qj-jour.trop {
+    background: #450a0a;
+    color: #fca5a5;
+  }
+  .qj-jour.futur {
+    background: transparent;
+    border-color: #2a2a2d;
+  }
+  .nu-estimation {
+    background: #1f1f22;
+    color: #d1d5db;
+  }
+}

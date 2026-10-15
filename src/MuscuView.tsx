@@ -1,3 +1,4 @@
+import MontreMuscu from './MontreMuscu'
 import ExoIllustration from './ExoIllustration'
 import { aUneIllustration, legendeDe } from './illustrations'
 import { BoutonRepli } from './Repliable'
@@ -832,6 +833,8 @@ export default function MuscuView() {
                     enregistrerProfil(p)
                 }}
             />
+
+            <MontreMuscu />
 
             <ProgressionMuscu seances={suivi.seances} lundi={debutDeSemaine(new Date())} synchro={synchro} onSupprimer={supprimerSeance} />
 

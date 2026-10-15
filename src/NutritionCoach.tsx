@@ -1,3 +1,4 @@
+import QuotasJour from './QuotasJour'
 import Repliable, { BoutonRepli } from './Repliable'
 import { definirOuvert, useRepli } from './repli'
 import { Fragment, useEffect, useState } from 'react'
@@ -7,7 +8,9 @@ import {
     envoyerNutrition,
     getEtatNutrition,
     supprimerRepas,
+    type ApportsJour,
     type ItemListe,
+    type SanteJour,
     type Moment,
     type Objectif,
     type Repas,
@@ -47,6 +50,8 @@ export default function NutritionCoach() {
     const [prioritesServeur, setPrioritesServeur] = useState<Objectif[]>(PAR_DEFAUT)
     const [repas, setRepas] = useState<Repas[]>([])
     const [liste, setListe] = useState<ItemListe[]>([])
+    const [apportsJours, setApportsJours] = useState<ApportsJour[]>([])
+    const [sante, setSante] = useState<SanteJour[]>([])
     const [filtre, setFiltre] = useState<'reste' | 'encas' | 'tout'>('reste')
     const [texte, setTexte] = useState('')
     const [analyse, setAnalyse] = useState<ReponseNutrition | null>(null)
@@ -64,6 +69,8 @@ export default function NutritionCoach() {
             setPrioritesServeur(p)
             setRepas(etat.repas_semaine)
             setListe(etat.liste)
+            setApportsJours(etat.apports_jours)
+            setSante(etat.sante)
         } catch (err) {
             setErreur(err instanceof Error ? err.message : 'Erreur de chargement.')
         }
@@ -106,6 +113,7 @@ export default function NutritionCoach() {
         try {
             const items = await cocherListe(item.id, fait)
             if (items.length) setListe(items)
+            recharger() // les portions cochées à la main comptent dans les quotas du jour
         } catch {
             setListe(avant)
             setErreur('Impossible de mettre à jour la liste pour l’instant.')
@@ -149,6 +157,9 @@ export default function NutritionCoach() {
             </section>
 
             {erreur && <p className="form-error">{erreur}</p>}
+
+            {/* Quotas du jour (calories, sucres ajoutés, gras saturés) */}
+            <QuotasJour apports={apportsJours} sante={sante} priorite={prioritesServeur[0] ?? 'musculation'} />
 
             {/* Liste de la semaine */}
             <section className={`nu-carte repliable${listeOuverte ? '' : ' replie'}`}>
@@ -258,6 +269,12 @@ export default function NutritionCoach() {
                     <div className="nu-resultat">
                         <h3>{analyse.titre || 'Analyse'}</h3>
                         <p className="nu-phrase">{analyse.reponse}</p>
+                        {analyse.repas && (analyse.repas.kcal ?? null) !== null && (
+                            <p className="nu-estimation">
+                                ≈ {Math.round(analyse.repas.kcal ?? 0)} kcal · 🍬 {analyse.repas.sucres_ajoutes ?? 0} g de sucres ajoutés · 🧈{' '}
+                                {analyse.repas.gras_satures ?? 0} g de gras saturés
+                            </p>
+                        )}
                         {(analyse.apports.length > 0 || analyse.manques.length > 0) && (
                             <div className="nu-deux">
                                 <div className="nu-col nu-col-ok">
@@ -531,6 +548,11 @@ export default function NutritionCoach() {
                                             </td>
                                             <td>
                                                 <b>{r.description}</b>
+                                                {(r.kcal ?? null) !== null && (
+                                                    <small className="nu-journal-kcal">
+                                                        ≈ {r.kcal} kcal{r.sucres_ajoutes ? ` · ${r.sucres_ajoutes} g sucres ajoutés` : ''}
+                                                    </small>
+                                                )}
                                                 <div className="nu-journal-nutri">
                                                     {r.nutriments.slice(0, 5).map((n) => (
                                                         <span key={n} className="nu-pastille info">

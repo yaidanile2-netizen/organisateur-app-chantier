@@ -157,6 +157,26 @@ export type Repas = {
     moment: Moment
     description: string
     nutriments: string[]
+    /** Estimations du coach (null pour les anciens repas). */
+    kcal?: number | null
+    sucres_ajoutes?: number | null
+    gras_satures?: number | null
+}
+
+/** Apports d'un jour : repas notés + portions cochées à la main dans la liste. */
+export type ApportsJour = { jour: string; kcal: number; sucres: number; gras: number; repas: number; prises: number }
+
+/** Données de la montre (Da Halo → Santé → Raccourci) pour un jour. */
+export type SanteJour = {
+    jour: string
+    pas: number | null
+    kcal_actives: number | null
+    distance_m: number | null
+    sommeil_min: number | null
+    fc_repos: number | null
+    fc_moy: number | null
+    fc_max: number | null
+    maj: string
 }
 
 export type ItemListe = {
@@ -170,12 +190,18 @@ export type ItemListe = {
     type?: 'repas' | 'facile' | 'grignoter'
     cible: number
     fait: number
+    /** Pour une portion (estimations du coach). */
+    kcal?: number | null
+    sucres_ajoutes?: number | null
+    gras_satures?: number | null
 }
 
 export type EtatNutrition = {
     priorites: Objectif[]
     repas_semaine: Repas[]
     liste: ItemListe[]
+    apports_jours: ApportsJour[]
+    sante: SanteJour[]
     semaine: string
 }
 
@@ -225,9 +251,12 @@ export async function getEtatNutrition(): Promise<EtatNutrition> {
         priorites: [],
         repas_semaine: [],
         liste: [],
+        apports_jours: [],
+        sante: [],
         semaine: '',
     })
-    return { ...etat, liste: Array.isArray(etat.liste) ? etat.liste : [] }
+    const tableau = <T,>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : [])
+    return { ...etat, liste: tableau(etat.liste), apports_jours: tableau(etat.apports_jours), sante: tableau(etat.sante) }
 }
 
 export async function envoyerNutrition(demande: DemandeNutrition): Promise<ReponseNutrition> {

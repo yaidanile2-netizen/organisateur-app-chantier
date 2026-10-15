@@ -1193,3 +1193,63 @@
   font-size: 12px;
   color: var(--mu-txt3);
 }
+
+/* Ma montre */
+.mu-montre-vide,
+.mu-montre-maj,
+.mu-montre-jour {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--mu-txt3);
+}
+.mu-montre-jour {
+  margin-bottom: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
+}
+.mu-montre .mu-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+.mu-montre-alerte {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--mu-txt);
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+}
+.mu-montre-graph {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  height: 74px;
+  margin: 12px 0 6px;
+  align-items: end;
+}
+.mu-montre-barre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 3px;
+}
+.mu-montre-barre span {
+  width: 70%;
+  border-radius: 6px 6px 3px 3px;
+  background: color-mix(in srgb, #4cc9ff 70%, transparent);
+}
+.mu-montre-barre span.vide {
+  background: color-mix(in srgb, var(--mu-txt) 12%, transparent);
+}
+.mu-montre-barre.auj span {
+  background: #4cc9ff;
+}
+.mu-montre-barre i {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--mu-txt3);
+}
