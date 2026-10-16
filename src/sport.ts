@@ -167,21 +167,20 @@ export function debutDeSemaine(date: Date): Date {
 type Choix = { jour: Date; code: CodeSeance; option: Option }
 
 // Note d'un planning : qualité des horaires, jours de repos entre les séances, dimanche un peu
-// évité, pas deux courses (B, C) deux jours de suite, et pas le renfo jambes (D) la veille de la
-// sortie longue (B). La sortie longue, plus longue, prend naturellement le jour le plus libre.
+// évité, pas la séance maison (épaules) le lendemain du haut du corps (A), et pas le cardio (C)
+// le lendemain des jambes (B).
 function noter(choix: Choix[]): number {
     const tries = [...choix].sort((a, b) => a.jour.getTime() - b.jour.getTime())
     let note = 0
     tries.forEach((c, i) => {
         note += c.option.score
         if (c.jour.getDay() === 0) note -= 2
-        if (c.code === 'B' && estWeekend(c.jour)) note += 2
         if (i > 0) {
             const p = tries[i - 1]
             const ecart = ecartJours(p.jour, c.jour)
             if (ecart >= 2) note += 4
-            if (ecart === 1 && ['B', 'C'].includes(p.code) && ['B', 'C'].includes(c.code)) note -= 4
-            if (ecart === 1 && p.code === 'D' && c.code === 'B') note -= 3
+            if (ecart === 1 && p.code === 'A' && c.code === 'D') note -= 3
+            if (ecart === 1 && p.code === 'B' && c.code === 'C') note -= 2
         }
     })
     return note

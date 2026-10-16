@@ -1,14 +1,10 @@
-// Programme de la semaine, orienté vers l'objectif de Daniel : courir 10 km sans s'arrêter
-// d'ici fin juin 2027 (fin de l'année à l'IUT), tout en continuant la muscu.
-//   A muscu complète (salle, 45 min) · B endurance, la course qui allonge (salle / dehors)
-//   C fractionné, la course qui rend plus rapide (salle / dehors) · D renfo du coureur (maison)
-// Chaque séance a ses niveaux ; ceux de B sont les étapes vers les 10 km.
-// En salle — Basic-Fit Saint-Herblain Atlantis (ouvert tous les jours 6h00–22h30) :
-//   A haut du corps, B bas du corps + abdos, C cardio (course + marche sur tapis).
-// À la maison — D, élastiques et poids du corps : épaules, posture, fessiers, gainage.
-// Daniel choisit lui-même le niveau de chaque séance dans l'onglet Muscu (« trop facile →
-// niveau suivant »). Les exercices gardent le même id d'un niveau à l'autre quand ils
-// reviennent, pour garder l'historique des charges.
+// Programme de la semaine : 4 séances, la muscu d'abord.
+//   A haut du corps (salle) · B bas du corps + abdos (salle) · C cardio athlétique (salle / dehors)
+//   D maison (épaules, posture, fessiers, gainage).
+// Objectif cardio de Daniel : retrouver la forme de quand il jouait au basket — se sentir fort,
+// rapide et léger, enchaîner des efforts comme dans un match sans être fatigué. Les 10 km sans
+// s'arrêter d'ici fin juin 2027 sont un bonus, pas la priorité.
+// Chaque séance a ses niveaux, que Daniel change lui-même dans l'app.
 
 export type Muscle =
     | 'pectoraux'
@@ -322,24 +318,18 @@ const B = {
     ], { alternative: 'Machine crunch' }),
 }
 
-// ---------- Exercices : courses (séances B et C) ----------
-// Point de départ : la formule habituelle de Daniel, 3 × (5 min de marche à 5 km/h + 5 min de
-// course lente à 8-10 km/h). B allonge la course jusqu'aux 10 km, C apprend à courir plus vite.
+// ---------- Exercices : séance C (cardio athlétique) ----------
+// Point de départ : la formule habituelle de Daniel, 3 × (5 min de marche + 5 min de course lente).
+// On construit d'abord le « fond » (courir longtemps sans fatigue), puis la capacité à répéter des
+// efforts courts et intenses, comme au basket ou au foot (accélérations, 30/30, 15/15).
 
 const MUSCLES_COURSE: Muscle[] = ['cardio', 'quadriceps', 'mollets', 'fessiers']
 const OU_COURIR = 'Tapis (pente 1 %) ou dehors'
-function endurance(nom: string, nb: number, reps: string, consignes: string[]): Exercice {
-    return ex('e-endurance', nom, OU_COURIR, 'cardio', MUSCLES_COURSE, nb, reps, [
+function course(id: string, nom: string, nb: number, reps: string, consignes: string[]): Exercice {
+    return ex(id, nom, OU_COURIR, 'cardio', MUSCLES_COURSE, nb, reps, [
         ...consignes,
-        'Allure facile : tu dois pouvoir parler par phrases (effort 5-6/10)',
         'Note la distance totale à la fin (compteur du tapis ou montre)',
-    ], { mesure: 'km', alternative: 'Vélo à la même durée si une douleur apparaît aux genoux ou aux tibias' })
-}
-function fractionne(nom: string, nb: number, reps: string, consignes: string[]): Exercice {
-    return ex('f-fractionne', nom, OU_COURIR, 'cardio', MUSCLES_COURSE, nb, reps, [
-        ...consignes,
-        'Coche un rond à chaque répétition terminée',
-    ], { mesure: 'km', alternative: 'Vélo : mêmes durées, en jouant sur la résistance' })
+    ], { mesure: 'km', alternative: 'Vélo ou rameur, mêmes durées, si une douleur apparaît aux genoux ou aux tibias' })
 }
 function marche(id: string, minutes: number, pente: string, vitesse: string): Exercice {
     return ex(id, 'Marche inclinée', 'Tapis de course', 'cardio', ['cardio', 'fessiers', 'mollets'], 1, `${minutes} min, pente ${pente}, ${vitesse}`, [
@@ -347,8 +337,8 @@ function marche(id: string, minutes: number, pente: string, vitesse: string): Ex
         'Tu dois pouvoir parler (effort 6/10)',
     ])
 }
-const ECHAUFFEMENT_COURSE = ['5 min de marche, de 5 à 6,5 km/h', 'Montées de genoux et talons-fesses sur place (1 min)']
-const RETOUR_COURSE = ['5 min de marche lente (4,5-5 km/h)', 'Étirements mollets, cuisses, fessiers (30 s chacun)']
+const ECHAUFFEMENT_COURSE = ['5 min de marche, de 5 à 6,5 km/h', 'Montées de genoux, talons-fesses et pas chassés (1 min)']
+const RETOUR_COURSE = ['3 min de marche lente (4,5-5 km/h)', 'Étirements mollets, cuisses, fessiers (30 s chacun)']
 
 // ---------- Exercices : séance D (maison) ----------
 
@@ -441,14 +431,7 @@ const D = {
 
 // ---------- Les séances, par niveau ----------
 
-const COULEURS = {
-    A: { degrade: ['#0b2a6b', '#1e5bd8'] as [string, string], couleur: '#4d9fff' },
-    B: { degrade: ['#063b26', '#0f9a5c'] as [string, string], couleur: '#00c46a' },
-    C: { degrade: ['#4a0d05', '#d9481e'] as [string, string], couleur: '#ff5a36' },
-    D: { degrade: ['#2b0a45', '#8b2fd6'] as [string, string], couleur: '#cc44ff' },
-}
-
-export const OBJECTIF_KM = 10
+export const OBJECTIF_KM = 10 // bonus de fin d'année
 export const OBJECTIF_DATE = '2027-06-30'
 
 export const PROGRAMME: SeanceBase[] = [
@@ -456,159 +439,112 @@ export const PROGRAMME: SeanceBase[] = [
         code: 'A',
         lieu: 'salle',
         emoji: '💪',
-        ...COULEURS.A,
-        titre: 'Muscu complète',
-        court: 'Muscu complète (haut du corps + jambes)',
-        focus: 'Tout le corps en une séance : pectoraux, dos, épaules, bras et jambes. Des jambes fortes = moins de blessures en course.',
+        degrade: ['#0b2a6b', '#1e5bd8'],
+        titre: 'Haut du corps',
+        court: 'Haut du corps (pecs, dos, épaules, bras)',
+        couleur: '#4d9fff',
+        focus: 'Musculation : pectoraux, dos, épaules, biceps et triceps.',
         niveaux: [
             {
                 nom: 'Machines guidées',
-                resume: 'Les grands mouvements sur machines : la technique d’abord, sans risque.',
-                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et de hanches, 10 squats à vide'],
+                resume: 'Les grands mouvements sur machines, pour apprendre la technique sans risque.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, puis 1 série légère de 15 reps au chest press'],
                 blocs: [
-                    bloc('Jambes + dos', 3, 75, [B.legPress, A.latPulldown]),
-                    bloc('Pecs + ischios', 3, 75, [A.chestPress, B.legCurl]),
-                    bloc('Épaules + dos', 3, 60, [A.shoulderPress, A.seatedRow]),
-                    bloc('Bras', 2, 45, [A.curlPoulie, A.tricepsCorde]),
+                    bloc('Pousser + tirer', 3, 75, [A.chestPress, A.latPulldown]),
+                    bloc('Épaules + dos', 3, 75, [A.shoulderPress, A.seatedRow]),
+                    bloc('Pecs + arrière d’épaules', 3, 60, [A.pecDeck, A.oiseauMachine]),
+                    bloc('Bras', 3, 45, [A.curlPoulie, A.tricepsCorde]),
                 ],
-                retourAuCalme: ['3 min d’étirements : pectoraux, dos, cuisses'],
-                progression: 'Toutes les séries réussies en haut de la fourchette ? +2,5 kg (presse : +5 kg) la prochaine fois.',
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Toutes les séries réussies en haut de la fourchette ? +2,5 kg la prochaine fois.',
                 monter: 'Niveau 2 quand tout te semble facile 2 séances de suite (souvent après 4 à 6 semaines).',
             },
             {
-                nom: 'Poids libres',
-                resume: 'Haltères et squat goblet : chaque côté se stabilise seul, plus de muscles travaillent.',
-                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et de hanches, 10 squats à vide, 10 pompes'],
+                nom: 'Haltères',
+                resume: 'Les haltères obligent chaque bras à se stabiliser seul : plus de muscles travaillent.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', '1 série de 12 au développé couché avec des haltères légers'],
                 blocs: [
-                    bloc('Squat goblet', 4, 90, [avec(B.gobletSquat, 4, '8–10')]),
-                    bloc('Pousser + tirer', 3, 75, [A.dcHalteres, A.rowingHaltere]),
-                    bloc('Ischios + dos', 3, 75, [B.sdtHalteres, A.tirageSerre]),
-                    bloc('Épaules', 3, 60, [A.militaireHalteres, A.facePull]),
-                    bloc('Bras', 2, 45, [A.curlIncline, A.tricepsNuque]),
+                    bloc('Développé couché', 4, 90, [A.dcHalteres]),
+                    bloc('Dos + épaules', 3, 75, [A.tirageSerre, A.militaireHalteres]),
+                    bloc('Rowing', 3, 60, [A.rowingHaltere]),
+                    bloc('Épaules 3D', 3, 45, [A.elevLatHalteres, A.facePull]),
+                    bloc('Bras', 3, 45, [A.curlIncline, A.tricepsNuque]),
                 ],
-                retourAuCalme: ['3 min d’étirements : pectoraux, dos, cuisses'],
-                progression: 'Haltères : paire suivante quand tu fais le haut de la fourchette sur toutes les séries.',
-                monter: 'Niveau 3 quand la technique est propre partout et que tout est facile 2 séances de suite.',
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Haltères : passe à la paire suivante quand tu fais le haut de la fourchette sur toutes les séries.',
+                monter: 'Niveau 3 quand tu es à l’aise techniquement avec les haltères et que tout est facile 2 séances de suite.',
             },
             {
                 nom: 'Barre et force',
-                resume: 'Squat, développé couché, tractions : moins de répétitions, plus lourd.',
-                echauffement: [
-                    '5 min de rameur (effort 4/10)',
-                    'Rotations, 10 squats à vide, 10 pompes',
-                    'Montée au squat : 10 reps barre seule, puis 5 reps à 60 % de ta charge',
-                ],
+                resume: 'Barre, tractions et dips : moins de répétitions, plus lourd, pour gagner en force.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', 'Montée au développé couché : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
                 blocs: [
-                    bloc('Squat barre', 4, 120, [B.squatBarre]),
                     bloc('Développé couché', 4, 120, [A.dcBarre]),
-                    bloc('Tirer + ischios', 3, 90, [A.tractionsAssistees, avec(B.sdtBarre, 3, '8')]),
-                    bloc('Incliné + rowing', 3, 75, [A.inclineHalteres, A.rowingBarre]),
-                    bloc('Épaules + dips', 2, 60, [A.elevLatPoulie, A.dips]),
+                    bloc('Tractions', 4, 90, [A.tractionsAssistees]),
+                    bloc('Incliné + rowing', 3, 90, [A.inclineHalteres, A.rowingBarre]),
+                    bloc('Épaules + dips', 3, 60, [A.elevLatPoulie, A.dips]),
+                    bloc('Bras + posture', 3, 45, [A.curlEz, A.facePull]),
                 ],
-                retourAuCalme: ['3 min d’étirements : pectoraux, dos, cuisses'],
-                progression: 'Barre : +2,5 kg dès que les séries sont faites en haut de la fourchette. Tractions : −2,5 kg d’assistance.',
-                monter: 'Dernier niveau : continue d’ajouter du poids petit à petit.',
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Barre : +2,5 kg dès que les 4 séries sont faites en haut de la fourchette. Tractions : −2,5 kg d’assistance.',
+                monter: 'Dernier niveau : continue d’ajouter du poids. Quand les tractions se font sans assistance, on pourra ajouter un niveau 4.',
             },
         ],
     },
     {
         code: 'B',
         lieu: 'salle',
-        emoji: '🏃',
-        ...COULEURS.B,
-        titre: 'Endurance · vers 10 km',
-        court: 'Endurance : la course qui s’allonge vers les 10 km',
-        focus: 'La séance la plus importante pour l’objectif : allure facile, et un peu plus long à chaque étape.',
+        emoji: '🦵',
+        degrade: ['#063b26', '#0f9a5c'],
+        titre: 'Bas du corps + abdos',
+        court: 'Bas du corps et abdos',
+        couleur: '#00c46a',
+        focus: 'Musculation : cuisses, fessiers, ischios, mollets et gainage. Des jambes fortes = plus d’explosivité et moins de blessures.',
         niveaux: [
             {
-                nom: 'Ta formule',
-                resume: 'Ta séance habituelle, avec un peu plus de course : 25 min de course au total.',
-                duree: 45,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course + marche', 1, 0, [endurance('5 × (5 min course + 2 min marche)', 5, '5 min à 8–8,5 km/h, puis 2 min de marche à 5,5 km/h', [])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Garde la même vitesse : c’est la durée qui compte, pas la vitesse.',
-                monter: 'Étape 2 quand les 5 blocs passent sans être essoufflé.',
+                nom: 'Machines + squat',
+                resume: 'Les machines pour charger les jambes, et le squat goblet pour apprendre le mouvement roi.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide et 10 fentes alternées'],
+                blocs: [
+                    bloc('Squat goblet', 3, 75, [B.gobletSquat]),
+                    bloc('Presse + ischios', 3, 75, [B.legPress, B.legCurl]),
+                    bloc('Cuisses + mollets', 3, 60, [B.legExtension, B.mollets]),
+                    bloc('Fessiers', 2, 45, [B.abducteurs]),
+                    bloc('Gainage', 3, 45, [B.crunch, B.planche]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Machines : +2,5 kg (presse : +5 kg) quand toutes les séries sont réussies et faciles.',
+                monter: 'Niveau 2 quand le squat goblet est propre avec un haltère lourd et que tout est facile 2 séances de suite.',
             },
             {
-                nom: '8 min',
-                resume: 'Blocs de course de 8 minutes : 32 min de course.',
-                duree: 50,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course + marche', 1, 0, [endurance('4 × (8 min course + 2 min marche)', 4, '8 min à 8–8,5 km/h, puis 2 min de marche', [])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Même vitesse qu’à l’étape 1. Si c’est dur, ralentis plutôt que de marcher.',
-                monter: 'Étape 3 quand les 4 blocs passent bien.',
+                nom: 'Poids libres',
+                resume: 'Squat guidé, soulevé de terre roumain et fentes : les jambes travaillent avec l’équilibre.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', '1 série légère de 10 à la Smith machine'],
+                blocs: [
+                    bloc('Squat', 4, 90, [B.squatSmith]),
+                    bloc('Ischios', 3, 75, [B.sdtHalteres, avec(B.legCurl, 3, '10–12')]),
+                    bloc('Fentes', 3, 75, [B.fentesMarchees]),
+                    bloc('Fessiers + mollets', 3, 60, [B.hipThrust, B.molletsDebout]),
+                    bloc('Abdos', 3, 45, [B.releveGenoux, B.pallof]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Squat et hip thrust : +2,5 à 5 kg quand toutes les séries sont réussies. Haltères : paire suivante.',
+                monter: 'Niveau 3 quand le squat guidé est solide (environ ton poids sur la barre) et que tout est facile 2 séances de suite.',
             },
             {
-                nom: '12 min',
-                resume: 'Blocs de 12 minutes : tu cours 36 min, avec seulement 2 pauses.',
-                duree: 52,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course + marche', 1, 0, [endurance('3 × (12 min course + 2 min marche)', 3, '12 min à 8–8,5 km/h, puis 2 min de marche', [])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Respire calmement : inspire sur 2-3 foulées, expire sur 2-3 foulées.',
-                monter: 'Étape 4 quand les 3 blocs passent bien.',
-            },
-            {
-                nom: '2 × 20 min',
-                resume: '2 blocs de 20 minutes : 40 min de course, une seule pause.',
-                duree: 55,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course + marche', 1, 0, [endurance('2 × (20 min course + 3 min marche)', 4, '4 × 10 min : 20 min à 8–8,5 km/h, 3 min de marche, puis 20 min', ['Coche un rond toutes les 10 minutes'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Si le 2e bloc est trop dur, coupe-le en 2 × 10 min.',
-                monter: 'Étape 5 quand les 2 × 20 min passent.',
-            },
-            {
-                nom: '5 km',
-                resume: '🎯 1er grand palier : 35 min sans marcher, environ 5 km.',
-                duree: 50,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course continue', 1, 0, [endurance('35 min sans t’arrêter', 7, '7 × 5 min à 8–8,5 km/h, sans marcher', ['Coche un rond toutes les 5 minutes'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Réussi une fois ? Refais-le 2 fois avant de monter, pour que ça devienne facile.',
-                monter: 'Étape 6 quand tu cours 35 min 2 fois de suite sans souffrir.',
-            },
-            {
-                nom: '45 min',
-                resume: '45 min de course continue : environ 6,5 km.',
-                duree: 60,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course continue', 1, 0, [endurance('45 min sans t’arrêter', 9, '9 × 5 min à 8–8,5 km/h', ['Bois quelques gorgées à mi-séance si besoin', 'Coche un rond toutes les 5 minutes'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'L’allure doit rester facile : si tu ne peux plus parler, ralentis de 0,5 km/h.',
-                monter: 'Étape 7 quand les 45 min passent 2 fois.',
-            },
-            {
-                nom: '55 min',
-                resume: '55 min continues : environ 7,5 km. Tu y es presque.',
-                duree: 70,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course continue', 1, 0, [endurance('55 min sans t’arrêter', 11, '11 × 5 min à 8–8,5 km/h', ['Prends une bouteille d’eau', 'Coche un rond toutes les 5 minutes'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Pense à manger des glucides (riz, pâtes, pain) la veille et 2 h avant.',
-                monter: 'Étape 8 quand les 55 min passent 2 fois.',
-            },
-            {
-                nom: '65 min',
-                resume: '65 min continues : environ 9 km.',
-                duree: 80,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('Course continue', 1, 0, [endurance('65 min sans t’arrêter', 13, '13 × 5 min à 8–8,5 km/h', ['Bouteille d’eau, et une banane 1 h avant', 'Coche un rond toutes les 5 minutes'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Garde 1 séance plus courte (étape 6) dans la semaine si tu es fatigué.',
-                monter: 'Étape 9 quand les 65 min passent bien.',
-            },
-            {
-                nom: '10 km 🏅',
-                resume: '🏅 L’objectif : 10 km sans t’arrêter, à ton allure (environ 1h10-1h15).',
-                duree: 90,
-                echauffement: ECHAUFFEMENT_COURSE,
-                blocs: [bloc('10 km', 1, 0, [endurance('10 km sans t’arrêter', 10, '10 × 1 km à ton allure facile', ['Coche un rond à chaque kilomètre', 'Pars lentement : les 2 premiers km doivent être faciles'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Objectif atteint ? Bonus : passer sous 1h10, puis sous 1h, grâce aux séances C.',
-                monter: 'Tu as réussi le programme. Prochain défi possible : un 10 km officiel !',
+                nom: 'Barre et force',
+                resume: 'Squat barre libre, soulevé de terre roumain et fentes bulgares : le vrai programme force.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', 'Montée au squat : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
+                blocs: [
+                    bloc('Squat barre', 4, 120, [B.squatBarre]),
+                    bloc('Soulevé de terre roumain', 3, 90, [B.sdtBarre]),
+                    bloc('Fentes bulgares', 3, 75, [B.fentesBulgares]),
+                    bloc('Fessiers + ischios', 3, 60, [avec(B.hipThrust, 3, '8–10'), avec(B.legCurl, 3, '10')]),
+                    bloc('Abdos', 3, 45, [B.releveJambes, B.crunchPoulie]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Squat et soulevé : +2,5 kg dès que les séries sont faites en haut de la fourchette.',
+                monter: 'Dernier niveau : continue d’ajouter du poids, les séances restent efficaces très longtemps.',
             },
         ],
     },
@@ -616,76 +552,89 @@ export const PROGRAMME: SeanceBase[] = [
         code: 'C',
         lieu: 'salle',
         emoji: '⚡',
-        ...COULEURS.C,
-        titre: 'Fractionné',
-        court: 'Fractionné : courir plus vite, plus facilement',
-        focus: 'Améliore ton souffle (VMA) : à la même vitesse, la course devient plus facile. C’est ce qui rendra les 10 km agréables.',
+        degrade: ['#4a0d05', '#d9481e'],
+        titre: 'Cardio athlétique',
+        court: 'Cardio athlétique (fond + efforts de match)',
+        couleur: '#ff5a36',
+        focus: 'Retrouver ta forme de basketteur : courir longtemps sans fatigue, et enchaîner des accélérations comme dans un match, en récupérant vite.',
         niveaux: [
             {
-                nom: 'Accélérations',
-                resume: '1 min un peu plus vite, 2 min de marche : on apprend à monter dans les tours.',
+                nom: 'Fond',
+                resume: 'Ta formule course + marche, avec un peu plus de course : la base du souffle.',
                 duree: 45,
-                echauffement: [...ECHAUFFEMENT_COURSE, '5 min de course très facile à 7,5–8 km/h'],
+                echauffement: ECHAUFFEMENT_COURSE,
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('8 × (1 min vite + 2 min marche)', 8, '1 min à 9,5–10 km/h, puis 2 min de marche à 5,5 km/h', ['Vite = effort 7-8/10, tu peux dire quelques mots'])]),
+                    bloc('Course + marche', 1, 0, [course('c-fond', '4 × (5 min course + 2 min marche)', 4, '5 min à 8–9 km/h, puis 2 min de marche à 5,5 km/h', ['Course facile : tu peux parler par phrases (effort 6/10)', 'Coche un rond à chaque bloc'])]),
                     bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '10 %', '5 km/h')]),
                 ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: '+0,5 km/h sur les minutes vites quand les 8 passent bien.',
-                monter: 'Niveau 2 quand les 8 minutes vites passent à 10 km/h.',
+                progression: '+0,5 km/h sur la course quand les 4 blocs passent bien.',
+                monter: 'Niveau 2 quand tu tiens 4 × 5 min à 9 km/h sans finir épuisé.',
             },
             {
-                nom: '1 min 30',
-                resume: 'Des passages plus longs, et la récup se fait en trottinant.',
+                nom: 'Vitesse',
+                resume: 'Course facile + 6 accélérations : tu réveilles la vitesse, comme une contre-attaque.',
                 duree: 45,
-                echauffement: [...ECHAUFFEMENT_COURSE, '5 min de course très facile à 7,5–8 km/h'],
+                echauffement: ECHAUFFEMENT_COURSE,
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('8 × (1 min 30 vite + 1 min 30 trot)', 8, '1 min 30 à 10–10,5 km/h, puis 1 min 30 à 7 km/h', ['Trot = course très lente, si c’est trop dur marche 30 s puis repars'])]),
-                    bloc('Finition en côte', 1, 0, [marche('c-marche-2', 5, '10 %', '5 km/h')]),
+                    bloc('Course facile', 1, 0, [course('c-fond', '3 × (8 min course + 1 min marche)', 3, '8 min à 8,5–9 km/h, puis 1 min de marche', ['Allure facile, respiration calme'])]),
+                    bloc('Accélérations', 1, 0, [course('c-acceleration', '6 × (20 s vite + 40 s marche)', 6, '20 s à 12–13 km/h, puis 40 s de marche', ['Vite = effort 9/10 mais relâché : épaules basses, bras qui poussent', 'Sur tapis : monte la vitesse 5 s avant, ou fais-les dehors'])]),
                 ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: 'Garde la vitesse jusqu’à la 8e répétition avant de l’augmenter.',
-                monter: 'Niveau 3 quand la récup se fait en trottinant du début à la fin.',
+                progression: '+0,5 km/h sur les accélérations quand elles restent faciles à tenir.',
+                monter: 'Niveau 3 quand les 24 min de course passent sans pause difficile.',
             },
             {
-                nom: '3 min',
-                resume: '3 minutes rapides : le cœur apprend à tenir un effort fort.',
+                nom: '30/30',
+                resume: '30 s vite, 30 s lent : le format le plus proche d’un match. Le cœur apprend à récupérer en courant.',
                 duree: 45,
                 echauffement: [...ECHAUFFEMENT_COURSE, '6 min de course facile à 8 km/h'],
-                blocs: [bloc('Fractionné', 1, 0, [fractionne('6 × (3 min vite + 2 min trot)', 6, '3 min à 10–10,5 km/h, puis 2 min à 7 km/h', ['Régularité : la 6e doit être aussi rapide que la 1re'])])],
+                blocs: [
+                    bloc('30/30', 1, 0, [course('c-30-30', '2 × (8 × 30 s vite + 30 s lent)', 16, '30 s à 11–12 km/h, puis 30 s à 6 km/h · 3 min de marche entre les 2 séries', ['Coche un rond à chaque « vite »', 'Si tu n’arrives plus à tenir la vitesse : 30 s de marche au lieu de trot'])]),
+                    bloc('Course facile', 1, 0, [course('c-fond', 'Course facile', 1, '8 min à 8,5 km/h', ['Tu récupères en courant'])]),
+                ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: '+0,5 km/h quand les 6 répétitions restent régulières.',
-                monter: 'Niveau 4 quand les 6 × 3 min passent à 10,5 km/h.',
+                progression: '+0,5 km/h sur les 30 s vite quand les 16 passent.',
+                monter: 'Niveau 4 quand tu récupères en trottinant (6-7 km/h) au lieu de marcher.',
             },
             {
-                nom: 'Allure 10 km',
-                resume: 'Des blocs de 5 min à l’allure visée pour tes 10 km « bonus » (1h à 1h10).',
+                nom: 'Endurance',
+                resume: '25 min sans t’arrêter : tu ne te sens plus lourd, même quand ça dure.',
+                duree: 45,
+                echauffement: ECHAUFFEMENT_COURSE,
+                blocs: [
+                    bloc('Course continue', 1, 0, [course('c-fond', '25 min de course continue', 5, '5 × 5 min à 8,5–9,5 km/h, sans marcher', ['Coche un rond toutes les 5 minutes', 'Trop dur ? Baisse de 0,5 km/h plutôt que de marcher'])]),
+                    bloc('Accélérations', 1, 0, [course('c-acceleration', '6 × (20 s vite + 40 s marche)', 6, '20 s à 12–13 km/h, puis 40 s de marche', ['Relâché, foulée rapide'])]),
+                ],
+                retourAuCalme: RETOUR_COURSE,
+                progression: 'Monte la course continue de 0,5 km/h quand c’est facile.',
+                monter: 'Niveau 5 quand les 25 min sont faciles à 9 km/h.',
+            },
+            {
+                nom: 'Match',
+                resume: '3 « quart-temps » de 15/15 : exactement le rythme d’un match de basket.',
+                duree: 45,
+                echauffement: [...ECHAUFFEMENT_COURSE, '8 min de course facile à 8,5 km/h'],
+                blocs: [
+                    bloc('Quart-temps', 3, 120, [course('c-15-15', '3 × 6 min de 15/15', 3, '12 × (15 s à 13–14 km/h + 15 s à 7 km/h), 2 min de marche entre', ['Un rond = un quart-temps de 6 min', 'Sur tapis c’est dur à régler : fais-le dehors, ou au vélo / rameur'])]),
+                    bloc('Course facile', 1, 0, [course('c-fond', 'Course facile', 1, '8 min à 8,5–9 km/h', ['Tu récupères en courant'])]),
+                ],
+                retourAuCalme: RETOUR_COURSE,
+                progression: 'Garde la qualité des 15 s vite jusqu’au 3e quart-temps.',
+                monter: 'Niveau 6 quand le 3e quart-temps est aussi rapide que le 1er.',
+            },
+            {
+                nom: 'Top forme',
+                resume: '30 min continues (environ 5 km) + sprints : ta forme de basketteur. Les 10 km de fin d’année deviennent possibles.',
                 duree: 50,
-                echauffement: [...ECHAUFFEMENT_COURSE, '8 min de course facile à 8 km/h'],
-                blocs: [bloc('Allure 10 km', 1, 0, [fractionne('4 × (5 min allure 10 km + 2 min trot)', 4, '5 min à 9,5–10 km/h, puis 2 min à 7,5 km/h', ['Allure 10 km = soutenue mais tenable longtemps (effort 7/10)'])])],
+                echauffement: ECHAUFFEMENT_COURSE,
+                blocs: [
+                    bloc('Course continue', 1, 0, [course('c-fond', '30 min de course continue', 6, '6 × 5 min à 9–10 km/h', ['Coche un rond toutes les 5 minutes'])]),
+                    bloc('Sprints', 1, 0, [course('c-acceleration', '8 × (15 s sprint + 45 s marche)', 8, '15 s à 14–15 km/h, puis 45 s de marche', ['Sprint relâché, gros mouvement de bras'])]),
+                ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: 'Tiens l’allure régulière : tu apprends le rythme de ton futur 10 km.',
-                monter: 'Niveau 5 quand les 4 blocs passent sans ralentir.',
-            },
-            {
-                nom: 'Tempo',
-                resume: 'De longs blocs à allure soutenue : 24 min au rythme « course ».',
-                duree: 50,
-                echauffement: [...ECHAUFFEMENT_COURSE, '8 min de course facile à 8 km/h'],
-                blocs: [bloc('Tempo', 1, 0, [fractionne('3 × (8 min tempo + 2 min trot)', 3, '8 min à 10 km/h, puis 2 min à 7,5 km/h', ['Effort 7/10 : tu ne parles plus que par mots'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: '+0,5 km/h quand les 3 blocs passent.',
-                monter: 'Niveau 6 quand les 3 × 8 min passent à 10 km/h ou plus.',
-            },
-            {
-                nom: 'Allure 1 h',
-                resume: '2 × 15 min à 10 km/h : le rythme pour faire 10 km en 1 h (le bonus).',
-                duree: 55,
-                echauffement: [...ECHAUFFEMENT_COURSE, '8 min de course facile à 8 km/h'],
-                blocs: [bloc('Allure 1 h', 1, 0, [fractionne('2 × (15 min à 10 km/h + 3 min trot)', 6, '3 × 5 min à 10 km/h, 3 min trot, puis encore 3 × 5 min', ['Coche un rond toutes les 5 minutes à 10 km/h'])])],
-                retourAuCalme: RETOUR_COURSE,
-                progression: 'Quand c’est facile : 2 × 20 min, puis 30 min d’affilée à 10 km/h.',
-                monter: 'Dernier niveau : si tu tiens 30 min à 10 km/h, le 10 km en 1 h est à ta portée.',
+                progression: 'Alterne : une semaine ce niveau, une semaine le niveau 5. Bonus : allonge la course continue de 5 min par mois.',
+                monter: 'Dernier niveau ! Bonus de fin d’année : allonger la course jusqu’aux 10 km.',
             },
         ],
     },
@@ -693,56 +642,58 @@ export const PROGRAMME: SeanceBase[] = [
         code: 'D',
         lieu: 'maison',
         emoji: '🏠',
-        ...COULEURS.D,
-        titre: 'Renfo du coureur',
-        court: 'Renfo du coureur à la maison (jambes, gainage, posture)',
-        focus: 'Ce qui protège un coureur : mollets et tendons, fessiers (stabilité du genou), gainage, et la posture du haut du corps.',
+        degrade: ['#2b0a45', '#8b2fd6'],
+        titre: 'Maison : épaules, posture, fessiers',
+        court: 'À la maison (élastiques) : épaules, posture, fessiers, gainage',
+        couleur: '#cc44ff',
+        focus: 'Ce que la salle ne travaille pas assez : épaules (côté et arrière), trapèzes, moyen fessier, mollets, lombaires, obliques et avant-bras.',
         niveaux: [
             {
-                nom: 'Bases',
-                resume: 'Les fondations du coureur, au poids du corps et aux élastiques.',
+                nom: 'Élastiques',
+                resume: 'Épaules, posture et fessiers avec les élastiques.',
                 duree: 35,
-                echauffement: ['Rotations des chevilles, des hanches et des épaules (1 min)', '20 jumping jacks'],
+                echauffement: ['Rotations des bras et des épaules (1 min)', '20 jumping jacks et 10 squats à vide'],
                 blocs: [
-                    bloc('Jambes', 3, 45, [D.squat, D.mollets]),
+                    bloc('Épaules et posture', 3, 45, [D.elevLat, D.facePull]),
+                    bloc('Trapèzes et pectoraux', 3, 45, [D.haussements, D.pompes]),
                     bloc('Fessiers', 3, 45, [D.pontFessier, D.pasLateraux]),
-                    bloc('Posture', 3, 30, [D.facePull, D.elevLat]),
-                    bloc('Gainage', 2, 30, [D.planche, D.gainageLateral, D.superman]),
+                    bloc('Gainage et avant-bras', 2, 30, [D.superman, D.gainageLateral, D.fingerGrip]),
                 ],
-                retourAuCalme: ['2 min d’étirements : mollets, fessiers, dos'],
-                progression: '+2 reps par série à chaque séance, puis élastique plus dur.',
-                monter: 'Niveau 2 quand tout passe facilement (15 reps propres partout).',
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: 'Quand c’est facile : élastique plus dur, ou +1 pompe par séance.',
+                monter: 'Niveau 2 quand tu fais 15 pompes propres et que les élastiques sont faciles.',
             },
             {
-                nom: 'Une jambe',
-                resume: 'Exercices sur une jambe : comme en course, où tu es toujours sur un seul pied.',
+                nom: 'Poids du corps +',
+                resume: 'Rowing, pompes piquées, fentes bulgares et mollets : plus de muscles, et des jambes plus réactives.',
                 duree: 35,
-                echauffement: ['Rotations des chevilles, des hanches et des épaules (1 min)', '30 jumping jacks, 10 squats'],
+                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
                 blocs: [
-                    bloc('Jambes', 3, 45, [D.bulgare, D.molletsUneJambe]),
-                    bloc('Fessiers', 3, 45, [D.pontUneJambe, D.pasLateraux]),
-                    bloc('Dos + posture', 3, 30, [D.rowingElastique, D.facePull]),
-                    bloc('Gainage', 2, 30, [D.deadBug, avec(D.gainageLateral, 2, '40 s par côté')]),
+                    bloc('Pousser + tirer', 4, 45, [avec(D.pompes, 4, 'max − 2'), D.rowingElastique]),
+                    bloc('Épaules', 3, 45, [D.pike, D.elevLat]),
+                    bloc('Jambes', 3, 45, [D.bulgare, D.mollets]),
+                    bloc('Fessiers + posture', 3, 30, [D.pontUneJambe, D.facePull]),
+                    bloc('Gainage', 2, 30, [D.deadBug, avec(D.gainageLateral, 2, '40 s par côté'), D.fingerGrip]),
                 ],
-                retourAuCalme: ['2 min d’étirements : mollets, fessiers, dos'],
-                progression: '+1 ou 2 reps par série à chaque séance.',
-                monter: 'Niveau 3 quand tu fais 12 fentes bulgares et 12 mollets par jambe.',
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: '+1 ou 2 reps par série à chaque séance, puis élastique plus dur.',
+                monter: 'Niveau 3 quand tu fais 10 pompes piquées et 12 fentes bulgares par jambe.',
             },
             {
-                nom: 'Explosif',
-                resume: 'Sauts et charges : des jambes plus réactives, une foulée plus économique.',
+                nom: 'Athlétique',
+                resume: 'Pompes surélevées, sauts, Y-T-W et hollow : fort et explosif, comme sur un terrain.',
                 duree: 35,
-                echauffement: ['Rotations des chevilles, des hanches et des épaules (1 min)', '30 jumping jacks, 10 squats, 10 fentes'],
+                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
                 blocs: [
-                    bloc('Explosivité', 3, 60, [D.squatSaute]),
-                    bloc('Jambes', 3, 45, [avec(D.bulgare, 3, '10 par jambe, sac à dos chargé'), avec(D.molletsUneJambe, 3, '12 par jambe, sac à dos')]),
+                    bloc('Pousser + tirer', 4, 60, [D.pompesSurelevees, avec(D.rowingElastique, 4, '10–12 (élastique fort)')]),
+                    bloc('Explosivité', 3, 60, [D.squatSaute, D.molletsUneJambe]),
+                    bloc('Épaules', 3, 45, [avec(D.pike, 3, '8–10, pieds sur une chaise'), D.ytw]),
                     bloc('Fessiers', 3, 45, [avec(D.pontUneJambe, 3, '12, épaules sur le canapé'), D.pasLateraux]),
-                    bloc('Posture', 3, 30, [D.ytw, D.rowingElastique]),
                     bloc('Gainage', 3, 30, [D.hollow, avec(D.gainageLateral, 3, '45 s par côté')]),
                 ],
-                retourAuCalme: ['2 min d’étirements : mollets, fessiers, dos'],
-                progression: 'Ajoute du poids dans le sac à dos petit à petit.',
-                monter: 'Dernier niveau : continue d’alourdir le sac.',
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: 'Charge un sac à dos (livres, bouteilles) pour les mollets, et un élastique plus fort.',
+                monter: 'Dernier niveau : ajoute du poids dans le sac à dos petit à petit.',
             },
         ],
     },

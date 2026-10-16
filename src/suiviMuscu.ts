@@ -172,7 +172,7 @@ export function avisNiveau(
     const faciles = exos.filter((e) => e.ressenti === 'facile').length
     const durs = exos.filter((e) => e.ressenti === 'dur').length
     if (niveau < nbNiveaux && tousFaits && durs === 0 && faciles >= exos.length / 2)
-        return { sens: 'monte', texte: `Tes 2 dernières séances étaient faciles : tu es prêt pour ${code === 'B' ? 'l’étape' : 'le niveau'} ${niveau + 1}.` }
+        return { sens: 'monte', texte: `Tes 2 dernières séances étaient faciles : tu es prêt pour le niveau ${niveau + 1}.` }
     if (niveau > 1 && durs > exos.length / 2)
         return { sens: 'descend', texte: `Tes 2 dernières séances étaient dures : le niveau ${niveau - 1} peut t’aider à consolider.` }
     return null

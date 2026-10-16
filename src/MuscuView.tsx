@@ -568,23 +568,23 @@ export default function MuscuView() {
 
             {/* Objectif 10 km */}
             {(() => {
-                const b = seanceParCode('B', niveaux.B?.n)
-                const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => e.id === 'e-endurance' && e.kg).map((e) => e.kg as number)))
+                const b = seanceParCode('C', niveaux.C?.n)
+                const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => (e.id === 'c-fond' || e.id === 'e-endurance') && e.kg).map((e) => e.kg as number)))
                 const semaines = Math.max(0, Math.ceil((new Date(OBJECTIF_DATE).getTime() - Date.now()) / (7 * 24 * 3600 * 1000)))
                 return (
                     <div className="mu-carte mu-objectif" style={{ '--c': b.couleur } as React.CSSProperties}>
                         <div className="mu-objectif-tete">
-                            <span className="mu-objectif-titre">🎯 OBJECTIF {OBJECTIF_KM} KM SANS S’ARRÊTER</span>
-                            <span className="mu-objectif-delai">fin juin · {semaines} sem.</span>
+                            <span className="mu-objectif-titre">🏀 OBJECTIF : FORME DE BASKETTEUR</span>
+                            <span className="mu-objectif-delai">bonus {OBJECTIF_KM} km fin juin · {semaines} sem.</span>
                         </div>
                         <div className="mu-objectif-barre" role="progressbar" aria-valuenow={b.niveau} aria-valuemin={1} aria-valuemax={b.nbNiveaux}>
                             {b.niveaux.map((nv, i) => (
-                                <span key={nv.nom} className={i + 1 < b.niveau ? 'fait' : i + 1 === b.niveau ? 'actuel' : ''} title={`Étape ${i + 1} : ${nv.nom}`} />
+                                <span key={nv.nom} className={i + 1 < b.niveau ? 'fait' : i + 1 === b.niveau ? 'actuel' : ''} title={`Niveau ${i + 1} : ${nv.nom}`} />
                             ))}
                         </div>
                         <p className="mu-objectif-texte">
-                            Étape <b>{b.niveau}/{b.nbNiveaux}</b> · {b.nom}
-                            {record > 0 ? ` · plus longue sortie : ${fmtKg(record)} km` : ' · note tes km en fin de séance B'}
+                            Cardio niveau <b>{b.niveau}/{b.nbNiveaux}</b> · {b.nom}
+                            {record > 0 ? ` · plus longue course : ${fmtKg(record)} km` : ' · note tes km en fin de séance C'}
                         </p>
                     </div>
                 )
@@ -609,7 +609,7 @@ export default function MuscuView() {
                             <span className="mu-cs-code">{s.code}</span>
                             <span className="mu-cs-titre">{s.titre.replace(/^Maison : /, '')}</span>
                             <span className="mu-cs-meta">
-                                {dureeDe(s, lireReglages().duree)} MIN · {s.code === 'B' ? 'ÉTAPE' : 'NIV.'} {s.niveau}/{s.nbNiveaux}
+                                {dureeDe(s, lireReglages().duree)} MIN · NIV. {s.niveau}/{s.nbNiveaux}
                             </span>
                         </button>
                     )
@@ -631,7 +631,7 @@ export default function MuscuView() {
                         </h2>
                         <p className="mu-detail-sous">{seance.titre.replace(/^Maison : /, '')}</p>
                         <p className="mu-detail-niveau">
-                            {seance.code === 'B' ? 'ÉTAPE' : 'NIVEAU'} {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
+                            NIVEAU {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
                         </p>
                         <div className="mu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
                             <span>
