@@ -127,7 +127,7 @@ export function conseilPour(e: Exercice, passes: ExoFait[], chargeActuelle: numb
         return { sens: 'garde', texte: `Garde ${fmtKg(base)}${unite}` }
     }
     if (complet(dernier) && dernier.ressenti === 'facile') {
-        if (e.materiel === 'cardio') return { sens: 'monte', texte: 'Un cran de résistance en plus sur les minutes rapides' }
+        if (e.materiel === 'cardio') return { sens: 'monte', texte: '+0,5 km/h sur la course la prochaine fois' }
         if (e.materiel === 'elastique') return { sens: 'monte', texte: 'Élastique plus dur, ou +2 reps' }
         return { sens: 'monte', texte: '+2 reps par série' }
     }

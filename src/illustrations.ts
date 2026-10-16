@@ -420,6 +420,26 @@ export const ILLUSTRATIONS: Record<string, Def> = {
         ],
     },
 
+    'c-course': {
+        legende: 'Tapis : course lente, foulée courte sous le bassin',
+        duree: 0.8,
+        accent: ['cuisse', 'jambe', 'fessiers'],
+        poses: [
+            { hanche: [56, 42], tronc: -80, tete: 6, main: [66, 32], coude: 1, main2: [48, 40], coude2: 1, pied: [67, 77], genou: -1, orteil: -5, pied2: [38, 66], genou2: -1, orteil2: 40 },
+            { hanche: [55, 39], tronc: -80, tete: 6, main: [59, 38], coude: 1, main2: [59, 38], coude2: 1, pied: [55, 76], genou: -1, orteil: 5, pied2: [52, 60], genou2: -1, orteil2: 60 },
+            { hanche: [56, 42], tronc: -80, tete: 6, main: [48, 40], coude: 1, main2: [66, 32], coude2: 1, pied: [38, 66], genou: -1, orteil: 40, pied2: [67, 77], genou2: -1, orteil2: -5 },
+            { hanche: [55, 39], tronc: -80, tete: 6, main: [59, 38], coude: 1, main2: [59, 38], coude2: 1, pied: [52, 60], genou: -1, orteil: 60, pied2: [55, 76], genou2: -1, orteil2: 5 },
+        ],
+        decor: [
+            { t: 'l', a: [10, 79], b: [104, 79], k: 'piece', w: 5 },
+            { t: 'l', a: [12, 84], b: [104, 84], k: 'machine', w: 2 },
+            { t: 'l', a: [104, 79], b: [104, 84], k: 'machine', w: 3 },
+            { t: 'l', a: [98, 79], b: [94, 36], k: 'machine', w: 3 },
+            { t: 'l', a: [94, 36], b: [80, 40], k: 'machine', w: 2.6 },
+            { t: 'r', x: 88, y: 28, w: 12, h: 8, rx: 2, k: 'piece' },
+        ],
+    },
+
     // ===== Séance D — maison =====
     'd-elevations-laterales': {
         legende: 'Monte les bras sur les côtés jusqu’à l’horizontale',
@@ -967,6 +987,12 @@ ILLUSTRATIONS['d-bulgare'] = {
 const ALIAS: Record<string, string> = {
     'a-tirage-serre': 'a-lat-pulldown',
     'a-elev-lat-poulie': 'a-elev-lat-halteres',
+    'c-course-1': 'c-course',
+    'c-course-2': 'c-course',
+    'c-course-3': 'c-course',
+    'c-course-5': 'c-course',
+    'c-tempo': 'c-course',
+    'c-vitesse': 'c-course',
     'c-fractionne-2': 'c-fractionne',
     'c-fractionne-3': 'c-fractionne',
     'c-fractionne-4': 'c-fractionne',

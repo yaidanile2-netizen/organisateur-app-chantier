@@ -1,6 +1,6 @@
 // Programme de la semaine : 4 séances de 45 min, chacune avec plusieurs niveaux.
 // En salle — Basic-Fit Saint-Herblain Atlantis (ouvert tous les jours 6h00–22h30) :
-//   A haut du corps, B bas du corps + abdos, C cardio (vélo / tapis).
+//   A haut du corps, B bas du corps + abdos, C cardio (course + marche sur tapis).
 // À la maison — D, élastiques et poids du corps : épaules, posture, fessiers, gainage.
 // Daniel choisit lui-même le niveau de chaque séance dans l'onglet Muscu (« trop facile →
 // niveau suivant »). Les exercices gardent le même id d'un niveau à l'autre quand ils
@@ -316,14 +316,22 @@ const B = {
     ], { alternative: 'Machine crunch' }),
 }
 
-// ---------- Exercices : séance C (cardio vélo / tapis) ----------
+// ---------- Exercices : séance C (cardio sur tapis : course + marche) ----------
+// Basé sur la formule habituelle de Daniel : 3 × (5 min de marche à 5 km/h + 5 min de course
+// lente à 8-10 km/h). Les niveaux font grandir la part de course, puis ajoutent de l'allure.
 
-function fractionne(id: string, nb: number, rapide: string, lent: string): Exercice {
-    return ex(id, `${nb} × (${rapide} rapide + ${lent} lent)`, 'Vélo (ou tapis en courant)', 'cardio', ['cardio', 'quadriceps'], nb, `${rapide} à 8/10, puis ${lent} à 3/10`, [
-        'Rapide = tu ne peux plus parler, mais tu tiens jusqu’au bout',
-        'Lent = tu récupères sans t’arrêter',
-        'Coche un rond à chaque intervalle terminé',
-    ])
+const MUSCLES_COURSE: Muscle[] = ['cardio', 'quadriceps', 'mollets', 'fessiers']
+function courseMarche(id: string, nb: number, course: string, vitesse: string, marcheMin: string, marcheVitesse: string): Exercice {
+    return ex(id, `${nb} × (${course} course + ${marcheMin} marche)`, 'Tapis de course, pente 1 %', 'cardio', MUSCLES_COURSE, nb, `${course} à ${vitesse}, puis ${marcheMin} à ${marcheVitesse}`, [
+        'Course lente = tu peux parler par phrases courtes (effort 6/10)',
+        'Pente à 1 % : ça ressemble plus à courir dehors',
+        'Coche un rond à chaque bloc course + marche terminé',
+    ], { alternative: 'Vélo au même rythme si les genoux ou les tibias tirent' })
+}
+function intervalles(id: string, nom: string, nb: number, reps: string, consignes: string[]): Exercice {
+    return ex(id, nom, 'Tapis de course, pente 1 %', 'cardio', MUSCLES_COURSE, nb, reps, consignes, {
+        alternative: 'Vélo : mêmes durées, en jouant sur la résistance',
+    })
 }
 function marche(id: string, minutes: number, pente: string, vitesse: string): Exercice {
     return ex(id, 'Marche inclinée', 'Tapis de course', 'cardio', ['cardio', 'fessiers', 'mollets'], 1, `${minutes} min, pente ${pente}, ${vitesse}`, [
@@ -536,69 +544,86 @@ export const PROGRAMME: SeanceBase[] = [
         emoji: '🔥',
         degrade: ['#4a0d05', '#d9481e'],
         titre: 'Cardio',
-        court: 'Cardio (fractionné vélo + marche inclinée)',
+        court: 'Cardio sur tapis (course + marche)',
         couleur: '#ff5a36',
         focus: 'Cardio, endurance et réduction du taux de gras.',
         niveaux: [
             {
-                nom: 'Bases',
-                resume: 'Fractionné court et marche inclinée : le cœur apprend à monter puis à récupérer.',
-                echauffement: ['5 min de vélo en augmentant progressivement (effort 3 → 5/10)'],
+                nom: 'Ta formule',
+                resume: 'Ta séance habituelle (course lente + marche), en un peu mieux : plus de course, récup plus courte, et une finition en côte.',
+                echauffement: ['5 min de marche, de 5 à 6 km/h'],
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('c-fractionne', 8, '1 min', '1 min')]),
-                    bloc('Endurance', 1, 0, [marche('c-marche-inclinee', 15, '8 %', '5 km/h')]),
+                    bloc('Course + marche', 1, 0, [courseMarche('c-course-1', 4, '5 min', '8–9 km/h', '3 min', '5,5 km/h')]),
+                    bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '10 %', '5 km/h')]),
                 ],
-                retourAuCalme: ['3 min de marche lente', '2 min d’étirements cuisses et mollets'],
-                progression: 'À chaque séance, un peu plus de résistance (ou de vitesse) sur les minutes rapides.',
-                monter: 'Niveau 2 quand les 8 minutes rapides passent sans finir à bout de souffle.',
+                retourAuCalme: ['3 min de marche lente (4,5 km/h)', '2 min d’étirements mollets, cuisses et fessiers'],
+                progression: '+0,5 km/h sur la course quand les 4 blocs passent bien, jusqu’à 9,5 km/h.',
+                monter: 'Niveau 2 quand tu tiens 4 × 5 min à 9 km/h sans finir épuisé.',
             },
             {
                 nom: 'Volume',
-                resume: 'Plus d’intervalles : 10 au lieu de 8, et une pente plus forte.',
-                echauffement: ['5 min de vélo en augmentant progressivement (effort 3 → 5/10)'],
+                resume: 'Des blocs de course plus longs (8 min) et 2 min de marche : tu cours 24 min au total.',
+                echauffement: ['5 min de marche, de 5 à 6 km/h'],
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('c-fractionne-2', 10, '1 min', '1 min')]),
-                    bloc('Endurance', 1, 0, [marche('c-marche-2', 12, '10 %', '5 km/h')]),
+                    bloc('Course + marche', 1, 0, [courseMarche('c-course-2', 3, '8 min', '8,5–9,5 km/h', '2 min', '5,5 km/h')]),
+                    bloc('Finition en côte', 1, 0, [marche('c-marche-2', 6, '10 %', '5 km/h')]),
                 ],
-                retourAuCalme: ['3 min de marche lente', '2 min d’étirements cuisses et mollets'],
-                progression: 'Garde la même résistance sur les 10 intervalles avant de l’augmenter.',
-                monter: 'Niveau 3 quand tu tiens la même résistance du 1er au 10e intervalle.',
+                retourAuCalme: ['3 min de marche lente (4,5 km/h)', '2 min d’étirements mollets, cuisses et fessiers'],
+                progression: 'Garde 8,5 km/h tant que le 3e bloc est dur, puis monte de 0,5 km/h.',
+                monter: 'Niveau 3 quand les 3 × 8 min passent en parlant encore par phrases courtes.',
             },
             {
-                nom: 'Longs',
-                resume: 'Des minutes rapides plus longues (1 min 30) : l’endurance à haute intensité.',
-                echauffement: ['5 min de vélo en augmentant progressivement (effort 3 → 5/10)'],
+                nom: 'Sans marcher',
+                resume: '25 min de course continue, à allure facile : le vrai socle de l’endurance.',
+                echauffement: ['5 min de marche, de 5 à 6,5 km/h'],
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('c-fractionne-3', 8, '1 min 30', '1 min')]),
-                    bloc('Endurance', 1, 0, [marche('c-marche-3', 12, '12 %', '5 km/h')]),
+                    bloc('Course continue', 1, 0, [
+                        intervalles('c-course-3', '25 min de course continue', 5, '5 × 5 min à 8,5–9,5 km/h, sans marcher', [
+                            'Allure où tu peux parler : si tu es essoufflé, baisse de 0,5 km/h',
+                            'Coche un rond toutes les 5 minutes',
+                        ]),
+                    ]),
+                    bloc('Finition en côte', 1, 0, [marche('c-marche-3', 8, '12 %', '5 km/h')]),
                 ],
-                retourAuCalme: ['3 min de marche lente', '2 min d’étirements cuisses et mollets'],
-                progression: 'Monte la résistance d’un cran quand les 8 intervalles sont réguliers.',
-                monter: 'Niveau 4 quand tu récupères bien pendant la minute lente.',
+                retourAuCalme: ['3 min de marche lente (4,5 km/h)', '2 min d’étirements mollets, cuisses et fessiers'],
+                progression: 'Monte la vitesse de 0,5 km/h quand les 25 min sont faciles.',
+                monter: 'Niveau 4 quand tu cours 25 min sans t’arrêter à 9 km/h ou plus.',
             },
             {
-                nom: 'Seuil',
-                resume: '2 minutes rapides pour pousser ton seuil : tu tiens un effort fort plus longtemps.',
-                echauffement: ['6 min de vélo en augmentant progressivement (effort 3 → 6/10)'],
+                nom: 'Tempo',
+                resume: 'Des blocs « allure soutenue » de 4 min : ton cœur s’habitue à tenir un effort plus fort.',
+                echauffement: ['5 min de marche, puis 6 min de course facile à 8,5 km/h'],
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('c-fractionne-4', 6, '2 min', '1 min')]),
-                    bloc('Endurance', 1, 0, [marche('c-marche-4', 15, '12 %', '5,5 km/h')]),
+                    bloc('Tempo', 1, 0, [
+                        intervalles('c-tempo', '4 × (4 min tempo + 2 min facile)', 4, '4 min à 10,5–11 km/h, puis 2 min à 8 km/h', [
+                            'Tempo = effort 7-8/10 : tu ne peux dire que quelques mots',
+                            'Les 2 min faciles se font en courant lentement, pas en marchant',
+                        ]),
+                    ]),
+                    bloc('Finition en côte', 1, 0, [marche('c-marche-4', 5, '12 %', '5 km/h')]),
                 ],
-                retourAuCalme: ['3 min de marche lente', '2 min d’étirements cuisses et mollets'],
-                progression: 'Monte la résistance d’un cran quand les 6 intervalles sont tenus.',
-                monter: 'Niveau 5 quand les 2 minutes rapides restent fortes jusqu’au bout.',
+                retourAuCalme: ['4 min de marche lente (4,5 km/h)', '2 min d’étirements mollets, cuisses et fessiers'],
+                progression: '+0,5 km/h sur le tempo quand les 4 blocs restent réguliers.',
+                monter: 'Niveau 5 quand les 4 min de tempo restent régulières jusqu’au dernier bloc.',
             },
             {
-                nom: 'Expert',
-                resume: '3 minutes rapides : le niveau le plus dur, pour un cardio solide.',
-                echauffement: ['6 min de vélo en augmentant progressivement (effort 3 → 6/10)'],
+                nom: 'Vitesse',
+                resume: 'Des accélérations d’1 min : le niveau le plus dur, pour un cardio solide.',
+                echauffement: ['5 min de marche, puis 8 min de course facile à 8,5–9 km/h'],
                 blocs: [
-                    bloc('Fractionné', 1, 0, [fractionne('c-fractionne-5', 5, '3 min', '1 min 30')]),
-                    bloc('Endurance', 1, 0, [marche('c-marche-5', 12, '15 %', '5,5 km/h')]),
+                    bloc('Accélérations', 1, 0, [
+                        intervalles('c-vitesse', '10 × (1 min vite + 1 min récup)', 10, '1 min à 12–13 km/h, puis 1 min à 6 km/h', [
+                            'Vite = effort 9/10, tu tiens jusqu’au bout de la minute',
+                            'Récup en marche rapide, sans descendre du tapis',
+                        ]),
+                    ]),
+                    bloc('Course facile', 1, 0, [
+                        intervalles('c-course-5', 'Course facile', 1, '8 min à 8,5–9 km/h', ['Allure très facile : tu récupères en courant']),
+                    ]),
                 ],
-                retourAuCalme: ['3 min de marche lente', '2 min d’étirements cuisses et mollets'],
-                progression: 'Augmente la résistance des minutes rapides petit à petit.',
-                monter: 'Dernier niveau : continue d’augmenter la résistance.',
+                retourAuCalme: ['3 min de marche lente (4,5 km/h)', '2 min d’étirements mollets, cuisses et fessiers'],
+                progression: '+0,5 km/h sur les minutes vites quand les 10 passent.',
+                monter: 'Dernier niveau : augmente la vitesse petit à petit, ou prépare une course de 10 km.',
             },
         ],
     },
