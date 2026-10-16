@@ -598,7 +598,7 @@ export default function MuscuView() {
             {/* Objectif de l'année : 10 km, et les défis du cardio comme étapes */}
             {(() => {
                 const c = seanceParCode('C', niveaux.C?.n)
-                const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => (e.id === 'c-fond' || e.id === 'e-endurance') && e.kg).map((e) => e.kg as number)))
+                const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => (e.id === 'c-fond' || e.id === 'c-depart' || e.id === 'e-endurance') && e.kg).map((e) => e.kg as number)))
                 const semaines = Math.max(0, Math.ceil((new Date(OBJECTIF_DATE).getTime() - Date.now()) / (7 * 24 * 3600 * 1000)))
                 const idsC = c.blocs.flatMap((b) => b.exercices.map((e) => e.id))
                 const faitesC = seancesAuNiveau('C', niveaux.C?.depuis, idsC, suivi.seances).length

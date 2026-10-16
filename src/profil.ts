@@ -136,6 +136,7 @@ export function recommandation(e: Exercice, p: Profil, aujourdhui: Date): Recomm
         const a = p.poidsKg * 0.5 / FACTEUR_NIVEAU[p.niveau]
         return { type: 'charge', min: arrondi(a * 0.9), max: arrondi(a * 1.1) }
     }
+    if (e.id === 'c-depart') return { type: 'texte', texte: `❤️ Reste sous ${Math.round(fcMax * 0.75)} bpm en courant : si ça monte plus, ralentis ou marche` }
     if (e.id === 'c-fond') return { type: 'texte', texte: `❤️ Course : ${fc(0.68, 0.8)} · tu dois pouvoir parler` }
     if (e.id === 'c-acceleration' || e.id === 'c-30-30' || e.id === 'c-15-15') return { type: 'texte', texte: `❤️ Vite : jusqu’à ${fc(0.88, 0.95)} · récup : redescends vers ${Math.round(0.7 * fcMax)} bpm` }
     if (e.id === 'e-endurance') return { type: 'texte', texte: `❤️ Vise ${fc(0.68, 0.78)} : tu dois pouvoir parler` }

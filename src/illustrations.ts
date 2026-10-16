@@ -1024,6 +1024,7 @@ const ALIAS: Record<string, string> = {
     'a-elev-lat-poulie': 'a-elev-lat-halteres',
     'e-endurance': 'c-course',
     'c-fond': 'c-course',
+    'c-depart': 'c-course',
     'c-acceleration': 'c-course',
     'c-30-30': 'c-course',
     'c-15-15': 'c-course',

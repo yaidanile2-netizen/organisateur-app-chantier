@@ -569,18 +569,38 @@ export const PROGRAMME: SeanceBase[] = [
         focus: 'Retrouver ta forme de basketteur : courir longtemps sans fatigue, et enchaîner des accélérations comme dans un match, en récupérant vite.',
         niveaux: [
             {
+                nom: 'Départ',
+                resume: 'Pour démarrer en douceur : des petits blocs de course très lente, et beaucoup de marche. Le souffle et les jambes s’habituent.',
+                duree: 40,
+                echauffement: ['6 min de marche, de 5 à 6 km/h', 'Montées de genoux et talons-fesses sur place (1 min)', '1 min de trottinage très lent à 6,5 km/h'],
+                blocs: [
+                    bloc('Course + marche', 1, 0, [
+                        course('c-depart', '7 × (2 min course + 2 min marche)', 7, '2 min à 6,5–7,5 km/h, puis 2 min de marche à 5,5 km/h', [
+                            'Course TRÈS lente : tu dois pouvoir parler en phrases. Essoufflé ? Ralentis encore, même à 6,5 km/h',
+                            'Petits pas rapides, pieds sous le corps : ça évite que les cuisses « brûlent »',
+                            'Les jambes qui chauffent au début, c’est normal : ça diminue en quelques séances',
+                        ]),
+                    ]),
+                    bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '8 %', '5 km/h')]),
+                ],
+                retourAuCalme: RETOUR_COURSE,
+                progression: 'D’abord garder la même vitesse et que ce soit plus facile. Ensuite : 2 min 30 de course, puis 3 min.',
+                monter: 'Niveau 2 quand tu cours 5 min d’affilée sans être essoufflé.',
+                defi: { titre: 'Courir 5 min sans t’arrêter, en pouvant parler', detail: 'À 7–7,5 km/h. Si tu y arrives sans être à bout de souffle, tu es prêt pour ta formule.', apres: 4 },
+            },
+            {
                 nom: 'Fond',
                 resume: 'Ta formule course + marche, avec un peu plus de course : la base du souffle.',
                 duree: 45,
                 echauffement: ECHAUFFEMENT_COURSE,
                 blocs: [
-                    bloc('Course + marche', 1, 0, [course('c-fond', '4 × (5 min course + 2 min marche)', 4, '5 min à 8–9 km/h, puis 2 min de marche à 5,5 km/h', ['Course facile : tu peux parler par phrases (effort 6/10)', 'Coche un rond à chaque bloc'])]),
+                    bloc('Course + marche', 1, 0, [course('c-fond', '4 × (5 min course + 2 min marche)', 4, '5 min à 7,5–8,5 km/h, puis 2 min de marche à 5,5 km/h', ['Course facile : tu peux parler par phrases (effort 6/10)', 'Coche un rond à chaque bloc'])]),
                     bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '10 %', '5 km/h')]),
                 ],
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur la course quand les 4 blocs passent bien.',
                 monter: 'Niveau 2 quand tu tiens 4 × 5 min à 9 km/h sans finir épuisé.',
-                defi: { titre: 'Courir 15 min sans t’arrêter', detail: 'À 8,5 km/h, sans marcher. Tu dois finir en pouvant encore parler.', apres: 4 },
+                defi: { titre: 'Courir 15 min sans t’arrêter', detail: 'À 8 km/h environ, sans marcher. Tu dois finir en pouvant encore parler.', apres: 4 },
             },
             {
                 nom: 'Vitesse',
