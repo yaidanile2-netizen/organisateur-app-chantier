@@ -3,7 +3,7 @@
 // (trajet salle), fait sa séance et rentre avant l'heure limite.
 // Maison — pas de trajet : il suffit d'être rentré, la séance doit finir avant l'heure limite maison.
 import type { Cours, Tache } from './api'
-import { SEANCES_SALLE, SEANCE_MAISON, type CodeSeance, type SeanceProgramme } from './programme'
+import { DUREE_SEANCE, SEANCES_SALLE, seanceParCode, type CodeSeance, type SeanceProgramme } from './programme'
 
 export const MARQUEUR = '#sport-auto'
 
@@ -20,7 +20,7 @@ export type Reglages = {
 export const REGLAGES_PAR_DEFAUT: Reglages = {
     trajetIut: 90,
     trajetSalle: 30,
-    duree: 30,
+    duree: DUREE_SEANCE,
     retourAvant: '20:00',
     departAuPlusTot: '08:00',
     seanceMaison: true,
@@ -32,7 +32,18 @@ const CLE_REGLAGES = 'sport.reglages'
 export function lireReglages(): Reglages {
     try {
         const brut = localStorage.getItem(CLE_REGLAGES)
-        if (brut) return { ...REGLAGES_PAR_DEFAUT, ...JSON.parse(brut) }
+        if (brut) {
+            const r: Reglages = { ...REGLAGES_PAR_DEFAUT, ...JSON.parse(brut) }
+            // Oct. 2026 : les séances passent de 30 à 45 min (nouveau programme par niveaux).
+            if (!localStorage.getItem('sport.duree45')) {
+                localStorage.setItem('sport.duree45', '1')
+                if (r.duree === 30) {
+                    r.duree = DUREE_SEANCE
+                    localStorage.setItem(CLE_REGLAGES, JSON.stringify(r))
+                }
+            }
+            return r
+        }
     } catch {
         // stockage indisponible : réglages par défaut
     }
@@ -241,7 +252,7 @@ export function planifierSemaine(
 
     const codes = codesPour(meilleur)
     return meilleur.map((c, i) => {
-        const seance = codes[i] === 'D' ? SEANCE_MAISON : SEANCES_SALLE.find((s) => s.code === codes[i])!
+        const seance = seanceParCode(codes[i])
         const trajet = c.lieu === 'salle' ? r.trajetSalle : 0
         const debut = c.option.depart + trajet * MIN
         const fin = debut + r.duree * MIN
@@ -268,7 +279,7 @@ export function descriptionSeance(c: Creneau): string {
         s.lieu === 'maison'
             ? `Séance à la maison ${hm(c.debut)}–${hm(c.fin)} (élastiques et poids du corps)`
             : `Départ ${hm(c.depart)} · séance ${hm(c.debut)}–${hm(c.fin)} au Basic-Fit Atlantis · retour vers ${hm(c.retour)}`
-    return [entete, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
+    return [entete, `Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
 }
 
 // Retrouve la séance (A/B/C/D) d'une tâche créée automatiquement.

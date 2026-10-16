@@ -136,6 +136,23 @@ const pile = (x: number, haut = 40): Element[] => [
 ]
 
 
+// Haltère vu de bout, barre avec disque, banc plat, colonne de poulie.
+const halt = (j: string, d?: P, r = 3.4): Element => ({ t: 'c', c: J(j, d), r, k: 'piece', avant: true })
+const disque = (j: string, d?: P, r = 8.5): Element => ({ t: 'c', c: J(j, d), r, k: 'piece' })
+const banc = (x: number, y: number, larg: number): Element[] => [
+    { t: 'r', x, y, w: larg, h: 4.5, rx: 2, k: 'piece' },
+    { t: 'l', a: [x + 4, y + 4], b: [x + 4, SOL], k: 'machine', w: 3 },
+    { t: 'l', a: [x + larg - 4, y + 4], b: [x + larg - 4, SOL], k: 'machine', w: 3 },
+]
+const colonne = (x: number, yPoulie: number): Element[] => [
+    { t: 'l', a: [x, SOL], b: [x, 4], k: 'machine', w: 3 },
+    { t: 'c', c: [x - 2, yPoulie], r: 2.4, k: 'machine' },
+]
+const corde = (): Element[] => [
+    { t: 'l', a: J('main', [0, -3]), b: J('main', [-1, 3]), k: 'piece', w: 2.4, avant: true },
+    { t: 'l', a: J('main', [0, -3]), b: J('main', [3, 3]), k: 'piece', w: 2.4, avant: true },
+]
+
 // Gros plan de la main pour le finger grip : 4 doigts qui s'ouvrent contre l'élastique.
 const BASES: P[] = [[44, 38], [51, 35], [58, 35], [65, 38]]
 const fermes: P[] = BASES.map(([x, y]) => [x + 1, y + 7])
@@ -353,7 +370,7 @@ export const ILLUSTRATIONS: Record<string, Def> = {
 
     // ===== Séance C — cardio =====
     'c-fractionne': {
-        legende: 'Vélo : 1 min vite, 1 min lent',
+        legende: 'Vélo : alterne minutes rapides et lentes',
         duree: 1.1,
         accent: ['cuisse', 'jambe'],
         poses: [0, 90, 180, 270].map((a) => ({
@@ -521,7 +538,445 @@ export const ILLUSTRATIONS: Record<string, Def> = {
             { t: 'l', a: { v: [[37, 46], [28, 42]] }, b: { v: [fermes[0], ouverts[0]] }, k: 'elastique', w: 1.8, avant: true },
         ],
     },
+    // ===== Nouveaux exercices (programme par niveaux) =====
+    'a-pec-deck': {
+        legende: 'Ramène les poignées devant la poitrine, coudes fixes',
+        pauses: true,
+        accent: ['tronc', 'epaules'],
+        poses: [
+            { vue: 'face', cx: 60, epauleY: 30, hancheY: 56, mainD: [90, 31], coude: 1, piedD: [70, 83], genou: -1 },
+            { vue: 'face', cx: 60, epauleY: 30, hancheY: 56, mainD: [65, 34], coude: 1, piedD: [70, 83], genou: -1 },
+        ],
+        decor: [
+            sol(),
+            { t: 'r', x: 51, y: 16, w: 18, h: 42, rx: 3, k: 'piece' },
+            { t: 'r', x: 46, y: 57, w: 28, h: 5, rx: 2, k: 'piece' },
+            { t: 'l', a: [60, 62], b: [60, SOL], k: 'machine', w: 3 },
+            { t: 'l', a: [76, 10], b: J('mainD', [0, -6]), k: 'machine', w: 2.4 },
+            { t: 'l', a: [44, 10], b: J('mainG', [0, -6]), k: 'machine', w: 2.4 },
+            { t: 'l', a: J('mainD', [0, -6]), b: J('mainD', [0, 6]), k: 'piece', w: 4, avant: true },
+            { t: 'l', a: J('mainG', [0, -6]), b: J('mainG', [0, 6]), k: 'piece', w: 4, avant: true },
+        ],
+    },
+    'a-oiseau-machine': {
+        legende: 'Ouvre les bras vers l’arrière, sans hausser les épaules',
+        pauses: true,
+        accent: ['epaules', 'trapezes'],
+        poses: [
+            { vue: 'face', cx: 60, epauleY: 30, hancheY: 56, mainD: [66, 34], coude: 1, piedD: [70, 83], genou: -1 },
+            { vue: 'face', cx: 60, epauleY: 30, hancheY: 56, mainD: [94, 30], coude: 1, piedD: [70, 83], genou: -1 },
+        ],
+        decor: [
+            sol(),
+            { t: 'r', x: 46, y: 57, w: 28, h: 5, rx: 2, k: 'piece' },
+            { t: 'l', a: [60, 62], b: [60, SOL], k: 'machine', w: 3 },
+            { t: 'l', a: [76, 10], b: J('mainD', [0, -6]), k: 'machine', w: 2.4 },
+            { t: 'l', a: [44, 10], b: J('mainG', [0, -6]), k: 'machine', w: 2.4 },
+            { t: 'l', a: J('mainD', [0, -6]), b: J('mainD', [0, 6]), k: 'piece', w: 4, avant: true },
+            { t: 'l', a: J('mainG', [0, -6]), b: J('mainG', [0, 6]), k: 'piece', w: 4, avant: true },
+        ],
+    },
+    'a-dc-halteres': {
+        legende: 'Allongé, pousse les haltères vers le plafond',
+        pauses: true,
+        accent: ['bras', 'ab', 'tronc'],
+        poses: [
+            { hanche: [40, 62], epaule: [64, 62], tete: 0, main: [63, 52], coude: 1, pied: [24, 83], genou: 1, orteil: 180 },
+            { hanche: [40, 62], epaule: [64, 62], tete: 0, main: [64, 36], coude: 1, pied: [24, 83], genou: 1, orteil: 180 },
+        ],
+        decor: [sol(), ...banc(30, 64.5, 50), halt('main')],
+    },
+    'a-incline-halteres': {
+        legende: 'Banc incliné : pousse les haltères au-dessus du haut de la poitrine',
+        pauses: true,
+        accent: ['bras', 'ab', 'tronc'],
+        poses: [
+            { hanche: [44, 64], tronc: -35, tete: 0, main: [60, 41], coude: 1, pied: [28, 83], genou: 1, orteil: 180 },
+            { hanche: [44, 64], tronc: -35, tete: 0, main: [64, 24], coude: 1, pied: [28, 83], genou: 1, orteil: 180 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [44, 68], b: [72, 49], k: 'piece', w: 5 },
+            { t: 'l', a: [30, 68], b: [48, 68], k: 'piece', w: 5 },
+            { t: 'l', a: [42, 70], b: [42, SOL], k: 'machine', w: 3 },
+            { t: 'l', a: [64, 56], b: [66, SOL], k: 'machine', w: 3 },
+            halt('main'),
+        ],
+    },
+    'a-dc-barre': {
+        legende: 'Descends la barre au bas des pectoraux, pousse en ligne droite',
+        pauses: true,
+        accent: ['bras', 'ab', 'tronc'],
+        poses: [
+            { hanche: [40, 62], epaule: [64, 62], tete: 0, main: [62, 53], coude: 1, pied: [24, 83], genou: 1, orteil: 180 },
+            { hanche: [40, 62], epaule: [64, 62], tete: 0, main: [63, 36], coude: 1, pied: [24, 83], genou: 1, orteil: 180 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [84, SOL], b: [84, 26], k: 'machine', w: 3 },
+            { t: 'l', a: [84, 34], b: [78, 34], k: 'machine', w: 2.6 },
+            ...banc(30, 64.5, 50),
+            disque('main', [0, 0], 9),
+            { t: 'c', c: J('main'), r: 2.2, k: 'machine', avant: true },
+        ],
+    },
+    'a-militaire-halteres': {
+        legende: 'Assis dos droit, pousse les haltères au-dessus de la tête',
+        pauses: true,
+        accent: ['bras', 'epaules'],
+        poses: [
+            { hanche: [44, 62], tronc: -95, tete: 4, main: [48, 37], coude: 1, pied: [64, 83], genou: -1, orteil: 0 },
+            { hanche: [44, 62], tronc: -95, tete: 4, main: [46, 12], coude: 1, pied: [64, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), ...siege(32, 63, 22, [32, 24]), halt('main')],
+    },
+    'a-rowing-haltere': {
+        legende: 'Dos plat, tire l’haltère vers la hanche',
+        pauses: true,
+        accent: ['tronc', 'bras'],
+        poses: [
+            { hanche: [34, 50], tronc: -8, tete: 6, main: [58, 71], coude: -1, main2: [72, 64], coude2: 1, pied: [46, 83], genou: -1, orteil: 0, pied2: [20, 83], genou2: -1, orteil2: 0 },
+            { hanche: [34, 50], tronc: -8, tete: 6, main: [45, 55], coude: -1, main2: [72, 64], coude2: 1, pied: [46, 83], genou: -1, orteil: 0, pied2: [20, 83], genou2: -1, orteil2: 0 },
+        ],
+        decor: [sol(), ...banc(64, 65, 40), halt('main')],
+    },
+    'a-elev-lat-halteres': {
+        legende: 'Monte les bras sur les côtés jusqu’à l’horizontale',
+        pauses: true,
+        accent: ['epaules'],
+        poses: [
+            { vue: 'face', cx: 60, epauleY: 23, hancheY: 46, mainD: [72, 66], coude: 1, piedD: [66, 83], genou: 1 },
+            { vue: 'face', cx: 60, epauleY: 23, hancheY: 46, mainD: [95, 25], coude: 1, piedD: [66, 83], genou: 1 },
+        ],
+        decor: [sol(), halt('mainD'), halt('mainG')],
+    },
+    'a-face-pull-poulie': {
+        legende: 'Tire la corde vers le front, coudes hauts',
+        pauses: true,
+        accent: ['bras', 'epaules'],
+        poses: [
+            { hanche: [42, 46], tronc: -90, main: [68, 21], coude: -1, pied: [44, 83], genou: 1, orteil: 0 },
+            { hanche: [42, 46], tronc: -90, main: [51, 15], coude: -1, pied: [44, 83], genou: 1, orteil: 0 },
+        ],
+        decor: [sol(), ...colonne(100, 20), { t: 'l', a: [98, 20], b: J('main'), k: 'cable', w: 1 }, ...corde()],
+    },
+    'a-curl-incline': {
+        legende: 'Bras derrière le buste, monte les haltères sans bouger les coudes',
+        pauses: true,
+        accent: ['bras', 'ab'],
+        poses: [
+            { hanche: [52, 66], tronc: -125, tete: 12, main: [41, 71], coude: 1, pied: [72, 83], genou: -1, orteil: 0 },
+            { hanche: [52, 66], tronc: -125, tete: 12, main: [47, 50], coude: 1, pied: [72, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [54, 70], b: [30, 35], k: 'piece', w: 5 },
+            { t: 'l', a: [46, 70], b: [64, 70], k: 'piece', w: 5 },
+            { t: 'l', a: [56, 72], b: [56, SOL], k: 'machine', w: 3 },
+            halt('main'),
+        ],
+    },
+    'a-triceps-nuque': {
+        legende: 'Dos à la poulie, tends les bras au-dessus de la tête',
+        pauses: true,
+        accent: ['bras'],
+        poses: [
+            { hanche: [44, 47], tronc: -70, tete: 0, main: [47, 16], coude: 1, pied: [52, 83], genou: -1, orteil: 0, pied2: [34, 83], orteil2: 0 },
+            { hanche: [44, 47], tronc: -70, tete: 0, main: [74, 11], coude: 1, pied: [52, 83], genou: -1, orteil: 0, pied2: [34, 83], orteil2: 0 },
+        ],
+        decor: [sol(), ...colonne(12, 20), { t: 'l', a: [14, 20], b: J('main'), k: 'cable', w: 1 }, ...corde()],
+    },
+    'a-tractions-assistees': {
+        legende: 'Genoux sur l’appui, monte le menton au-dessus de la barre',
+        pauses: true,
+        accent: ['tronc', 'bras'],
+        poses: [
+            { hanche: [50, 52], tronc: -90, tete: 0, main: [53, 5], coude: 1, pied: [34, 74], genou: -1, orteil: 180 },
+            { hanche: [50, 40], tronc: -90, tete: 0, main: [53, 5], coude: 1, pied: [34, 62], genou: -1, orteil: 180 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [76, SOL], b: [76, 4], k: 'machine', w: 3 },
+            { t: 'l', a: [34, 4], b: [78, 4], k: 'machine', w: 3 },
+            { t: 'l', a: J('genou', [0, 4]), b: { j: 'genou', y: SOL }, k: 'machine', w: 2.6 },
+            { t: 'l', a: J('genou', [-7, 3]), b: J('genou', [6, 3]), k: 'piece', w: 4.5, avant: true },
+        ],
+    },
+    'a-rowing-barre': {
+        legende: 'Buste penché dos plat, tire la barre vers le nombril',
+        pauses: true,
+        accent: ['tronc', 'bras'],
+        poses: [
+            { hanche: [40, 48], tronc: -25, tete: 4, main: [60, 62], coude: -1, pied: [46, 83], genou: -1, orteil: 0 },
+            { hanche: [40, 48], tronc: -25, tete: 4, main: [50, 53], coude: -1, pied: [46, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), disque('main'), { t: 'c', c: J('main'), r: 2.2, k: 'machine', avant: true }],
+    },
+    'a-dips': {
+        legende: 'Descends coudes à 90°, puis remonte',
+        pauses: true,
+        accent: ['bras', 'ab', 'epaules'],
+        poses: [
+            { hanche: [56, 48], tronc: -96, tete: 4, main: [58, 50], coude: -1, pied: [44, 70], genou: 1, orteil: 100 },
+            { hanche: [58, 60], tronc: -80, tete: 4, main: [58, 50], coude: -1, pied: [46, 81], genou: 1, orteil: 100 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [36, 50.5], b: [90, 50.5], k: 'machine', w: 3 },
+            { t: 'l', a: [40, 50], b: [40, SOL], k: 'machine', w: 3 },
+            { t: 'l', a: [86, 50], b: [86, SOL], k: 'machine', w: 3 },
+        ],
+    },
+    'a-curl-ez': {
+        legende: 'Coudes collés, monte la barre vers les épaules',
+        pauses: true,
+        accent: ['bras', 'ab'],
+        poses: [
+            { hanche: [48, 46], tronc: -90, main: [51, 70], coude: -1, pied: [49, 83], genou: 1, orteil: 0 },
+            { hanche: [48, 46], tronc: -90, main: [60, 27], coude: -1, pied: [49, 83], genou: 1, orteil: 0 },
+        ],
+        decor: [sol(), disque('main', [0, 0], 5.5), { t: 'c', c: J('main'), r: 1.8, k: 'machine', avant: true }],
+    },
+    'b-goblet-squat': {
+        legende: 'Haltère contre la poitrine, descends cuisses parallèles',
+        pauses: true,
+        accent: ['cuisse', 'fessiers'],
+        poses: [
+            { hanche: [52, 47], tronc: -88, tete: 2, main: { rel: 'epaule', d: [7, 8] }, coude: 1, pied: [54, 83], genou: -1, orteil: 0 },
+            { hanche: [42, 66], tronc: -62, tete: -20, main: { rel: 'epaule', d: [7, 8] }, coude: 1, pied: [54, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), halt('main', [1, -1], 4)],
+    },
+    'b-squat-barre': {
+        legende: 'Barre sur le haut du dos, descends cuisses parallèles',
+        pauses: true,
+        accent: ['cuisse', 'fessiers'],
+        poses: [
+            { hanche: [52, 47], tronc: -88, tete: 2, main: { rel: 'epaule', d: [-2, -2] }, coude: 1, pied: [54, 83], genou: -1, orteil: 0 },
+            { hanche: [40, 65], tronc: -55, tete: -25, main: { rel: 'epaule', d: [-2, -2] }, coude: 1, pied: [54, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), disque('epaule', [-3, 0], 7.5), { t: 'c', c: J('epaule', [-3, 0]), r: 2.2, k: 'machine', avant: true }],
+    },
+    'b-sdt-roumain-halteres': {
+        legende: 'Fesses en arrière, dos plat, haltères le long des jambes',
+        pauses: true,
+        accent: ['cuisse', 'fessiers'],
+        poses: [
+            { hanche: [50, 47], tronc: -90, tete: 0, main: [53, 49], coude: -1, pied: [52, 83], genou: -1, orteil: 0 },
+            { hanche: [42, 48], tronc: -22, tete: 6, main: [62, 64], coude: -1, pied: [52, 83], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), halt('main')],
+    },
+    'b-fentes-marchees': {
+        legende: 'Grand pas, le genou arrière descend presque au sol',
+        pauses: true,
+        accent: ['cuisse', 'fessiers'],
+        poses: [
+            { hanche: [54, 47], tronc: -90, main: { rel: 'epaule', d: [1, 26] }, coude: 1, pied: [58, 83], genou: -1, orteil: 0, pied2: [48, 83], genou2: -1, orteil2: 0 },
+            { hanche: [52, 58], tronc: -90, main: { rel: 'epaule', d: [1, 26] }, coude: 1, pied: [68, 83], genou: -1, orteil: 0, pied2: [30, 81], genou2: -1, orteil2: 30 },
+        ],
+        decor: [sol(), halt('main')],
+    },
+    'b-fentes-bulgares': {
+        legende: 'Pied arrière sur le banc, descends à la verticale',
+        pauses: true,
+        accent: ['cuisse', 'fessiers'],
+        poses: [
+            { hanche: [52, 48], tronc: -86, main: { rel: 'epaule', d: [1, 26] }, coude: 1, pied: [62, 83], genou: -1, orteil: 0, pied2: [28, 61], genou2: -1, orteil2: 180 },
+            { hanche: [50, 62], tronc: -82, main: { rel: 'epaule', d: [1, 26] }, coude: 1, pied: [62, 83], genou: -1, orteil: 0, pied2: [28, 61], genou2: -1, orteil2: 180 },
+        ],
+        decor: [sol(), ...banc(10, 63.5, 24), halt('main')],
+    },
+    'b-hip-thrust': {
+        legende: 'Dos contre le banc, monte les hanches et serre les fessiers',
+        pauses: true,
+        accent: ['fessiers', 'cuisse'],
+        poses: [
+            { hanche: [44, 76], epaule: [24, 60], tete: 0, main: { rel: 'hanche', d: [1, -6] }, coude: 1, pied: [66, 82], genou: -1, orteil: 0 },
+            { hanche: [46, 60], epaule: [22, 61], tete: 0, main: { rel: 'hanche', d: [1, -6] }, coude: 1, pied: [66, 82], genou: -1, orteil: 0 },
+        ],
+        decor: [sol(), ...banc(4, 62.5, 22), disque('hanche', [1, -6.5], 8.5), { t: 'c', c: J('hanche', [1, -6.5]), r: 2.2, k: 'machine', avant: true }],
+    },
+    'b-mollets-debout': {
+        legende: 'Talons en bas, puis monte au maximum sur la pointe des pieds',
+        pauses: true,
+        accent: ['jambe'],
+        poses: [
+            { hanche: [50, 45], tronc: -90, main: { rel: 'epaule', d: [6, -2] }, coude: 1, pied: [52, 81], genou: -1, orteil: -15 },
+            { hanche: [49, 39], tronc: -90, main: { rel: 'epaule', d: [6, -2] }, coude: 1, pied: [51, 75], genou: -1, orteil: 60 },
+        ],
+        decor: [
+            sol(),
+            { t: 'l', a: [84, SOL], b: [84, 4], k: 'machine', w: 3 },
+            { t: 'l', a: [40, 4], b: [86, 4], k: 'machine', w: 3 },
+            { t: 'l', a: J('epaule', [7, -3]), b: { j: 'epaule', d: [7, 0], y: 4 }, k: 'machine', w: 2.4 },
+            { t: 'l', a: J('epaule', [-5, -3]), b: J('epaule', [7, -3]), k: 'piece', w: 5, avant: true },
+            { t: 'r', x: 50, y: 79.5, w: 18, h: 4.5, rx: 1, k: 'piece' },
+        ],
+    },
+    'b-abducteurs': {
+        legende: 'Écarte les genoux contre les coussins, tiens 1 s',
+        pauses: true,
+        accent: ['hanches', 'cuisse'],
+        poses: [
+            { vue: 'face', cx: 60, epauleY: 28, hancheY: 56, mainD: [72, 58], coude: 1, piedD: [67, 83], genou: -1 },
+            { vue: 'face', cx: 60, epauleY: 28, hancheY: 56, mainD: [72, 58], coude: 1, piedD: [80, 83], genou: -1 },
+        ],
+        decor: [
+            sol(),
+            { t: 'r', x: 50, y: 20, w: 20, h: 38, rx: 3, k: 'piece' },
+            { t: 'r', x: 44, y: 57, w: 32, h: 5, rx: 2, k: 'piece' },
+            { t: 'l', a: J('genouD', [4, -5]), b: J('genouD', [4, 5]), k: 'piece', w: 4, avant: true },
+            { t: 'l', a: J('genouG', [-4, -5]), b: J('genouG', [-4, 5]), k: 'piece', w: 4, avant: true },
+        ],
+    },
+    'b-releve-genoux': {
+        legende: 'Suspendu, monte les genoux vers la poitrine',
+        pauses: true,
+        accent: ['tronc', 'cuisse'],
+        poses: [
+            { hanche: [50, 52], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [51, 88], genou: -1, orteil: 60 },
+            { hanche: [50, 50], tronc: -94, tete: 0, main: [51, 5], coude: 1, pied: [66, 66], genou: -1, orteil: 60 },
+        ],
+        decor: [{ t: 'l', a: [28, 4.5], b: [76, 4.5], k: 'machine', w: 3 }],
+    },
+    'b-releve-jambes': {
+        legende: 'Suspendu, monte les jambes tendues à l’horizontale',
+        pauses: true,
+        accent: ['tronc', 'cuisse'],
+        poses: [
+            { hanche: [50, 52], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [51, 88], genou: -1, orteil: 60 },
+            { hanche: [48, 50], tronc: -96, tete: 0, main: [51, 5], coude: 1, pied: [84, 46], genou: -1, orteil: -20 },
+        ],
+        decor: [{ t: 'l', a: [28, 4.5], b: [76, 4.5], k: 'machine', w: 3 }],
+    },
+    'b-pallof': {
+        legende: 'Tends les bras devant toi sans laisser le buste tourner',
+        pauses: true,
+        accent: ['tronc'],
+        poses: [
+            { hanche: [48, 47], tronc: -90, main: { rel: 'epaule', d: [5, 9] }, coude: 1, pied: [50, 83], genou: -1, orteil: 0, pied2: [44, 83], orteil2: 0 },
+            { hanche: [48, 47], tronc: -90, main: [73, 31], coude: 1, pied: [50, 83], genou: -1, orteil: 0, pied2: [44, 83], orteil2: 0 },
+        ],
+        decor: [
+            sol(),
+            ...colonne(102, 31),
+            { t: 'l', a: [100, 31], b: J('main'), k: 'cable', w: 1 },
+            { t: 'l', a: J('main', [0, -3]), b: J('main', [0, 3]), k: 'piece', w: 3, avant: true },
+        ],
+    },
+    'b-crunch-poulie': {
+        legende: 'À genoux, enroule le dos pour amener les coudes aux genoux',
+        pauses: true,
+        accent: ['tronc'],
+        poses: [
+            { hanche: [48, 60], tronc: -82, tete: 0, main: { rel: 'epaule', d: [5, -7] }, coude: 1, pied: [32, 82], genou: -1, orteil: 180 },
+            { hanche: [48, 60], tronc: -22, tete: 30, main: { rel: 'epaule', d: [7, 3] }, coude: 1, pied: [32, 82], genou: -1, orteil: 180 },
+        ],
+        decor: [sol(), ...colonne(98, 8), { t: 'l', a: [96, 8], b: J('main'), k: 'cable', w: 1 }, ...corde()],
+    },
+    'd-rowing-elastique': {
+        legende: 'Assis, tire l’élastique vers le bas des côtes',
+        pauses: true,
+        accent: ['tronc', 'bras'],
+        poses: [
+            { hanche: [36, 80], tronc: -95, tete: 0, main: [58, 64], coude: -1, pied: [72, 81], genou: 1, orteil: -80 },
+            { hanche: [36, 80], tronc: -98, tete: 0, main: [42, 64], coude: -1, pied: [72, 81], genou: 1, orteil: -80 },
+        ],
+        decor: [sol(), { t: 'l', a: J('cheville', [3, -3]), b: J('main'), k: 'elastique', w: 1.6 }],
+    },
+    'd-pike-pushup': {
+        legende: 'Fesses en l’air, descends la tête entre les mains',
+        pauses: true,
+        accent: ['bras', 'epaules'],
+        poses: [
+            { hanche: [50, 48], tronc: 30, tete: 20, main: [80, 83], coude: -1, pied: [36, 82], genou: 1, orteil: 100 },
+            { hanche: [50, 50], tronc: 48, tete: 15, main: [80, 83], coude: -1, pied: [36, 82], genou: 1, orteil: 100 },
+        ],
+        decor: [sol()],
+    },
+    'd-pompes-surelevees': {
+        legende: 'Pieds sur une chaise, corps aligné, poitrine près du sol',
+        pauses: true,
+        accent: ['bras', 'epaules', 'tronc'],
+        poses: [
+            { hanche: [51, 60], tronc: -8, tete: 4, main: [77, 83], coude: 1, pied: [16, 65], genou: 1, orteil: 160 },
+            { hanche: [52, 70], tronc: 12, tete: 4, main: [77, 83], coude: 1, pied: [16, 65], genou: 1, orteil: 160 },
+        ],
+        decor: [sol(), ...banc(2, 67, 20)],
+    },
+    'd-pont-une-jambe': {
+        legende: 'Une jambe tendue, pousse dans le talon et monte le bassin',
+        pauses: true,
+        accent: ['fessiers'],
+        poses: [
+            { hanche: [44, 80], epaule: [20, 80], tete: 0, main: [46, 82.5], coude: -1, pied: [66, 82], genou: -1, orteil: 0, pied2: [78, 68], genou2: -1, orteil2: -30 },
+            { hanche: [46, 63], epaule: [22, 79], tete: 0, main: [48, 82.5], coude: -1, pied: [66, 82], genou: -1, orteil: 0, pied2: [78, 46], genou2: -1, orteil2: -40 },
+        ],
+        decor: [sol()],
+    },
+    'd-dead-bug': {
+        legende: 'Dos plaqué au sol, tends un bras et la jambe opposée',
+        pauses: true,
+        accent: ['tronc'],
+        poses: [
+            { hanche: [58, 80], epaule: [34, 80], tete: 0, main: [36, 54], coude: 1, main2: [37, 54], coude2: 1, pied: [76, 62], genou: -1, orteil: -60, pied2: [77, 62], genou2: -1, orteil2: -60 },
+            { hanche: [58, 80], epaule: [34, 80], tete: 0, main: [11, 73], coude: 1, main2: [37, 54], coude2: 1, pied: [76, 62], genou: -1, orteil: -60, pied2: [94, 77], genou2: -1, orteil2: -20 },
+        ],
+        decor: [sol()],
+    },
+    'd-ytw': {
+        legende: 'Allongé sur le ventre, décolle les bras en Y, T puis W',
+        pauses: true,
+        accent: ['epaules', 'bras'],
+        poses: [
+            { hanche: [52, 79], epaule: [76, 78], tete: 0, main: [101, 80], coude: -1, pied: [15, 80.5], genou: 1, orteil: 100 },
+            { hanche: [52, 79], epaule: [76, 76.5], tete: -6, main: [100, 69], coude: -1, pied: [15, 80.5], genou: 1, orteil: 100 },
+        ],
+        decor: [sol()],
+    },
+    'd-hollow': {
+        legende: 'Sur le dos, épaules et jambes décollées, bas du dos au sol',
+        duree: 3,
+        accent: ['tronc'],
+        poses: [
+            { hanche: [58, 80], epaule: [36, 76], tete: 0, main: [12, 70], coude: 1, pied: [94, 74], genou: 1, orteil: -10 },
+            { hanche: [58, 80.5], epaule: [36, 76.6], tete: 0, main: [12, 70.6], coude: 1, pied: [94, 74.6], genou: 1, orteil: -10 },
+        ],
+        decor: [sol()],
+    },
 }
+
+// Variantes qui réutilisent un dessin existant (même mouvement, autre matériel ou autre niveau).
+const SQUAT_BARRE = ILLUSTRATIONS['b-squat-barre']
+ILLUSTRATIONS['b-squat-smith'] = {
+    ...SQUAT_BARRE,
+    legende: 'Barre guidée sur le haut du dos, descends cuisses parallèles',
+    decor: [{ t: 'l', a: [28, SOL], b: [28, 4], k: 'machine', w: 3 }, { t: 'l', a: [80, SOL], b: [80, 4], k: 'machine', w: 3 }, ...SQUAT_BARRE.decor],
+}
+ILLUSTRATIONS['b-sdt-roumain-barre'] = {
+    ...ILLUSTRATIONS['b-sdt-roumain-halteres'],
+    legende: 'Fesses en arrière, dos plat, barre le long des cuisses',
+    decor: [sol(), disque('main'), { t: 'c', c: J('main'), r: 2.2, k: 'machine', avant: true }],
+}
+ILLUSTRATIONS['d-bulgare'] = {
+    ...ILLUSTRATIONS['b-fentes-bulgares'],
+    legende: 'Pied arrière sur une chaise, descends à la verticale',
+    decor: [sol(), ...banc(10, 63.5, 24)],
+}
+const ALIAS: Record<string, string> = {
+    'a-tirage-serre': 'a-lat-pulldown',
+    'a-elev-lat-poulie': 'a-elev-lat-halteres',
+    'c-fractionne-2': 'c-fractionne',
+    'c-fractionne-3': 'c-fractionne',
+    'c-fractionne-4': 'c-fractionne',
+    'c-fractionne-5': 'c-fractionne',
+    'c-marche-2': 'c-marche-inclinee',
+    'c-marche-3': 'c-marche-inclinee',
+    'c-marche-4': 'c-marche-inclinee',
+    'c-marche-5': 'c-marche-inclinee',
+}
+const vraiId = (id: string) => ALIAS[id] ?? id
 
 // ---------- Rendu (données prêtes pour le SVG) ----------
 
@@ -579,7 +1034,7 @@ const SEGS_FACE: [Seg, string, string][] = [
 export type Illustration = { formes: Forme[]; temps: number[]; duree: number; legende: string }
 
 export function illustration(id: string): Illustration | null {
-    const def = ILLUSTRATIONS[id]
+    const def = ILLUSTRATIONS[vraiId(id)]
     if (!def) return null
     const js = def.poses.map(joints)
     const n = js.length
@@ -659,6 +1114,6 @@ export function illustration(id: string): Illustration | null {
     return { formes, temps, duree: def.duree ?? (def.pauses ? 2.8 : 2.2), legende: def.legende ?? '' }
 }
 
-export const aUneIllustration = (id: string) => id in ILLUSTRATIONS
+export const aUneIllustration = (id: string) => vraiId(id) in ILLUSTRATIONS
 
-export const legendeDe = (id: string) => ILLUSTRATIONS[id]?.legende ?? ''
+export const legendeDe = (id: string) => ILLUSTRATIONS[vraiId(id)]?.legende ?? ''

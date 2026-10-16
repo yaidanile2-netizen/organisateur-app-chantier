@@ -151,7 +151,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                                 min={15}
                                 step={5}
                                 value={reglages.duree}
-                                onChange={(e) => changerReglage('duree', Number(e.target.value) || 30)}
+                                onChange={(e) => changerReglage('duree', Number(e.target.value) || 45)}
                             />
                         </label>
                         <label>

@@ -77,6 +77,34 @@ const RATIOS: Record<string, number> = {
     'b-leg-extension': 0.35,
     'b-mollets': 0.8,
     'b-crunch': 0.25,
+    // Nouveaux exercices (programme par niveaux, oct. 2026). Haltères : charge d'UN haltère.
+    'a-pec-deck': 0.25,
+    'a-oiseau-machine': 0.15,
+    'a-dc-halteres': 0.14,
+    'a-tirage-serre': 0.45,
+    'a-militaire-halteres': 0.09,
+    'a-rowing-haltere': 0.18,
+    'a-elev-lat-halteres': 0.05,
+    'a-face-pull-poulie': 0.2,
+    'a-curl-incline': 0.07,
+    'a-triceps-nuque': 0.15,
+    'a-dc-barre': 0.6,
+    'a-incline-halteres': 0.12,
+    'a-rowing-barre': 0.55,
+    'a-elev-lat-poulie': 0.06,
+    'a-curl-ez': 0.3,
+    'b-goblet-squat': 0.25,
+    'b-abducteurs': 0.5,
+    'b-squat-smith': 0.7,
+    'b-sdt-roumain-halteres': 0.2,
+    'b-fentes-marchees': 0.1,
+    'b-hip-thrust': 0.8,
+    'b-mollets-debout': 0.8,
+    'b-pallof': 0.12,
+    'b-squat-barre': 0.75,
+    'b-sdt-roumain-barre': 0.7,
+    'b-fentes-bulgares': 0.12,
+    'b-crunch-poulie': 0.35,
 }
 const FACTEUR_NIVEAU: Record<Niveau, number> = { debutant: 1, intermediaire: 1.3, confirme: 1.6 }
 
@@ -103,8 +131,13 @@ export function recommandation(e: Exercice, p: Profil, aujourdhui: Date): Recomm
         return { type: 'charge', min: arrondi(cible * 0.85), max: arrondi(cible * 1.05) }
     }
     const fc = (a: number, b: number) => `${Math.round(fcMax * a)}–${Math.round(fcMax * b)} bpm`
-    if (e.id === 'c-fractionne') return { type: 'texte', texte: `❤️ Rapide : ${fc(0.85, 0.9)} · lent : ${fc(0.6, 0.7)}` }
-    if (e.id === 'c-marche-inclinee') return { type: 'texte', texte: `❤️ Vise ${fc(0.65, 0.75)}` }
+    if (e.assistance) {
+        // Assistance de départ ≈ la moitié du poids du corps (on la baisse ensuite).
+        const a = p.poidsKg * 0.5 / FACTEUR_NIVEAU[p.niveau]
+        return { type: 'charge', min: arrondi(a * 0.9), max: arrondi(a * 1.1) }
+    }
+    if (e.id.startsWith('c-fractionne')) return { type: 'texte', texte: `❤️ Rapide : ${fc(0.85, 0.9)} · lent : ${fc(0.6, 0.7)}` }
+    if (e.id.startsWith('c-marche')) return { type: 'texte', texte: `❤️ Vise ${fc(0.65, 0.75)}` }
     if (e.materiel === 'elastique') {
         const el = { debutant: 'léger', intermediaire: 'moyen', confirme: 'fort' }[p.niveau]
         return { type: 'texte', texte: `🎗️ Élastique ${el} : finis avec 2-3 reps en réserve` }
@@ -113,6 +146,13 @@ export function recommandation(e: Exercice, p: Profil, aujourdhui: Date): Recomm
         const t = { debutant: '6 à 10 reps, genoux au sol si besoin', intermediaire: '10 à 15 reps', confirme: '15 à 20 reps' }[p.niveau]
         return { type: 'texte', texte: `🤸 ${t}` }
     }
+    if (e.id === 'a-dips') {
+        const t = { debutant: '3 à 6 reps, ou dips assistés à la machine', intermediaire: '8 à 12 reps', confirme: '12 à 15 reps' }[p.niveau]
+        return { type: 'texte', texte: `🤸 ${t}` }
+    }
+    if (e.id === 'd-pike-pushup') return { type: 'texte', texte: '🤸 Commence par 5 à 8 reps, hanches bien hautes' }
+    if (e.id === 'b-releve-genoux' || e.id === 'b-releve-jambes')
+        return { type: 'texte', texte: '🤸 Sans balancer : moins de reps mais bien contrôlées' }
     if (e.id === 'b-planche') {
         const t = { debutant: '20 à 30 s', intermediaire: '40 s', confirme: '60 s' }[p.niveau]
         return { type: 'texte', texte: `⏱️ Vise ${t} bien gainé` }

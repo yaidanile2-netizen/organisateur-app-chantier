@@ -1,6 +1,6 @@
 // Suivi muscu : cache sur l'appareil, file d'attente hors ligne, et conseils de progression.
 import { envoyerMuscu, type EtatMuscu, type ExoFait, type Ressenti, type SeanceFaite } from './api'
-import { PROGRAMME, type CodeSeance, type Exercice } from './programme'
+import { TOUS_LES_EXERCICES, type CodeSeance, type Exercice, type NiveauxChoisis } from './programme'
 
 export const RESSENTIS: Record<Ressenti, { emoji: string; libelle: string }> = {
     dur: { emoji: '🥵', libelle: 'Dur' },
@@ -26,11 +26,9 @@ function ecrire(cle: string, valeur: unknown): void {
     }
 }
 
-const EXERCICES: Record<string, Exercice> = Object.fromEntries(
-    PROGRAMME.flatMap((s) => s.blocs.flatMap((b) => b.exercices)).map((e) => [e.id, e])
-)
+const EXERCICES: Record<string, Exercice> = Object.fromEntries(TOUS_LES_EXERCICES.map((e) => [e.id, e]))
 export const exerciceParId = (id: string): Exercice | undefined => EXERCICES[id]
-export const avecCharge = (e: Exercice) => e.materiel === 'machine' || e.materiel === 'poulie'
+export const avecCharge = (e: Exercice) => e.charge !== false && ['machine', 'poulie', 'halteres', 'barre'].includes(e.materiel)
 
 export function versKg(v: string | number | null | undefined): number | null {
     const n = Math.round(Number(String(v ?? '').replace(',', '.')) * 2) / 2
@@ -115,18 +113,21 @@ export function conseilPour(e: Exercice, passes: ExoFait[], chargeActuelle: numb
         const base = dernier.kg ?? chargeActuelle
         if (base === null) return null
         const deuxReussies = avant && complet(avant) && avant.ressenti !== 'dur' && avant.kg === dernier.kg && dernier.ressenti !== 'dur'
-        if (complet(dernier) && (dernier.ressenti === 'facile' || deuxReussies)) {
-            const kg = base + PAS_KG
-            return { sens: 'monte', kg, texte: `Passe à ${fmtKg(kg)} kg` }
+        // Machine d'assistance (tractions) : progresser = enlever des kg.
+        const pas = e.assistance ? -PAS_KG : PAS_KG
+        const unite = e.parHaltere ? ' kg par haltère' : e.assistance ? ' kg d’assistance' : ' kg'
+        if (complet(dernier) && (dernier.ressenti === 'facile' || deuxReussies) && base + pas > 0) {
+            const kg = base + pas
+            return { sens: 'monte', kg, texte: `Passe à ${fmtKg(kg)}${unite}` }
         }
-        if (!complet(dernier) && dernier.ressenti === 'dur' && avant && !complet(avant) && avant.ressenti === 'dur' && base > PAS_KG) {
-            const kg = base - PAS_KG
-            return { sens: 'descend', kg, texte: `Redescends à ${fmtKg(kg)} kg` }
+        if (!complet(dernier) && dernier.ressenti === 'dur' && avant && !complet(avant) && avant.ressenti === 'dur' && base - pas > 0) {
+            const kg = base - pas
+            return { sens: 'descend', kg, texte: `${e.assistance ? 'Remets' : 'Redescends à'} ${fmtKg(kg)}${unite}` }
         }
-        return { sens: 'garde', texte: `Garde ${fmtKg(base)} kg` }
+        return { sens: 'garde', texte: `Garde ${fmtKg(base)}${unite}` }
     }
     if (complet(dernier) && dernier.ressenti === 'facile') {
-        if (e.materiel === 'cardio') return { sens: 'monte', texte: 'Un peu plus vite sur les minutes rapides' }
+        if (e.materiel === 'cardio') return { sens: 'monte', texte: 'Un cran de résistance en plus sur les minutes rapides' }
         if (e.materiel === 'elastique') return { sens: 'monte', texte: 'Élastique plus dur, ou +2 reps' }
         return { sens: 'monte', texte: '+2 reps par série' }
     }
@@ -134,3 +135,36 @@ export function conseilPour(e: Exercice, passes: ExoFait[], chargeActuelle: numb
 }
 
 export const fmtKg = (kg: number) => String(kg).replace('.', ',')
+
+// --- Niveaux des séances (choisis par Daniel, synchronisés via les « charges » niveau-a, niveau-b…) ---
+
+export const cleNiveau = (code: CodeSeance) => `niveau-${code.toLowerCase()}`
+
+/** Reprend les niveaux enregistrés en ligne (s'ils existent) dans les niveaux de l'appareil. */
+export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxChoisis): NiveauxChoisis {
+    const res: NiveauxChoisis = { ...locaux }
+    for (const code of ['A', 'B', 'C', 'D'] as CodeSeance[]) {
+        const n = charges[cleNiveau(code)]
+        if (n && n !== locaux[code]?.n) res[code] = { n: Math.round(n), depuis: locaux[code]?.depuis }
+    }
+    return res
+}
+
+export type AvisNiveau = { sens: 'monte' | 'descend'; texte: string }
+
+/** Après 2 séances du même niveau : prêt à monter (tout fait, souvent facile) ou trop dur ? */
+export function avisNiveau(code: CodeSeance, niveau: number, nbNiveaux: number, depuis: string | undefined, seances: SeanceFaite[]): AvisNiveau | null {
+    const recentes = seances
+        .filter((s) => s.code === code && s.exercices.length > 0 && (!depuis || s.date >= depuis))
+        .slice(0, 2)
+    if (recentes.length < 2) return null
+    const exos = recentes.flatMap((s) => s.exercices)
+    const tousFaits = exos.every(complet)
+    const faciles = exos.filter((e) => e.ressenti === 'facile').length
+    const durs = exos.filter((e) => e.ressenti === 'dur').length
+    if (niveau < nbNiveaux && tousFaits && durs === 0 && faciles >= exos.length / 2)
+        return { sens: 'monte', texte: `Tes 2 dernières séances étaient faciles : tu es prêt pour le niveau ${niveau + 1}.` }
+    if (niveau > 1 && durs > exos.length / 2)
+        return { sens: 'descend', texte: `Tes 2 dernières séances étaient dures : le niveau ${niveau - 1} peut t’aider à consolider.` }
+    return null
+}

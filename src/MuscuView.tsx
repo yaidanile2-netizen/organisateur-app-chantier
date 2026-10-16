@@ -13,6 +13,9 @@ import {
     PAS_KG,
     RESSENTIS,
     avecCharge,
+    avisNiveau,
+    cleNiveau,
+    niveauxDepuis,
     conseilPour,
     ecrireCache,
     fmtKg,
@@ -28,7 +31,10 @@ import {
     MUSCLES,
     PROGRAMME,
     SALLE,
+    ecrireNiveaux,
+    lireNiveaux,
     seanceParCode,
+    type NiveauxChoisis,
     type Bloc,
     type CodeSeance,
     type Exercice,
@@ -127,6 +133,7 @@ export default function MuscuView() {
     const [zoom, setZoom] = useState<string | null>(null)
     const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
     const [message, setMessage] = useState<string | null>(null)
+    const [niveaux, setNiveaux] = useState<NiveauxChoisis>(() => lireNiveaux())
 
     const lundi = useMemo(() => {
         const l = debutDeSemaine(new Date())
@@ -164,6 +171,9 @@ export default function MuscuView() {
             .then((etat) => {
                 setSuivi(etat)
                 setCharges(enTexte(etat.charges))
+                const n = niveauxDepuis(etat.charges, lireNiveaux())
+                ecrireNiveaux(n)
+                setNiveaux(n)
                 setSynchro('ok')
             })
             .catch(() => setSynchro('hors-ligne'))
@@ -183,7 +193,8 @@ export default function MuscuView() {
         return () => window.clearTimeout(id)
     }, [repos])
 
-    const seance = seanceParCode(code)
+    const seance = seanceParCode(code, niveaux[code]?.n)
+    const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances)
     const exercices = seance.blocs.flatMap((b) => b.exercices)
     const total = exercices.reduce((n, e) => n + e.series, 0)
     const faites = exercices.reduce((n, e) => n + (series[e.id] || []).filter(Boolean).length, 0)
@@ -209,6 +220,25 @@ export default function MuscuView() {
                     setSynchro('hors-ligne')
                 })
         }, 900)
+    }
+
+    function changerNiveau(n: number) {
+        if (n === seance.niveau) return
+        const nouveaux = { ...niveaux, [code]: { n, depuis: new Date().toISOString() } }
+        setNiveaux(nouveaux)
+        ecrireNiveaux(nouveaux)
+        setConseils(null)
+        setZoom(null)
+        const id = cleNiveau(code)
+        const etat = { ...suivi, charges: { ...suivi.charges, [id]: n } }
+        setSuivi(etat)
+        ecrireCache(etat)
+        envoyerMuscu({ action: 'charge', id, kg: n })
+            .then(() => setSynchro('ok'))
+            .catch(() => {
+                mettreEnAttente({ charges: { [id]: n } })
+                setSynchro('hors-ligne')
+            })
     }
 
     function ajusterCharge(id: string, delta: number) {
@@ -535,7 +565,8 @@ export default function MuscuView() {
 
             {/* Choix de la séance */}
             <div className="mu-cartes-seances">
-                {PROGRAMME.map((s) => {
+                {PROGRAMME.map((base) => {
+                    const s = seanceParCode(base.code, niveaux[base.code]?.n)
                     const nb = s.blocs.reduce((n, b) => n + b.exercices.length, 0)
                     return (
                         <button
@@ -552,7 +583,7 @@ export default function MuscuView() {
                             <span className="mu-cs-code">{s.code}</span>
                             <span className="mu-cs-titre">{s.titre.replace(/^Maison : /, '')}</span>
                             <span className="mu-cs-meta">
-                                30 MIN · {nb} EXOS · {s.lieu === 'maison' ? 'MAISON' : 'SALLE'}
+                                {lireReglages().duree} MIN · {nb} EXOS · NIV. {s.niveau}
                             </span>
                         </button>
                     )
@@ -573,6 +604,9 @@ export default function MuscuView() {
                             </BoutonRepli>
                         </h2>
                         <p className="mu-detail-sous">{seance.titre.replace(/^Maison : /, '')}</p>
+                        <p className="mu-detail-niveau">
+                            NIVEAU {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
+                        </p>
                         <div className="mu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
                             <span>
                                 {faites}/{total}
@@ -584,6 +618,33 @@ export default function MuscuView() {
                 </div>
                 {detailOuvert && (
                     <>
+                <div className="mu-niveaux">
+                    <div className="mu-niveaux-choix" role="radiogroup" aria-label="Niveau de la séance">
+                        {seance.niveaux.map((nv, i) => (
+                            <button
+                                key={nv.nom}
+                                role="radio"
+                                aria-checked={seance.niveau === i + 1}
+                                className={seance.niveau === i + 1 ? 'actif' : i + 1 < seance.niveau ? 'passe' : ''}
+                                onClick={() => changerNiveau(i + 1)}
+                            >
+                                <b>{i + 1}</b>
+                                <span>{nv.nom}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <p className="mu-niveaux-resume">{seance.resume}</p>
+                    {avis ? (
+                        <p className={`mu-niveaux-avis ${avis.sens}`}>
+                            {avis.sens === 'monte' ? '🚀' : '🧱'} {avis.texte}
+                            <button onClick={() => changerNiveau(seance.niveau + (avis.sens === 'monte' ? 1 : -1))}>
+                                Niveau {seance.niveau + (avis.sens === 'monte' ? 1 : -1)}
+                            </button>
+                        </p>
+                    ) : (
+                        <p className="mu-niveaux-aide">Trop facile ou trop dur ? Change de niveau quand tu veux : tes charges sont gardées.</p>
+                    )}
+                </div>
                 <div className="mu-muscles">
                     {musclesDe(exercices).map((m) => (
                         <span key={m} className="mu-muscle">
@@ -672,7 +733,7 @@ export default function MuscuView() {
                                                 </button>
                                             ))}
                                         </div>
-                                        {e.materiel === 'machine' || e.materiel === 'poulie' ? (
+                                        {avecCharge(e) ? (
                                             <div className="mu-charge">
                                                 <button onClick={() => ajusterCharge(e.id, -2.5)} aria-label="Moins">
                                                     −
@@ -687,7 +748,7 @@ export default function MuscuView() {
                                                     onChange={(ev) => changerCharge(e.id, ev.target.value)}
                                                     aria-label={`Charge pour ${e.nom}`}
                                                 />
-                                                <span>kg</span>
+                                                <span>{e.parHaltere ? 'kg/haltère' : e.assistance ? 'kg aide' : 'kg'}</span>
                                                 <button onClick={() => ajusterCharge(e.id, 2.5)} aria-label="Plus">
                                                     +
                                                 </button>
@@ -698,6 +759,7 @@ export default function MuscuView() {
                                         <div className="mu-passe">
                                             <span className="mu-reco">
                                                 🎯 Pour toi : {reco.min === reco.max ? `≈ ${fmtKg(reco.min)}` : `${fmtKg(reco.min)}–${fmtKg(reco.max)}`} kg
+                                                {e.parHaltere ? ' par haltère' : e.assistance ? ' d’assistance' : ''}
                                                 {versKg(charges[e.id]) === null && (
                                                     <button onClick={() => changerCharge(e.id, String(reco.min))}>Utiliser {fmtKg(reco.min)} kg</button>
                                                 )}
@@ -755,11 +817,9 @@ export default function MuscuView() {
                 </div>
 
                 <p className="mu-progression">
-                    {seance.lieu === 'maison'
-                        ? '📈 Quand c’est facile : élastique plus dur, ou +1 pompe par séance.'
-                        : seance.code === 'C'
-                          ? '📈 Chaque semaine, un peu plus vite sur les minutes rapides.'
-                          : '📈 Toutes les séries réussies en haut de la fourchette ? Monte d’un cran (+2,5 kg) la prochaine fois.'}
+                    📈 {seance.progression}
+                    <br />
+                    🎯 {seance.monter}
                 </p>
 
                 {bilan ? (
