@@ -153,9 +153,18 @@ export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxCh
 export type AvisNiveau = { sens: 'monte' | 'descend'; texte: string }
 
 /** Après 2 séances du même niveau : prêt à monter (tout fait, souvent facile) ou trop dur ? */
-export function avisNiveau(code: CodeSeance, niveau: number, nbNiveaux: number, depuis: string | undefined, seances: SeanceFaite[]): AvisNiveau | null {
+export function avisNiveau(
+    code: CodeSeance,
+    niveau: number,
+    nbNiveaux: number,
+    depuis: string | undefined,
+    seances: SeanceFaite[],
+    ids: string[] = [],
+): AvisNiveau | null {
+    // Seulement les séances faites avec les exercices du niveau actuel.
     const recentes = seances
         .filter((s) => s.code === code && s.exercices.length > 0 && (!depuis || s.date >= depuis))
+        .filter((s) => ids.length === 0 || s.exercices.every((e) => ids.includes(e.id)))
         .slice(0, 2)
     if (recentes.length < 2) return null
     const exos = recentes.flatMap((s) => s.exercices)
@@ -163,7 +172,7 @@ export function avisNiveau(code: CodeSeance, niveau: number, nbNiveaux: number, 
     const faciles = exos.filter((e) => e.ressenti === 'facile').length
     const durs = exos.filter((e) => e.ressenti === 'dur').length
     if (niveau < nbNiveaux && tousFaits && durs === 0 && faciles >= exos.length / 2)
-        return { sens: 'monte', texte: `Tes 2 dernières séances étaient faciles : tu es prêt pour le niveau ${niveau + 1}.` }
+        return { sens: 'monte', texte: `Tes 2 dernières séances étaient faciles : tu es prêt pour ${code === 'B' ? 'l’étape' : 'le niveau'} ${niveau + 1}.` }
     if (niveau > 1 && durs > exos.length / 2)
         return { sens: 'descend', texte: `Tes 2 dernières séances étaient dures : le niveau ${niveau - 1} peut t’aider à consolider.` }
     return null

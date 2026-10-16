@@ -113,9 +113,9 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
     return (
         <Repliable cle="agenda.sport" className="card sport-planner" titre="🏋️ Séances de sport">
             <p className="muted">
-                {SEANCES_SALLE.length} séances de {reglages.duree} min au {SALLE.nom}
-                {reglages.seanceMaison ? ' + 1 à la maison avec les élastiques' : ''}, placées autour de tes cours en
-                comptant les trajets.
+                {SEANCES_SALLE.length} séances au {SALLE.nom} (muscu {reglages.duree} min, et 2 courses dont la durée suit ton
+                étape vers les 10 km){reglages.seanceMaison ? ', + 1 renfo à la maison' : ''}, placées autour de tes cours en comptant les
+                trajets.
             </p>
 
             <button className="btn-link sport-reglages-lien" onClick={() => setVoirReglages((v) => !v)}>
@@ -145,7 +145,7 @@ export default function SportPlanner({ onPlanifie }: { onPlanifie: () => void })
                     </div>
                     <div className="form-row">
                         <label>
-                            Durée de séance (min)
+                            Durée de la séance muscu (min)
                             <input
                                 type="number"
                                 min={15}

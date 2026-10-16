@@ -984,9 +984,47 @@ ILLUSTRATIONS['d-bulgare'] = {
     legende: 'Pied arrière sur une chaise, descends à la verticale',
     decor: [sol(), ...banc(10, 63.5, 24)],
 }
+const GOBLET = ILLUSTRATIONS['b-goblet-squat']
+ILLUSTRATIONS['d-squat'] = {
+    ...GOBLET,
+    legende: 'Descends cuisses parallèles, talons au sol',
+    poses: (GOBLET.poses as PoseCote[]).map((p) => ({ ...p, main: { rel: 'epaule', d: [16, 6] } })),
+    decor: [sol()],
+}
+ILLUSTRATIONS['d-squat-saute'] = {
+    legende: 'Squat, puis saute haut et réceptionne-toi en souplesse',
+    duree: 1.4,
+    accent: ['cuisse', 'jambe', 'fessiers'],
+    poses: [
+        { hanche: [44, 64], tronc: -62, tete: -20, main: { rel: 'epaule', d: [14, 10] }, coude: 1, pied: [54, 83], genou: -1, orteil: 0 },
+        { hanche: [52, 40], tronc: -88, tete: 0, main: { rel: 'epaule', d: [6, -14] }, coude: 1, pied: [54, 76], genou: -1, orteil: 60 },
+        { hanche: [52, 46], tronc: -86, tete: 0, main: { rel: 'epaule', d: [10, 14] }, coude: 1, pied: [54, 82], genou: -1, orteil: 5 },
+    ],
+    decor: [sol()],
+}
+const MOLLETS_MARCHE = (uneJambe: boolean): Def => ({
+    legende: uneJambe ? 'Sur une jambe : descends lentement, monte au maximum' : 'Talons dans le vide : descends bas, monte au maximum',
+    pauses: true,
+    accent: ['jambe'],
+    poses: [
+        { hanche: [50, 46], tronc: -90, main: [70, 30], coude: 1, pied: [52, 82], genou: -1, orteil: -25, ...(uneJambe ? { pied2: [40, 72], genou2: -1, orteil2: 30 } : {}) },
+        { hanche: [49, 40], tronc: -90, main: [70, 26], coude: 1, pied: [51, 76], genou: -1, orteil: 60, ...(uneJambe ? { pied2: [39, 66], genou2: -1, orteil2: 30 } : {}) },
+    ],
+    decor: [
+        { t: 'r', x: 50, y: 82.5, w: 30, h: 5, rx: 1, k: 'piece' },
+        { t: 'r', x: 80, y: 0, w: 6, h: 90, rx: 1, k: 'piece' },
+        { t: 'l', a: [4, 88], b: [50, 88], k: 'sol', w: 1.4 },
+    ],
+})
+ILLUSTRATIONS['d-mollets-marche'] = MOLLETS_MARCHE(false)
+ILLUSTRATIONS['d-mollets-une-jambe'] = MOLLETS_MARCHE(true)
+
 const ALIAS: Record<string, string> = {
     'a-tirage-serre': 'a-lat-pulldown',
     'a-elev-lat-poulie': 'a-elev-lat-halteres',
+    'e-endurance': 'c-course',
+    'f-fractionne': 'c-course',
+    'd-planche': 'b-planche',
     'c-course-1': 'c-course',
     'c-course-2': 'c-course',
     'c-course-3': 'c-course',

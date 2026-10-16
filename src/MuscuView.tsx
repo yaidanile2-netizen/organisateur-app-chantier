@@ -29,7 +29,10 @@ import BodyMap from './BodyMap'
 import {
     MATERIEL,
     MUSCLES,
+    OBJECTIF_DATE,
+    OBJECTIF_KM,
     PROGRAMME,
+    dureeDe,
     SALLE,
     ecrireNiveaux,
     lireNiveaux,
@@ -98,7 +101,7 @@ function horaireSeance(t: Tache): { debut: Date; fin: Date } {
     const depart = new Date(t.date_debut || Date.now())
     const trajet = s.lieu === 'salle' ? r.trajetSalle : 0
     const debut = new Date(depart.getTime() + trajet * 60000)
-    return { debut, fin: new Date(debut.getTime() + r.duree * 60000) }
+    return { debut, fin: new Date(debut.getTime() + dureeDe(s, r.duree) * 60000) }
 }
 
 function musclesDe(exos: Exercice[]): Muscle[] {
@@ -194,8 +197,8 @@ export default function MuscuView() {
     }, [repos])
 
     const seance = seanceParCode(code, niveaux[code]?.n)
-    const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances)
     const exercices = seance.blocs.flatMap((b) => b.exercices)
+    const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances, exercices.map((e) => e.id))
     const total = exercices.reduce((n, e) => n + e.series, 0)
     const faites = exercices.reduce((n, e) => n + (series[e.id] || []).filter(Boolean).length, 0)
     const pourcent = total ? Math.round((faites / total) * 100) : 0
@@ -274,7 +277,7 @@ export default function MuscuView() {
                 const faitesExo = (series[e.id] || []).filter(Boolean).length
                 if (faitesExo === 0) return []
                 const ressenti: Ressenti = faitesExo >= e.series ? 'bien' : 'dur'
-                return [{ id: e.id, faites: faitesExo, total: e.series, kg: avecCharge(e) ? versKg(charges[e.id]) : null, ressenti }]
+                return [{ id: e.id, faites: faitesExo, total: e.series, kg: avecCharge(e) || e.mesure === 'km' ? versKg(charges[e.id]) : null, ressenti }]
             })
         )
         setRepos(null)
@@ -563,11 +566,34 @@ export default function MuscuView() {
                 )}
             </section>
 
+            {/* Objectif 10 km */}
+            {(() => {
+                const b = seanceParCode('B', niveaux.B?.n)
+                const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => e.id === 'e-endurance' && e.kg).map((e) => e.kg as number)))
+                const semaines = Math.max(0, Math.ceil((new Date(OBJECTIF_DATE).getTime() - Date.now()) / (7 * 24 * 3600 * 1000)))
+                return (
+                    <div className="mu-carte mu-objectif" style={{ '--c': b.couleur } as React.CSSProperties}>
+                        <div className="mu-objectif-tete">
+                            <span className="mu-objectif-titre">🎯 OBJECTIF {OBJECTIF_KM} KM SANS S’ARRÊTER</span>
+                            <span className="mu-objectif-delai">fin juin · {semaines} sem.</span>
+                        </div>
+                        <div className="mu-objectif-barre" role="progressbar" aria-valuenow={b.niveau} aria-valuemin={1} aria-valuemax={b.nbNiveaux}>
+                            {b.niveaux.map((nv, i) => (
+                                <span key={nv.nom} className={i + 1 < b.niveau ? 'fait' : i + 1 === b.niveau ? 'actuel' : ''} title={`Étape ${i + 1} : ${nv.nom}`} />
+                            ))}
+                        </div>
+                        <p className="mu-objectif-texte">
+                            Étape <b>{b.niveau}/{b.nbNiveaux}</b> · {b.nom}
+                            {record > 0 ? ` · plus longue sortie : ${fmtKg(record)} km` : ' · note tes km en fin de séance B'}
+                        </p>
+                    </div>
+                )
+            })()}
+
             {/* Choix de la séance */}
             <div className="mu-cartes-seances">
                 {PROGRAMME.map((base) => {
                     const s = seanceParCode(base.code, niveaux[base.code]?.n)
-                    const nb = s.blocs.reduce((n, b) => n + b.exercices.length, 0)
                     return (
                         <button
                             key={s.code}
@@ -583,7 +609,7 @@ export default function MuscuView() {
                             <span className="mu-cs-code">{s.code}</span>
                             <span className="mu-cs-titre">{s.titre.replace(/^Maison : /, '')}</span>
                             <span className="mu-cs-meta">
-                                {lireReglages().duree} MIN · {nb} EXOS · NIV. {s.niveau}
+                                {dureeDe(s, lireReglages().duree)} MIN · {s.code === 'B' ? 'ÉTAPE' : 'NIV.'} {s.niveau}/{s.nbNiveaux}
                             </span>
                         </button>
                     )
@@ -605,7 +631,7 @@ export default function MuscuView() {
                         </h2>
                         <p className="mu-detail-sous">{seance.titre.replace(/^Maison : /, '')}</p>
                         <p className="mu-detail-niveau">
-                            NIVEAU {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
+                            {seance.code === 'B' ? 'ÉTAPE' : 'NIVEAU'} {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
                         </p>
                         <div className="mu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
                             <span>
@@ -753,6 +779,26 @@ export default function MuscuView() {
                                                     +
                                                 </button>
                                             </div>
+                                        ) : e.mesure === 'km' ? (
+                                            <div className="mu-charge">
+                                                <button onClick={() => ajusterCharge(e.id, -0.5)} aria-label="Moins">
+                                                    −
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    step="0.5"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={charges[e.id] ?? ''}
+                                                    onChange={(ev) => changerCharge(e.id, ev.target.value)}
+                                                    aria-label={`Distance parcourue pour ${e.nom}`}
+                                                />
+                                                <span>km</span>
+                                                <button onClick={() => ajusterCharge(e.id, 0.5)} aria-label="Plus">
+                                                    +
+                                                </button>
+                                            </div>
                                         ) : null}
                                     </div>
                                     {reco?.type === 'charge' && !dernier && (
@@ -774,7 +820,7 @@ export default function MuscuView() {
                                     {dernier && (
                                         <div className="mu-passe">
                                             <span>
-                                                Dernière fois : {dernier.kg !== null ? `${fmtKg(dernier.kg)} kg · ` : ''}
+                                                Dernière fois : {dernier.kg !== null ? `${fmtKg(dernier.kg)} ${e.mesure === 'km' ? 'km' : 'kg'} · ` : ''}
                                                 {dernier.faites}/{dernier.total} · {RESSENTIS[dernier.ressenti].emoji}
                                             </span>
                                             {conseil && (
@@ -839,7 +885,7 @@ export default function MuscuView() {
                                             <td>
                                                 <b>{exo?.nom ?? b.id}</b>
                                                 <small>
-                                                    {b.faites}/{b.total} séries{b.kg !== null ? ` · ${fmtKg(b.kg)} kg` : ''}
+                                                    {b.faites}/{b.total} séries{b.kg !== null ? ` · ${fmtKg(b.kg)} ${exo?.mesure === 'km' ? 'km' : 'kg'}` : ''}
                                                 </small>
                                             </td>
                                             <td className="mu-droite">

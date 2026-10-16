@@ -2,7 +2,7 @@
 import type { Cours, Priorite, Statut, Tache } from './api'
 import { codeModule, detailsCours, nomModule, typeDe } from './coursType'
 import { lireBloc } from './etudes'
-import { seanceParCode } from './programme'
+import { dureeDe, seanceParCode } from './programme'
 import { MARQUEUR, codeDeTache, lireReglages } from './sport'
 import { duree } from './temps'
 
@@ -55,13 +55,13 @@ function etapesDe(item: Item, jour: Item[]): Etape[] {
         const s = seanceParCode(code)
         if (s.lieu === 'salle') {
             const dSeance = new Date(debut.getTime() + r.trajetSalle * MIN)
-            const fSeance = new Date(dSeance.getTime() + r.duree * MIN)
+            const fSeance = new Date(dSeance.getTime() + dureeDe(s, r.duree) * MIN)
             etapes.push({ heure: debut, emoji: '🚶', texte: 'Pars pour la salle', detail: `${duree(r.trajetSalle)} jusqu’au Basic-Fit` })
-            etapes.push({ heure: dSeance, emoji: s.emoji, texte: `Séance ${s.code} : ${s.titre}`, detail: `${duree(r.duree)}`, principal: true })
+            etapes.push({ heure: dSeance, emoji: s.emoji, texte: `Séance ${s.code} : ${s.titre}`, detail: `${duree(dureeDe(s, r.duree))}`, principal: true })
             etapes.push({ heure: fSeance, emoji: '🧘', texte: 'Étirements, puis retour' })
             if (fin) etapes.push({ heure: fin, emoji: '🏠', texte: 'De retour à la maison', detail: `objectif : avant ${r.retourAvant}` })
         } else {
-            etapes.push({ heure: debut, emoji: s.emoji, texte: `Séance ${s.code} à la maison`, detail: 'élastiques et poids du corps', principal: true })
+            etapes.push({ heure: debut, emoji: s.emoji, texte: `Séance ${s.code} à la maison`, detail: 'renfo au poids du corps et aux élastiques', principal: true })
             if (fin) etapes.push({ heure: fin, emoji: '✅', texte: 'Fin de la séance' })
         }
     } else {

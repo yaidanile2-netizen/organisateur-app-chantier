@@ -3,7 +3,7 @@
 // (trajet salle), fait sa séance et rentre avant l'heure limite.
 // Maison — pas de trajet : il suffit d'être rentré, la séance doit finir avant l'heure limite maison.
 import type { Cours, Tache } from './api'
-import { DUREE_SEANCE, SEANCES_SALLE, seanceParCode, type CodeSeance, type SeanceProgramme } from './programme'
+import { DUREE_SEANCE, PROGRAMME, dureeDe, seanceParCode, type CodeSeance, type SeanceProgramme } from './programme'
 
 export const MARQUEUR = '#sport-auto'
 
@@ -73,7 +73,6 @@ export type Creneau = {
 
 type Intervalle = { debut: number; fin: number }
 type Option = { depart: number; score: number }
-type Jour = { jour: Date; salle: Option | null; maison: Option | null }
 
 function aHeure(jour: Date, hhmm: string): number {
     const [h, m] = hhmm.split(':').map(Number)
@@ -124,16 +123,17 @@ export function absences(cours: Cours[], taches: Tache[], r: Reglages): Interval
 }
 
 // Meilleur départ de la journée pour un bloc de `total` minutes qui commence par `avant`
-// minutes de trajet ; la séance elle-même dure r.duree.
+// minutes de trajet ; la séance elle-même dure `duree` minutes.
 function meilleurCreneau(
     jour: Date,
     occ: Intervalle[],
     r: Reglages,
     maintenant: Date,
     lieu: 'salle' | 'maison',
+    duree: number,
 ): Option | null {
     const trajet = lieu === 'salle' ? r.trajetSalle : 0
-    const total = (2 * trajet + r.duree) * MIN
+    const total = (2 * trajet + duree) * MIN
     const premier = Math.max(aHeure(jour, r.departAuPlusTot), maintenant.getTime() + DELAI_MIN_AVANT_DEBUT * MIN)
     const limite = aHeure(jour, lieu === 'salle' ? r.retourAvant : r.maisonAvant)
     const ouverture = aHeure(jour, '06:00')
@@ -142,7 +142,7 @@ function meilleurCreneau(
     for (let t = aHeure(jour, '00:00'); t + total <= limite; t += PAS_MIN * MIN) {
         if (t < premier) continue
         const debutSeance = t + trajet * MIN
-        const finSeance = debutSeance + r.duree * MIN
+        const finSeance = debutSeance + duree * MIN
         if (lieu === 'salle' && (debutSeance < ouverture || finSeance > fermeture)) continue
         if (occ.some((o) => t < o.fin && t + total > o.debut)) continue
         const score = lieu === 'salle' ? scoreSalle(new Date(debutSeance)) : scoreMaison(new Date(debutSeance))
@@ -157,13 +157,6 @@ function ecartJours(a: Date, b: Date): number {
     return Math.round((jb - ja) / (24 * 60 * MIN))
 }
 
-function combinaisons<T>(liste: T[], k: number): T[][] {
-    if (k === 0) return [[]]
-    if (liste.length < k) return []
-    const [tete, ...reste] = liste
-    return [...combinaisons(reste, k - 1).map((c) => [tete, ...c]), ...combinaisons(reste, k)]
-}
-
 export function debutDeSemaine(date: Date): Date {
     const d = new Date(date)
     d.setHours(0, 0, 0, 0)
@@ -171,29 +164,27 @@ export function debutDeSemaine(date: Date): Date {
     return d
 }
 
-type Choix = { jour: Date; lieu: 'salle' | 'maison'; option: Option }
+type Choix = { jour: Date; code: CodeSeance; option: Option }
 
-// Note d'un planning : qualité des horaires, jours de repos entre les séances,
-// dimanche un peu évité, et la séance maison pas le lendemain de la séance haut du corps
-// (elle retravaille les épaules).
-function noter(choix: Choix[], codes: CodeSeance[]): number {
+// Note d'un planning : qualité des horaires, jours de repos entre les séances, dimanche un peu
+// évité, pas deux courses (B, C) deux jours de suite, et pas le renfo jambes (D) la veille de la
+// sortie longue (B). La sortie longue, plus longue, prend naturellement le jour le plus libre.
+function noter(choix: Choix[]): number {
+    const tries = [...choix].sort((a, b) => a.jour.getTime() - b.jour.getTime())
     let note = 0
-    choix.forEach((c, i) => {
+    tries.forEach((c, i) => {
         note += c.option.score
         if (c.jour.getDay() === 0) note -= 2
+        if (c.code === 'B' && estWeekend(c.jour)) note += 2
         if (i > 0) {
-            const ecart = ecartJours(choix[i - 1].jour, c.jour)
+            const p = tries[i - 1]
+            const ecart = ecartJours(p.jour, c.jour)
             if (ecart >= 2) note += 4
-            if (ecart === 1 && codes[i] === 'D' && codes[i - 1] === 'A') note -= 3
+            if (ecart === 1 && ['B', 'C'].includes(p.code) && ['B', 'C'].includes(c.code)) note -= 4
+            if (ecart === 1 && p.code === 'D' && c.code === 'B') note -= 3
         }
     })
     return note
-}
-
-// Les séances en salle gardent l'ordre A, B, C ; la séance maison D se place où elle convient le mieux.
-function codesPour(choix: Choix[]): CodeSeance[] {
-    let iSalle = 0
-    return choix.map((c) => (c.lieu === 'maison' ? 'D' : SEANCES_SALLE[iSalle++].code))
 }
 
 export function planifierSemaine(
@@ -204,66 +195,46 @@ export function planifierSemaine(
     maintenant: Date = new Date(),
 ): Creneau[] {
     const occ = absences(cours, taches, r)
-    const jours: Jour[] = []
+    const jours: Date[] = []
     for (let i = 0; i < 7; i++) {
         const jour = new Date(lundi)
         jour.setDate(lundi.getDate() + i)
-        jours.push({
-            jour,
-            salle: meilleurCreneau(jour, occ, r, maintenant, 'salle'),
-            maison: r.seanceMaison ? meilleurCreneau(jour, occ, r, maintenant, 'maison') : null,
-        })
+        jours.push(jour)
     }
+    const seances = PROGRAMME.filter((b) => b.lieu === 'salle' || r.seanceMaison).map((b) => seanceParCode(b.code))
+    // options[s][j] : meilleur créneau de la séance s le jour j (chaque séance a sa durée).
+    const options = seances.map((s) => jours.map((j) => meilleurCreneau(j, occ, r, maintenant, s.lieu, dureeDe(s, r.duree))))
 
-    const nbSalle = SEANCES_SALLE.length
-    const nbMaison = r.seanceMaison ? 1 : 0
     let meilleur: Choix[] = []
-    let meilleureNote = -Infinity
-    let meilleurNb = 0
-    // On cherche d'abord le plus de séances possible (4, sinon 3…), puis le meilleur planning.
-    for (let k = nbSalle + nbMaison; k >= 1 && meilleurNb === 0; k--) {
-        for (const combo of combinaisons(jours, k)) {
-            // position de la séance maison dans la combinaison (ou aucune)
-            const positions = nbMaison ? [...combo.keys(), -1] : [-1]
-            for (const pm of positions) {
-                const choix: Choix[] = []
-                let possible = true
-                let nbS = 0
-                combo.forEach((j, i) => {
-                    if (i === pm) {
-                        if (j.maison) choix.push({ jour: j.jour, lieu: 'maison', option: j.maison })
-                        else possible = false
-                    } else {
-                        nbS++
-                        if (j.salle) choix.push({ jour: j.jour, lieu: 'salle', option: j.salle })
-                        else possible = false
-                    }
-                })
-                if (!possible || nbS > nbSalle) continue
-                const note = noter(choix, codesPour(choix))
-                if (note > meilleureNote) {
-                    meilleureNote = note
-                    meilleur = choix
-                    meilleurNb = k
-                }
+    let meilleureCle = -Infinity
+    const pris = new Set<number>()
+    const courant: Choix[] = []
+    // On cherche d'abord le plus de séances possible, puis le meilleur planning.
+    const explorer = (k: number) => {
+        if (k === seances.length) {
+            const cle = courant.length * 1000 + noter(courant)
+            if (cle > meilleureCle) {
+                meilleureCle = cle
+                meilleur = [...courant]
             }
+            return
         }
+        for (let j = 0; j < 7; j++) {
+            const o = options[k][j]
+            if (!o || pris.has(j)) continue
+            pris.add(j)
+            courant.push({ jour: jours[j], code: seances[k].code, option: o })
+            explorer(k + 1)
+            courant.pop()
+            pris.delete(j)
+        }
+        explorer(k + 1) // séance non placée cette semaine
     }
+    explorer(0)
 
-    const codes = codesPour(meilleur)
-    return meilleur.map((c, i) => {
-        const seance = seanceParCode(codes[i])
-        const trajet = c.lieu === 'salle' ? r.trajetSalle : 0
-        const debut = c.option.depart + trajet * MIN
-        const fin = debut + r.duree * MIN
-        return {
-            seance,
-            depart: new Date(c.option.depart),
-            debut: new Date(debut),
-            fin: new Date(fin),
-            retour: new Date(fin + trajet * MIN),
-        }
-    })
+    return meilleur
+        .sort((a, b) => a.option.depart - b.option.depart)
+        .map((c) => versCreneau(seanceParCode(c.code), c.option.depart, r))
 }
 
 const hm = (d: Date) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -293,7 +264,7 @@ export function codeDeTache(t: Tache): CodeSeance | null {
 function versCreneau(seance: SeanceProgramme, depart: number, r: Reglages): Creneau {
     const trajet = seance.lieu === 'salle' ? r.trajetSalle : 0
     const debut = depart + trajet * MIN
-    const fin = debut + r.duree * MIN
+    const fin = debut + dureeDe(seance, r.duree) * MIN
     return { seance, depart: new Date(depart), debut: new Date(debut), fin: new Date(fin), retour: new Date(fin + trajet * MIN) }
 }
 
@@ -315,7 +286,7 @@ export function creneauxPourDeplacer(
         const fin = new Date(jour)
         fin.setHours(23, 59, 59, 999)
         if (fin.getTime() < maintenant.getTime()) continue
-        const o = meilleurCreneau(jour, occ, r, maintenant, seance.lieu)
+        const o = meilleurCreneau(jour, occ, r, maintenant, seance.lieu, dureeDe(seance, r.duree))
         res.push({ jour, creneau: o ? versCreneau(seance, o.depart, r) : null })
     }
     return res
