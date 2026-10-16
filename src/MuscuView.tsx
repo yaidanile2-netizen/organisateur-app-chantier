@@ -642,11 +642,11 @@ export default function MuscuView() {
                                         <div className="mu-exo-nom">
                                             <b>{e.nom.toUpperCase()}</b>
                                             <span>{e.machine}</span>
+                                            <span className="mu-cible">
+                                                {e.series > 1 ? `${e.series} × ` : ''}
+                                                {e.reps}
+                                            </span>
                                         </div>
-                                        <span className="mu-cible">
-                                            {e.series > 1 ? `${e.series} × ` : ''}
-                                            {e.reps}
-                                        </span>
                                     </div>
                                     {zoom === e.id && (
                                         <figure className="mu-exo-zoom">

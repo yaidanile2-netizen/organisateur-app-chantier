@@ -646,8 +646,16 @@
   background: color-mix(in srgb, var(--c) 14%, transparent);
   padding: 3px 9px;
   border-radius: 9px;
-  white-space: nowrap;
   filter: brightness(1.35);
+}
+.mu-exo-nom .mu-cible {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 17px;
+  line-height: 1.15;
+  color: var(--c);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .mu-exo-bas {
   display: flex;
