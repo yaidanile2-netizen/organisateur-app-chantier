@@ -14,7 +14,13 @@ import {
     RESSENTIS,
     avecCharge,
     avisNiveau,
+    cleDefi,
     cleNiveau,
+    defisDepuis,
+    ecrireDefis,
+    lireDefis,
+    seancesAuNiveau,
+    type DefisReussis,
     niveauxDepuis,
     conseilPour,
     ecrireCache,
@@ -137,6 +143,7 @@ export default function MuscuView() {
     const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
     const [message, setMessage] = useState<string | null>(null)
     const [niveaux, setNiveaux] = useState<NiveauxChoisis>(() => lireNiveaux())
+    const [defis, setDefis] = useState<DefisReussis>(() => lireDefis())
 
     const lundi = useMemo(() => {
         const l = debutDeSemaine(new Date())
@@ -177,6 +184,9 @@ export default function MuscuView() {
                 const n = niveauxDepuis(etat.charges, lireNiveaux())
                 ecrireNiveaux(n)
                 setNiveaux(n)
+                const d = defisDepuis(etat.charges, lireDefis())
+                ecrireDefis(d)
+                setDefis(d)
                 setSynchro('ok')
             })
             .catch(() => setSynchro('hors-ligne'))
@@ -199,6 +209,8 @@ export default function MuscuView() {
     const seance = seanceParCode(code, niveaux[code]?.n)
     const exercices = seance.blocs.flatMap((b) => b.exercices)
     const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances, exercices.map((e) => e.id))
+    const faitesAuNiveau = seancesAuNiveau(code, niveaux[code]?.depuis, exercices.map((e) => e.id), suivi.seances).length
+    const defiReussi = defis[cleDefi(code, seance.niveau)]
     const total = exercices.reduce((n, e) => n + e.series, 0)
     const faites = exercices.reduce((n, e) => n + (series[e.id] || []).filter(Boolean).length, 0)
     const pourcent = total ? Math.round((faites / total) * 100) : 0
@@ -242,6 +254,23 @@ export default function MuscuView() {
                 mettreEnAttente({ charges: { [id]: n } })
                 setSynchro('hors-ligne')
             })
+    }
+
+    function reussirDefi() {
+        const d = seance.defi
+        if (!d) return
+        const dernier = seance.niveau >= seance.nbNiveaux
+        if (!window.confirm(`Tu as réussi le défi « ${d.titre.replace('🏅 ', '')} » ?${dernier ? '' : ` Tu passes au niveau ${seance.niveau + 1}.`}`)) return
+        const id = cleDefi(code, seance.niveau)
+        const nouveaux = { ...defis, [id]: new Date().toISOString() }
+        setDefis(nouveaux)
+        ecrireDefis(nouveaux)
+        const etat = { ...suivi, charges: { ...suivi.charges, [id]: 1 } }
+        setSuivi(etat)
+        ecrireCache(etat)
+        envoyerMuscu({ action: 'charge', id, kg: 1 }).catch(() => mettreEnAttente({ charges: { [id]: 1 } }))
+        if (!dernier) changerNiveau(seance.niveau + 1)
+        setMessage(dernier ? `🏅 Objectif réussi : ${d.titre.replace('🏅 ', '')}. Énorme, bravo !` : `🎉 Défi réussi ! Bienvenue au niveau ${seance.niveau + 1}.`)
     }
 
     function ajusterCharge(id: string, delta: number) {
@@ -566,25 +595,52 @@ export default function MuscuView() {
                 )}
             </section>
 
-            {/* Objectif 10 km */}
+            {/* Objectif de l'année : 10 km, et les défis du cardio comme étapes */}
             {(() => {
-                const b = seanceParCode('C', niveaux.C?.n)
+                const c = seanceParCode('C', niveaux.C?.n)
                 const record = Math.max(0, ...suivi.seances.flatMap((x) => x.exercices.filter((e) => (e.id === 'c-fond' || e.id === 'e-endurance') && e.kg).map((e) => e.kg as number)))
                 const semaines = Math.max(0, Math.ceil((new Date(OBJECTIF_DATE).getTime() - Date.now()) / (7 * 24 * 3600 * 1000)))
+                const idsC = c.blocs.flatMap((b) => b.exercices.map((e) => e.id))
+                const faitesC = seancesAuNiveau('C', niveaux.C?.depuis, idsC, suivi.seances).length
+                const fini = defis[cleDefi('C', c.nbNiveaux)] !== undefined
+                // Séances cardio encore conseillées avant de pouvoir tenter les 10 km (1 cardio par semaine).
+                const reste = Math.max(0, (c.defi?.apres ?? 0) - faitesC) + c.niveaux.slice(c.niveau).reduce((n, nv) => n + (nv.defi?.apres ?? 0), 0)
+                const prevue = new Date(Date.now() + reste * 7 * 24 * 3600 * 1000)
+                const dansLesTemps = prevue.getTime() <= new Date(OBJECTIF_DATE).getTime()
                 return (
-                    <div className="mu-carte mu-objectif" style={{ '--c': b.couleur } as React.CSSProperties}>
+                    <div className="mu-carte mu-objectif" style={{ '--c': c.couleur } as React.CSSProperties}>
                         <div className="mu-objectif-tete">
-                            <span className="mu-objectif-titre">🏀 OBJECTIF : FORME DE BASKETTEUR</span>
-                            <span className="mu-objectif-delai">bonus {OBJECTIF_KM} km fin juin · {semaines} sem.</span>
+                            <span className="mu-objectif-titre">🏅 OBJECTIF DE L’ANNÉE : {OBJECTIF_KM} KM SANS S’ARRÊTER</span>
+                            <span className="mu-objectif-delai">avant le 30 juin · {semaines} sem.</span>
                         </div>
-                        <div className="mu-objectif-barre" role="progressbar" aria-valuenow={b.niveau} aria-valuemin={1} aria-valuemax={b.nbNiveaux}>
-                            {b.niveaux.map((nv, i) => (
-                                <span key={nv.nom} className={i + 1 < b.niveau ? 'fait' : i + 1 === b.niveau ? 'actuel' : ''} title={`Niveau ${i + 1} : ${nv.nom}`} />
-                            ))}
-                        </div>
+                        <ol className="mu-jalons">
+                            {c.niveaux.map((nv, i) => {
+                                const n = i + 1
+                                const ok = defis[cleDefi('C', n)] !== undefined || n < c.niveau
+                                const actuel = n === c.niveau && !ok
+                                return (
+                                    <li key={nv.nom} className={ok ? 'fait' : actuel ? 'actuel' : ''}>
+                                        <span className="mu-jalon-puce">{ok ? '✓' : n}</span>
+                                        <span className="mu-jalon-texte">
+                                            {nv.defi?.titre.replace('🏅 ', '') ?? nv.nom}
+                                            {actuel && nv.defi && (
+                                                <small>
+                                                    {' '}
+                                                    · {Math.min(faitesC, nv.defi.apres)}/{nv.defi.apres} séances
+                                                </small>
+                                            )}
+                                        </span>
+                                    </li>
+                                )
+                            })}
+                        </ol>
                         <p className="mu-objectif-texte">
-                            Cardio niveau <b>{b.niveau}/{b.nbNiveaux}</b> · {b.nom}
-                            {record > 0 ? ` · plus longue course : ${fmtKg(record)} km` : ' · note tes km en fin de séance C'}
+                            {fini
+                                ? '🏅 Objectif atteint : tu as couru 10 km. Bravo !'
+                                : reste === 0
+                                  ? '💪 Tu peux tenter les 10 km quand tu te sens prêt.'
+                                  : `${dansLesTemps ? '✅ Dans les temps' : '⚠️ Un peu juste'} : à 1 cardio par semaine, tu pourras tenter les 10 km vers ${prevue.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}.`}
+                            {record > 0 ? ` Plus longue course : ${fmtKg(record)} km.` : ''}
                         </p>
                     </div>
                 )
@@ -660,15 +716,46 @@ export default function MuscuView() {
                         ))}
                     </div>
                     <p className="mu-niveaux-resume">{seance.resume}</p>
-                    {avis ? (
+                    {seance.defi && (
+                        <div className={`mu-defi${defiReussi !== undefined ? ' reussi' : ''}`}>
+                            <span className="mu-defi-label">
+                                {seance.niveau >= seance.nbNiveaux ? '🏅 OBJECTIF FINAL' : `🎯 DÉFI POUR LE NIVEAU ${seance.niveau + 1}`}
+                            </span>
+                            <b>{seance.defi.titre.replace('🏅 ', '')}</b>
+                            <p>{seance.defi.detail}</p>
+                            {defiReussi !== undefined ? (
+                                <p className="mu-defi-ok">
+                                    ✅ Réussi{defiReussi ? ` le ${new Date(defiReussi).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="mu-defi-compte">
+                                        <div className="mu-defi-jauge">
+                                            <span style={{ width: `${Math.min(100, (faitesAuNiveau / seance.defi.apres) * 100)}%` }} />
+                                        </div>
+                                        <small>
+                                            {Math.min(faitesAuNiveau, seance.defi.apres)}/{seance.defi.apres} séances conseillées
+                                        </small>
+                                    </div>
+                                    <p className="mu-defi-quand">
+                                        {faitesAuNiveau >= seance.defi.apres
+                                            ? '💪 Tu as fait assez de séances : tente le défi dès que tu te sens prêt !'
+                                            : `Encore ${seance.defi.apres - faitesAuNiveau} séance${seance.defi.apres - faitesAuNiveau > 1 ? 's' : ''} conseillée${seance.defi.apres - faitesAuNiveau > 1 ? 's' : ''} avant de tenter (tu peux essayer avant si tu te sens prêt).`}
+                                    </p>
+                                    <button className="mu-defi-btn" onClick={reussirDefi}>
+                                        {seance.niveau >= seance.nbNiveaux ? '🏅 J’ai réussi l’objectif' : '✅ J’ai réussi le défi'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
+                    {avis?.sens === 'descend' ? (
                         <p className={`mu-niveaux-avis ${avis.sens}`}>
-                            {avis.sens === 'monte' ? '🚀' : '🧱'} {avis.texte}
-                            <button onClick={() => changerNiveau(seance.niveau + (avis.sens === 'monte' ? 1 : -1))}>
-                                Niveau {seance.niveau + (avis.sens === 'monte' ? 1 : -1)}
-                            </button>
+                            🧱 {avis.texte}
+                            <button onClick={() => changerNiveau(seance.niveau - 1)}>Niveau {seance.niveau - 1}</button>
                         </p>
                     ) : (
-                        <p className="mu-niveaux-aide">Trop facile ou trop dur ? Change de niveau quand tu veux : tes charges sont gardées.</p>
+                        <p className="mu-niveaux-aide">Tu peux aussi changer de niveau à la main : tes charges sont gardées.</p>
                     )}
                 </div>
                 <div className="mu-muscles">

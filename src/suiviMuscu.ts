@@ -162,10 +162,7 @@ export function avisNiveau(
     ids: string[] = [],
 ): AvisNiveau | null {
     // Seulement les séances faites avec les exercices du niveau actuel.
-    const recentes = seances
-        .filter((s) => s.code === code && s.exercices.length > 0 && (!depuis || s.date >= depuis))
-        .filter((s) => ids.length === 0 || s.exercices.every((e) => ids.includes(e.id)))
-        .slice(0, 2)
+    const recentes = seancesAuNiveau(code, depuis, ids, seances).slice(0, 2)
     if (recentes.length < 2) return null
     const exos = recentes.flatMap((s) => s.exercices)
     const tousFaits = exos.every(complet)
@@ -176,4 +173,30 @@ export function avisNiveau(
     if (niveau > 1 && durs > exos.length / 2)
         return { sens: 'descend', texte: `Tes 2 dernières séances étaient dures : le niveau ${niveau - 1} peut t’aider à consolider.` }
     return null
+}
+
+/** Séances faites au niveau actuel (depuis le dernier changement, avec les exercices de ce niveau). */
+export function seancesAuNiveau(code: CodeSeance, depuis: string | undefined, ids: string[], seances: SeanceFaite[]): SeanceFaite[] {
+    return seances
+        .filter((s) => s.code === code && s.exercices.length > 0 && (!depuis || s.date >= depuis))
+        .filter((s) => ids.length === 0 || s.exercices.every((e) => ids.includes(e.id)))
+}
+
+// --- Défis réussis (objectifs pour passer au niveau suivant) ---
+// Gardés sur l'appareil avec la date, et synchronisés comme une « charge » defi-c1, defi-a2… = 1.
+
+export type DefisReussis = Record<string, string> // clé → date ISO (ou '' si la date est inconnue)
+export const cleDefi = (code: CodeSeance, niveau: number) => `defi-${code.toLowerCase()}${niveau}`
+
+export function lireDefis(): DefisReussis {
+    return lire<DefisReussis>('muscu.defis', {})
+}
+export function ecrireDefis(d: DefisReussis): void {
+    ecrire('muscu.defis', d)
+}
+/** Ajoute les défis enregistrés en ligne à ceux de l'appareil. */
+export function defisDepuis(charges: Record<string, number>, locaux: DefisReussis): DefisReussis {
+    const res = { ...locaux }
+    for (const [id, v] of Object.entries(charges)) if (id.startsWith('defi-') && v > 0 && !(id in res)) res[id] = ''
+    return res
 }

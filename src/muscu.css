@@ -43,7 +43,7 @@
     background: var(--mu-surface);
     box-shadow: 0 1px 3px rgba(20, 26, 51, 0.08);
   }
-  .page-muscu :is(.mu-prochaine-label, .mu-pastille, .mu-badge, .mu-cs-code, .mu-cible, .mu-btn, .mu-bilan h3, .mu-pct, .mu-detail-niveau, .mu-niveaux-choix .actif b, .mu-objectif-titre) {
+  .page-muscu :is(.mu-prochaine-label, .mu-pastille, .mu-badge, .mu-cs-code, .mu-cible, .mu-btn, .mu-bilan h3, .mu-pct, .mu-detail-niveau, .mu-niveaux-choix .actif b, .mu-objectif-titre, .mu-defi-label) {
     color: color-mix(in srgb, var(--c) 72%, #000);
   }
 }
@@ -1415,4 +1415,135 @@
   margin: 0;
   font-size: 13px;
   color: var(--mu-txt2);
+}
+
+/* ---------- Défis et jalons ---------- */
+.mu-defi {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mu-surface);
+  border: 1.5px dashed var(--c);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mu-defi.reussi {
+  border-style: solid;
+  border-color: var(--mu-ok);
+}
+.mu-defi-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.7px;
+  color: var(--c);
+}
+.mu-defi b {
+  font-size: 15px;
+  color: var(--mu-txt);
+}
+.mu-defi p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--mu-txt2);
+}
+.mu-defi-compte {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.mu-defi-jauge {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--mu-ink) 12%, transparent);
+  overflow: hidden;
+}
+.mu-defi-jauge span {
+  display: block;
+  height: 100%;
+  background: var(--c);
+  border-radius: 4px;
+}
+.mu-defi-compte small {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--mu-txt3);
+  white-space: nowrap;
+}
+.mu-defi p.mu-defi-quand {
+  font-size: 12px;
+  color: var(--mu-txt3);
+}
+.mu-defi p.mu-defi-ok {
+  font-weight: 700;
+  color: var(--mu-ok);
+}
+.mu-defi-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--c);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mu-jalons {
+  list-style: none;
+  margin: 10px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mu-jalons li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--mu-txt3);
+}
+.mu-jalon-puce {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1.5px solid color-mix(in srgb, var(--mu-ink) 20%, transparent);
+}
+.mu-jalons li.fait {
+  color: var(--mu-txt2);
+}
+.mu-jalons li.fait .mu-jalon-puce {
+  background: var(--c);
+  border-color: var(--c);
+  color: #fff;
+}
+.mu-jalons li.fait .mu-jalon-texte {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--mu-ink) 35%, transparent);
+}
+.mu-jalons li.actuel {
+  color: var(--mu-txt);
+  font-weight: 700;
+}
+.mu-jalons li.actuel .mu-jalon-puce {
+  border-color: var(--c);
+  color: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent);
+}
+.mu-jalons li:last-child .mu-jalon-texte {
+  font-weight: 800;
+}
+.mu-jalons small {
+  font-weight: 600;
+  color: var(--mu-txt3);
 }

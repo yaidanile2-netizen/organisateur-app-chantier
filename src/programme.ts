@@ -85,8 +85,12 @@ export type NiveauSeance = {
     retourAuCalme: string[]
     progression: string // comment progresser à ce niveau
     monter: string // quand passer au niveau suivant
+    defi?: Defi // objectif à réussir pour passer au niveau suivant (ou objectif final au dernier niveau)
     duree?: number // minutes de séance, si différent du réglage (courses)
 }
+
+/** Un défi à tenter quand on se sent prêt, conseillé après `apres` séances au niveau. */
+export type Defi = { titre: string; detail: string; apres: number }
 
 export type SeanceBase = {
     code: CodeSeance
@@ -458,6 +462,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
                 progression: 'Toutes les séries réussies en haut de la fourchette ? +2,5 kg la prochaine fois.',
                 monter: 'Niveau 2 quand tout te semble facile 2 séances de suite (souvent après 4 à 6 semaines).',
+                defi: { titre: 'Chest press et tirage vertical : 3 × 12 propres', detail: 'Avec ta charge actuelle, les 3 séries de 12 sans tricher (dos collé, descente lente) sur les deux machines.', apres: 8 },
             },
             {
                 nom: 'Haltères',
@@ -473,6 +478,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
                 progression: 'Haltères : passe à la paire suivante quand tu fais le haut de la fourchette sur toutes les séries.',
                 monter: 'Niveau 3 quand tu es à l’aise techniquement avec les haltères et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Développé couché haltères : 4 × 10 avec 2 × 14 kg', detail: 'Environ 40 % de ton poids au total. Omoplates serrées, descente jusqu’à la poitrine.', apres: 10 },
             },
             {
                 nom: 'Barre et force',
@@ -488,6 +494,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
                 progression: 'Barre : +2,5 kg dès que les 4 séries sont faites en haut de la fourchette. Tractions : −2,5 kg d’assistance.',
                 monter: 'Dernier niveau : continue d’ajouter du poids. Quand les tractions se font sans assistance, on pourra ajouter un niveau 4.',
+                defi: { titre: '🏅 1 traction stricte, sans assistance', detail: 'Bras tendus en bas, menton au-dessus de la barre, sans élan. Le défi ultime du haut du corps.', apres: 12 },
             },
         ],
     },
@@ -515,6 +522,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
                 progression: 'Machines : +2,5 kg (presse : +5 kg) quand toutes les séries sont réussies et faciles.',
                 monter: 'Niveau 2 quand le squat goblet est propre avec un haltère lourd et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Squat goblet : 3 × 10 avec un haltère de 20 kg', detail: 'Cuisses au moins parallèles au sol, talons au sol, dos droit.', apres: 8 },
             },
             {
                 nom: 'Poids libres',
@@ -530,6 +538,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
                 progression: 'Squat et hip thrust : +2,5 à 5 kg quand toutes les séries sont réussies. Haltères : paire suivante.',
                 monter: 'Niveau 3 quand le squat guidé est solide (environ ton poids sur la barre) et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Squat à la Smith : 4 × 8 avec ton poids du corps', detail: 'Environ 67 kg sur la barre, cuisses parallèles à chaque répétition.', apres: 10 },
             },
             {
                 nom: 'Barre et force',
@@ -545,6 +554,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
                 progression: 'Squat et soulevé : +2,5 kg dès que les séries sont faites en haut de la fourchette.',
                 monter: 'Dernier niveau : continue d’ajouter du poids, les séances restent efficaces très longtemps.',
+                defi: { titre: '🏅 Squat barre : 5 répétitions avec ton poids du corps', detail: 'Barre libre, cuisses parallèles, barres de sécurité du rack bien réglées.', apres: 12 },
             },
         ],
     },
@@ -570,6 +580,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur la course quand les 4 blocs passent bien.',
                 monter: 'Niveau 2 quand tu tiens 4 × 5 min à 9 km/h sans finir épuisé.',
+                defi: { titre: 'Courir 15 min sans t’arrêter', detail: 'À 8,5 km/h, sans marcher. Tu dois finir en pouvant encore parler.', apres: 4 },
             },
             {
                 nom: 'Vitesse',
@@ -583,6 +594,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur les accélérations quand elles restent faciles à tenir.',
                 monter: 'Niveau 3 quand les 24 min de course passent sans pause difficile.',
+                defi: { titre: 'Courir 20 min sans t’arrêter, puis 6 accélérations à 12 km/h', detail: 'Le fond et la vitesse dans la même séance.', apres: 4 },
             },
             {
                 nom: '30/30',
@@ -596,6 +608,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur les 30 s vite quand les 16 passent.',
                 monter: 'Niveau 4 quand tu récupères en trottinant (6-7 km/h) au lieu de marcher.',
+                defi: { titre: '16 × 30/30 en récupérant en trottinant', detail: 'Les 30 s lentes se font en courant (6-7 km/h), jamais en marchant.', apres: 4 },
             },
             {
                 nom: 'Endurance',
@@ -609,6 +622,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: 'Monte la course continue de 0,5 km/h quand c’est facile.',
                 monter: 'Niveau 5 quand les 25 min sont faciles à 9 km/h.',
+                defi: { titre: 'Courir 5 km sans t’arrêter', detail: 'Allure libre (environ 35 min). C’est le premier grand palier vers les 10 km.', apres: 5 },
             },
             {
                 nom: 'Match',
@@ -622,6 +636,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: 'Garde la qualité des 15 s vite jusqu’au 3e quart-temps.',
                 monter: 'Niveau 6 quand le 3e quart-temps est aussi rapide que le 1er.',
+                defi: { titre: 'Test du basketteur : 3 quart-temps de 15/15 sans ralentir', detail: 'Le 3e quart-temps aussi rapide que le 1er : tu tiens un match entier.', apres: 5 },
             },
             {
                 nom: 'Top forme',
@@ -635,6 +650,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: RETOUR_COURSE,
                 progression: 'Alterne : une semaine ce niveau, une semaine le niveau 5. Bonus : allonge la course continue de 5 min par mois.',
                 monter: 'Dernier niveau ! Bonus de fin d’année : allonger la course jusqu’aux 10 km.',
+                defi: { titre: '🏅 Courir 10 km sans t’arrêter', detail: 'L’objectif de l’année, à ton allure (moins de 2 h ; 1 h à 1 h 10 en bonus). Avant de tenter : une sortie de 45 min, puis une de 60 min.', apres: 8 },
             },
         ],
     },
@@ -662,6 +678,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
                 progression: 'Quand c’est facile : élastique plus dur, ou +1 pompe par séance.',
                 monter: 'Niveau 2 quand tu fais 15 pompes propres et que les élastiques sont faciles.',
+                defi: { titre: '15 pompes propres d’affilée', detail: 'Corps gainé, poitrine près du sol à chaque répétition.', apres: 6 },
             },
             {
                 nom: 'Poids du corps +',
@@ -678,6 +695,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
                 progression: '+1 ou 2 reps par série à chaque séance, puis élastique plus dur.',
                 monter: 'Niveau 3 quand tu fais 10 pompes piquées et 12 fentes bulgares par jambe.',
+                defi: { titre: '10 pompes piquées + 12 fentes bulgares par jambe', detail: 'Dans la même séance, technique propre.', apres: 8 },
             },
             {
                 nom: 'Athlétique',
@@ -694,6 +712,7 @@ export const PROGRAMME: SeanceBase[] = [
                 retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
                 progression: 'Charge un sac à dos (livres, bouteilles) pour les mollets, et un élastique plus fort.',
                 monter: 'Dernier niveau : ajoute du poids dans le sac à dos petit à petit.',
+                defi: { titre: '🏅 25 pompes d’affilée', detail: 'Le défi final de la séance maison.', apres: 10 },
             },
         ],
     },
