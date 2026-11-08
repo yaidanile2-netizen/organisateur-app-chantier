@@ -18,7 +18,7 @@ import {
 } from './api'
 import { GUIDE, sansAccent } from './aliments'
 import GuideAliments from './GuideAliments'
-import ConseilCoach from './ConseilCoach'
+import { ecouter, emettre } from './evenements'
 
 const OBJECTIFS: { cle: Objectif; libelle: string; emoji: string }[] = [
     { cle: 'musculation', libelle: 'Musculation', emoji: '💪' },
@@ -55,11 +55,9 @@ export default function NutritionCoach() {
     const [apportsJours, setApportsJours] = useState<ApportsJour[]>([])
     const [sante, setSante] = useState<SanteJour[]>([])
     const [filtre, setFiltre] = useState<'reste' | 'encas' | 'tout'>('reste')
-    const [texte, setTexte] = useState('')
     const [analyse, setAnalyse] = useState<ReponseNutrition | null>(null)
     const [bilan, setBilan] = useState<ReponseNutrition | null>(null)
     const [enCours, setEnCours] = useState<null | 'repas' | 'bilan' | 'objectifs' | 'liste' | 'conseil'>(null)
-    const [conseil, setConseil] = useState<ReponseNutrition | null>(null)
     const [listeOuverte, basculerListe] = useRepli('nutri.liste')
     const [erreur, setErreur] = useState<string | null>(null)
 
@@ -82,25 +80,33 @@ export default function NutritionCoach() {
         recharger()
     }, [])
 
-    async function demander(type: 'repas' | 'bilan' | 'objectifs' | 'liste') {
+    // Les repas, bilans et listes passent maintenant par l'assistant (bouton ✨) : on affiche ici son dernier résultat.
+    useEffect(
+        () =>
+            ecouter('organisateur:nutrition', (r) => {
+                if (r.intent === 'bilan') {
+                    setBilan(r)
+                    definirOuvert('nutri.bilan', true)
+                } else if (r.intent === 'repas' || r.intent === 'question') {
+                    if (r.apports.length || r.coches.length || r.repas) setAnalyse(r)
+                }
+                recharger()
+            }),
+        []
+    )
+    useEffect(() => ecouter('organisateur:actualiser', () => recharger()), [])
+
+    async function demander(type: 'bilan' | 'objectifs' | 'liste') {
         setEnCours(type)
         setErreur(null)
         try {
             const r =
-                type === 'repas'
-                    ? await envoyerNutrition({ texte: texte.trim() })
-                    : type === 'bilan'
-                      ? await envoyerNutrition({ action: 'bilan' })
-                      : type === 'liste'
-                        ? await envoyerNutrition({ action: 'liste' })
-                        : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
+                type === 'bilan'
+                    ? await envoyerNutrition({ action: 'bilan' })
+                    : type === 'liste'
+                      ? await envoyerNutrition({ action: 'liste' })
+                      : await envoyerNutrition({ action: 'objectifs', objectifs: priorites })
             if (type === 'bilan') setBilan(r)
-            else if (r.intent === 'conseil') {
-                setConseil(r)
-                definirOuvert('nutri.conseil', true)
-            }
-            else if (type !== 'liste') setAnalyse(r)
-            if (type === 'repas') setTexte('')
             await recharger()
         } catch (err) {
             setErreur(err instanceof Error ? err.message : 'Une erreur est survenue.')
@@ -254,28 +260,19 @@ export default function NutritionCoach() {
             </section>
 
             {/* Noter un repas */}
-            <Repliable cle="nutri.repas" className="nu-carte" titre="🍽️ Qu’est-ce que tu as mangé ?">
-                <form
-                    className="nu-saisie"
-                    onSubmit={(e) => {
-                        e.preventDefault()
-                        if (texte.trim()) demander('repas')
-                    }}
-                >
-                    <textarea
-                        value={texte}
-                        onChange={(e) => setTexte(e.target.value)}
-                        placeholder="Ex. : ce midi 3 œufs, du riz complet et 2 bananes"
-                        rows={2}
-                        disabled={enCours !== null}
-                    />
-                    <p className="nu-astuce">
-                        💡 Donne les quantités (3 œufs, 2 bananes, 1 boîte de sardines…) : ta liste se coche toute seule.
-                    </p>
-                    <button type="submit" className="btn-primary" disabled={enCours !== null || !texte.trim()}>
-                        {enCours === 'repas' ? 'Analyse…' : 'Analyser'}
+            <Repliable cle="nutri.repas" className="nu-carte" titre="🍽️ Noter un repas">
+                <div className="nu-ia-boutons">
+                    <button className="btn-primary" onClick={() => emettre('organisateur:ia', { texte: 'J’ai mangé ' })}>
+                        ✨ Dire à l’assistant ce que j’ai mangé
                     </button>
-                </form>
+                    <button className="btn-secondary" onClick={() => emettre('organisateur:ia', { texte: 'Je mange quoi ' })}>
+                        💡 Je mange quoi ?
+                    </button>
+                </div>
+                <p className="nu-astuce">
+                    💡 Donne les quantités (3 œufs, 2 bananes, 1 boîte de sardines…) : ta liste se coche toute seule. Tu peux aussi demander une
+                    idée de plat, un conseil au supermarché avec ton budget, ou le bilan de ta semaine.
+                </p>
 
                 {analyse && (analyse.apports.length > 0 || analyse.reponse) && (
                     <div className="nu-resultat">
@@ -378,13 +375,6 @@ export default function NutritionCoach() {
                 )}
             </Repliable>
 
-            {/* Conseil personnalisé : quoi prendre, où, avec quel budget */}
-            <ConseilCoach
-                reponse={conseil}
-                onReponse={setConseil}
-                occupe={enCours !== null && enCours !== 'conseil'}
-                onOccupe={(o) => setEnCours(o ? 'conseil' : null)}
-            />
 
             {/* Tableau de la semaine */}
             <Repliable cle="nutri.tableau" className="nu-carte" titre="📊 Mon tableau de la semaine">

@@ -1422,3 +1422,14 @@ li.dans-liste .gu-nom {
     color: #c4b5fd;
   }
 }
+
+/* Boutons vers l'assistant (la saisie des repas passe par l'assistant ✨) */
+.nu-ia-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.nu-ia-boutons button {
+  flex: 1 1 200px;
+}

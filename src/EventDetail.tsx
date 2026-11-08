@@ -2,6 +2,8 @@
 import type { Cours, Priorite, Statut, Tache } from './api'
 import { codeModule, detailsCours, nomModule, typeDe } from './coursType'
 import { lireBloc } from './etudes'
+import { emettre } from './evenements'
+import { itemRevision } from './revision'
 import { dureeDe, seanceParCode } from './programme'
 import { MARQUEUR, codeDeTache, lireReglages } from './sport'
 import { duree } from './temps'
@@ -256,6 +258,19 @@ export default function EventDetail({ item, jour, maintenant, onFermer, onModifi
                             ))}
                         </ul>
                         {bloc.urgence && <p className="muted">⚡ Placé hors de ton créneau du soir : l’échéance est très proche.</p>}
+                        {tache && itemRevision(tache) && (
+                            <button
+                                className="btn-primary ev-cours"
+                                onClick={() => {
+                                    const it = itemRevision(tache)
+                                    if (!it) return
+                                    onFermer()
+                                    emettre('organisateur:cours', it)
+                                }}
+                            >
+                                📚 Réviser dans l’onglet Cours
+                            </button>
+                        )}
                     </>
                 )}
 

@@ -1,0 +1,426 @@
+/* Assistant IA flottant : bouton rond au-dessus de la barre d'onglets, panneau qui glisse du bas. */
+:root {
+  --ia-a: #6366f1;
+  --ia-b: #a855f7;
+  --ia-fond: #ffffff;
+  --ia-fond2: #f4f4f8;
+  --ia-texte: #15151d;
+  --ia-texte2: #5b5b6e;
+  --ia-ligne: #e6e6ef;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ia-fond: #151519;
+    --ia-fond2: #1f1f25;
+    --ia-texte: #f2f2f7;
+    --ia-texte2: #a1a1b3;
+    --ia-ligne: #2c2c35;
+  }
+}
+
+.ia-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 74px);
+  z-index: 60;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--ia-a), var(--ia-b));
+  color: #fff;
+  font-size: 24px;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3), opacity 0.2s;
+  animation: ia-apparait 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.ia-fab::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--ia-b);
+  opacity: 0;
+  animation: ia-onde 3.2s ease-out infinite;
+}
+.ia-fab:active {
+  transform: scale(0.92);
+}
+.ia-fab.cache {
+  transform: scale(0.4);
+  opacity: 0;
+  pointer-events: none;
+}
+.ia-fab.haut {
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 92px);
+}
+@keyframes ia-apparait {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes ia-onde {
+  0%,
+  60% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.ia-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 10, 20, 0.35);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.ia-fond.ouvert {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ia-panneau {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 71;
+  height: min(88dvh, 760px);
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--ia-fond);
+  color: var(--ia-texte);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+  transform: translateY(105%);
+  transition: transform 0.38s cubic-bezier(0.2, 0.85, 0.25, 1);
+  visibility: hidden;
+}
+.ia-panneau.ouvert {
+  transform: none;
+  visibility: visible;
+}
+.ia-poignee {
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ia-ligne);
+  margin: 8px auto 2px;
+  cursor: pointer;
+  flex: none;
+}
+.ia-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 10px;
+  border-bottom: 1px solid var(--ia-ligne);
+  flex: none;
+}
+.ia-tete b {
+  font-size: 17px;
+  display: block;
+}
+.ia-ecran {
+  font-size: 12px;
+  color: var(--ia-texte2);
+}
+.ia-tete-btns {
+  display: flex;
+  gap: 6px;
+}
+.ia-tete-btns button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ia-fond2);
+  color: var(--ia-texte);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.ia-fil {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overscroll-behavior: contain;
+}
+.ia-accueil {
+  text-align: center;
+  padding: 18px 10px 6px;
+  animation: ia-monte 0.4s ease-out;
+}
+.ia-accueil h3 {
+  margin: 10px 0 6px;
+  font-size: 20px;
+}
+.ia-accueil p {
+  margin: 0 auto;
+  max-width: 380px;
+  color: var(--ia-texte2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.ia-orbe {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  background: radial-gradient(circle at 30% 30%, #c4b5fd, var(--ia-a) 55%, var(--ia-b));
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.45);
+  animation: ia-flotte 3s ease-in-out infinite;
+}
+@keyframes ia-flotte {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.ia-msg {
+  display: flex;
+  animation: ia-monte 0.28s ease-out;
+}
+.ia-msg.user {
+  justify-content: flex-end;
+}
+@keyframes ia-monte {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.ia-bulle {
+  max-width: 86%;
+  padding: 10px 13px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.ia-msg.user .ia-bulle {
+  background: linear-gradient(135deg, var(--ia-a), var(--ia-b));
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  white-space: pre-wrap;
+}
+.ia-msg.assistant .ia-bulle {
+  background: var(--ia-fond2);
+  border-bottom-left-radius: 6px;
+}
+.ia-msg.erreur .ia-bulle {
+  background: color-mix(in srgb, #f59e0b 16%, var(--ia-fond2));
+}
+.ia-bulle p {
+  margin: 0 0 6px;
+}
+.ia-bulle p:last-child {
+  margin-bottom: 0;
+}
+.ia-bulle ul {
+  margin: 4px 0 6px;
+  padding-left: 18px;
+}
+.ia-bulle li {
+  margin: 2px 0;
+}
+
+.ia-points {
+  display: flex;
+  gap: 5px;
+  padding: 14px 16px;
+}
+.ia-points i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ia-texte2);
+  animation: ia-point 1.2s infinite ease-in-out;
+}
+.ia-points i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ia-points i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ia-point {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.ia-relances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 6px;
+}
+.ia-relances button {
+  border: 1px solid color-mix(in srgb, var(--ia-a) 40%, transparent);
+  background: color-mix(in srgb, var(--ia-a) 8%, var(--ia-fond));
+  color: var(--ia-texte);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  animation: ia-monte 0.35s ease-out backwards;
+}
+.ia-relances button:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.ia-relances button:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.ia-relances button:nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+.ia-carte {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--ia-fond);
+  border: 1px solid var(--ia-ligne);
+  font-size: 13.5px;
+}
+.ia-carte p {
+  margin: 4px 0;
+}
+.ia-carte ul {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+.ia-carte-titre {
+  display: block;
+  margin-bottom: 2px;
+}
+.ia-gris {
+  color: var(--ia-texte2);
+  font-size: 12.5px;
+}
+.ia-option + .ia-option {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ia-ligne);
+}
+.ia-option-tete {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ia-prix {
+  font-weight: 700;
+  color: var(--ia-a);
+  white-space: nowrap;
+}
+.ia-pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+.ia-pastille {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.ia-pastille.ok {
+  background: color-mix(in srgb, #10b981 18%, transparent);
+}
+.ia-pastille.manque {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.ia-saisie {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px max(env(safe-area-inset-bottom), 12px);
+  border-top: 1px solid var(--ia-ligne);
+  background: var(--ia-fond);
+}
+.ia-saisie textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--ia-ligne);
+  background: var(--ia-fond2);
+  color: var(--ia-texte);
+  border-radius: 20px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+  max-height: 140px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ia-saisie textarea:focus {
+  border-color: var(--ia-a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ia-a) 20%, transparent);
+}
+.ia-saisie button {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--ia-a), var(--ia-b));
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.2s;
+}
+.ia-saisie button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ia-saisie button:not(:disabled):active {
+  transform: scale(0.9);
+}
+
+body.ia-ouvert {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-fab,
+  .ia-fab::after,
+  .ia-panneau,
+  .ia-msg,
+  .ia-orbe,
+  .ia-relances button {
+    animation: none !important;
+    transition: none !important;
+  }
+}

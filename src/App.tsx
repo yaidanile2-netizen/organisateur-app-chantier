@@ -1,6 +1,6 @@
 import { definirOuvert } from './repli'
 import Repliable from './Repliable'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { activerNotifications, etatNotifications, notificationsDisponibles, type EtatNotifications } from './push'
 import { getCategories, type Categorie } from './api'
@@ -9,13 +9,17 @@ import EtudesPlanner from './EtudesPlanner'
 import SportPlanner from './SportPlanner'
 import NutritionCoach from './NutritionCoach'
 import MuscuView from './MuscuView'
+import CoursView from './CoursView'
+import AssistantIA from './AssistantIA'
+import { ecouter } from './evenements'
 
-type Onglet = 'agenda' | 'muscu' | 'nutrition'
+type Onglet = 'agenda' | 'muscu' | 'nutrition' | 'cours'
 
 const ONGLETS: { cle: Onglet; libelle: string; icone: string }[] = [
     { cle: 'agenda', libelle: 'Agenda', icone: '📅' },
     { cle: 'muscu', libelle: 'Muscu', icone: '🏋️' },
     { cle: 'nutrition', libelle: 'Nutrition', icone: '🥗' },
+    { cle: 'cours', libelle: 'Cours', icone: '📚' },
 ]
 
 const todayLabel = new Intl.DateTimeFormat('fr-FR', {
@@ -27,7 +31,7 @@ const todayLabel = new Intl.DateTimeFormat('fr-FR', {
 function ongletInitial(): Onglet {
     try {
         const o = localStorage.getItem('app.onglet')
-        if (o === 'agenda' || o === 'muscu' || o === 'nutrition') return o
+        if (o === 'agenda' || o === 'muscu' || o === 'nutrition' || o === 'cours') return o
     } catch {
         // stockage indisponible : onglet Agenda
     }
@@ -39,6 +43,26 @@ function App() {
     const [etat, setEtat] = useState<EtatNotifications | 'chargement'>('chargement')
     const [categories, setCategories] = useState<Categorie[]>([])
     const [version, setVersion] = useState(0)
+    const topbar = useRef<HTMLElement>(null)
+    const tabbar = useRef<HTMLElement>(null)
+
+    // Hauteur des barres (pour l'onglet Cours, qui occupe tout l'espace entre les deux)
+    useEffect(() => {
+        const maj = () => {
+            const r = document.documentElement.style
+            r.setProperty('--haut-topbar', `${topbar.current?.offsetHeight ?? 60}px`)
+            r.setProperty('--haut-tabbar', `${tabbar.current?.offsetHeight ?? 64}px`)
+        }
+        maj()
+        const ro = new ResizeObserver(maj)
+        if (topbar.current) ro.observe(topbar.current)
+        if (tabbar.current) ro.observe(tabbar.current)
+        return () => ro.disconnect()
+    }, [])
+
+    // L'assistant a modifié l'agenda → on recharge ; « Ouvrir le cours » → onglet Cours
+    useEffect(() => ecouter('organisateur:actualiser', () => setVersion((v) => v + 1)), [])
+    useEffect(() => ecouter('organisateur:cours', () => choisir('cours')), [])
 
     useEffect(() => {
         if (!notificationsDisponibles()) {
@@ -71,8 +95,8 @@ function App() {
     }
 
     return (
-        <div className={`page ${onglet === 'muscu' ? 'page-muscu' : ''}`}>
-            <header className="topbar">
+        <div className={`page ${onglet === 'muscu' ? 'page-muscu' : ''} ${onglet === 'cours' ? 'page-cours' : ''}`}>
+            <header className="topbar" ref={topbar}>
                 <div className="brand">
                     <span className="brand-dot" />
                     Organisateur
@@ -143,7 +167,11 @@ function App() {
                 {onglet === 'nutrition' && <NutritionCoach />}
             </main>
 
-            <nav className="tabbar" aria-label="Sections">
+            <CoursView actif={onglet === 'cours'} />
+
+            <AssistantIA ecran={onglet} />
+
+            <nav className="tabbar" aria-label="Sections" ref={tabbar}>
                 {ONGLETS.map((o) => (
                     <button
                         key={o.cle}
