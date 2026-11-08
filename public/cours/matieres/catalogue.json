@@ -1,0 +1,10 @@
+[
+  {
+    "id": "regulation",
+    "titre": "Régulation",
+    "code": "R3.08",
+    "couleur": "#1D6E8C",
+    "sous": "R3.08 · Régulation des installations",
+    "fichier": "matieres/regulation.js"
+  }
+]
