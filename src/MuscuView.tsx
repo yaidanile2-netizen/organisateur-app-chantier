@@ -10,7 +10,6 @@ import ProfilMuscu from './ProfilMuscu'
 import ProgressionMuscu from './ProgressionMuscu'
 import { enregistrerProfil, lireProfil, recommandation, type Profil } from './profil'
 import {
-    PAS_KG,
     RESSENTIS,
     avecCharge,
     avisNiveau,
@@ -30,6 +29,13 @@ import {
     passesDe,
     synchroniser,
     versKg,
+    cleFigure,
+    exercicePerso,
+    idPerso,
+    retenirPerso,
+    uniteCourte,
+    uniteDe,
+    type MesurePerso,
 } from './suiviMuscu'
 import BodyMap from './BodyMap'
 import {
@@ -37,7 +43,9 @@ import {
     MUSCLES,
     OBJECTIF_DATE,
     OBJECTIF_KM,
+    FIGURES,
     PROGRAMME,
+    TOUS_LES_EXERCICES,
     dureeDe,
     SALLE,
     ecrireNiveaux,
@@ -47,6 +55,7 @@ import {
     type Bloc,
     type CodeSeance,
     type Exercice,
+    type FigureId,
     type Muscle,
 } from './programme'
 import {
@@ -59,6 +68,11 @@ import {
     lireReglages,
     type Creneau,
 } from './sport'
+
+const VERSION_PROGRAMME = { cle: 'programme-v', valeur: 2 }
+
+/** Pas des boutons − / + pour ce qu'on note. */
+const pasDe = (e: Exercice) => (e.mesure === 'km' ? 0.5 : e.mesure === 'reps' ? 1 : e.mesure === 'sec' ? 5 : 2.5)
 
 const enTexte = (c: Record<string, number>) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, String(v)]))
 
@@ -114,6 +128,33 @@ function musclesDe(exos: Exercice[]): Muscle[] {
     return [...new Set(exos.flatMap((e) => e.muscles))]
 }
 
+const sansAccents = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/** Les exercices du catalogue, une seule fois par nom (pour l'ajout d'un exercice en plus). */
+const CATALOGUE = (() => {
+    const vus = new Set<string>()
+    return TOUS_LES_EXERCICES.filter((e) => e.series > 0 && !e.id.endsWith('-emom') && !vus.has(sansAccents(e.nom)) && vus.add(sansAccents(e.nom)))
+})()
+
+const BLOC_EXTRA: Bloc = { titre: 'En plus', tours: 1, repos: 0, exercices: [] }
+
+const MESURES_PERSO: { v: MesurePerso; libelle: string }[] = [
+    { v: 'reps', libelle: 'Reps' },
+    { v: 'kg', libelle: 'Kg' },
+    { v: 'sec', libelle: 'Secondes' },
+    { v: 'km', libelle: 'Km' },
+    { v: 'aucune', libelle: 'Rien' },
+]
+
+type Ajout = { texte: string; choisi: Exercice | null; series: number; mesure: MesurePerso; erreur: string | null }
+
+/** Le défi de séance qui correspond à une étape de figure (s'il y en a un). */
+function lienFigure(id: FigureId, etape: number): { code: CodeSeance; niveau: number } | null {
+    for (const s of PROGRAMME)
+        for (const [i, nv] of s.niveaux.entries()) if (nv.defi?.figure?.id === id && nv.defi.figure.etape === etape) return { code: s.code, niveau: i + 1 }
+    return null
+}
+
 type Deplacement = {
     tache: Tache
     chargement: boolean
@@ -144,6 +185,9 @@ export default function MuscuView() {
     const [message, setMessage] = useState<string | null>(null)
     const [niveaux, setNiveaux] = useState<NiveauxChoisis>(() => lireNiveaux())
     const [defis, setDefis] = useState<DefisReussis>(() => lireDefis())
+    const [extras, setExtras] = useState<Partial<Record<CodeSeance, Exercice[]>>>(() => lire('muscu.extras', {}))
+    const [ajout, setAjout] = useState<Ajout | null>(null)
+    const [figureOuverte, setFigureOuverte] = useState<FigureId | null>(null)
 
     const lundi = useMemo(() => {
         const l = debutDeSemaine(new Date())
@@ -178,10 +222,21 @@ export default function MuscuView() {
 
     useEffect(() => {
         synchroniser()
-            .then((etat) => {
+            .then((recu) => {
+                let etat = recu
                 setSuivi(etat)
                 setCharges(enTexte(etat.charges))
-                const n = niveauxDepuis(etat.charges, lireNiveaux())
+                let n = niveauxDepuis(etat.charges, lireNiveaux())
+                // Passage à la callisthénie (nov. 2026) : A, B et D repartent du niveau 1, une seule fois pour tous les appareils.
+                if ((etat.charges[VERSION_PROGRAMME.cle] ?? 0) < VERSION_PROGRAMME.valeur) {
+                    const depuis = new Date().toISOString()
+                    n = { ...n, A: { n: 1, depuis }, B: { n: 1, depuis }, D: { n: 1, depuis } }
+                    const envoi = { 'niveau-a': 1, 'niveau-b': 1, 'niveau-d': 1, [VERSION_PROGRAMME.cle]: VERSION_PROGRAMME.valeur }
+                    etat = { ...etat, charges: { ...etat.charges, ...envoi } }
+                    setSuivi(etat)
+                    ecrireCache(etat)
+                    for (const [id, kg] of Object.entries(envoi)) envoyerMuscu({ action: 'charge', id, kg }).catch(() => mettreEnAttente({ charges: { [id]: kg } }))
+                }
                 ecrireNiveaux(n)
                 setNiveaux(n)
                 const d = defisDepuis(etat.charges, lireDefis())
@@ -198,6 +253,12 @@ export default function MuscuView() {
     }, [lundi])
 
     useEffect(() => {
+        if (!message) return
+        const id = window.setTimeout(() => setMessage(null), 6000)
+        return () => window.clearTimeout(id)
+    }, [message])
+
+    useEffect(() => {
         if (!repos || repos.restant <= 0) return
         const id = window.setTimeout(() => {
             if (repos.restant === 1 && 'vibrate' in navigator) navigator.vibrate([200, 100, 200])
@@ -207,10 +268,12 @@ export default function MuscuView() {
     }, [repos])
 
     const seance = seanceParCode(code, niveaux[code]?.n)
-    const exercices = seance.blocs.flatMap((b) => b.exercices)
-    const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances, exercices.map((e) => e.id))
-    const faitesAuNiveau = seancesAuNiveau(code, niveaux[code]?.depuis, exercices.map((e) => e.id), suivi.seances).length
-    const defiReussi = defis[cleDefi(code, seance.niveau)]
+    const prevus = seance.blocs.flatMap((b) => b.exercices)
+    const extrasSeance = (extras[code] ?? []).filter((e) => !prevus.some((p) => p.id === e.id))
+    const exercices = [...prevus, ...extrasSeance]
+    const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances, prevus.map((e) => e.id))
+    const faitesAuNiveau = seancesAuNiveau(code, niveaux[code]?.depuis, prevus.map((e) => e.id), suivi.seances).length
+    const defiReussi = defiFait(code, seance.niveau)
     const total = exercices.reduce((n, e) => n + e.series, 0)
     const faites = exercices.reduce((n, e) => n + (series[e.id] || []).filter(Boolean).length, 0)
     const pourcent = total ? Math.round((faites / total) * 100) : 0
@@ -237,40 +300,119 @@ export default function MuscuView() {
         }, 900)
     }
 
-    function changerNiveau(n: number) {
-        if (n === seance.niveau) return
-        const nouveaux = { ...niveaux, [code]: { n, depuis: new Date().toISOString() } }
-        setNiveaux(nouveaux)
-        ecrireNiveaux(nouveaux)
-        setConseils(null)
-        setZoom(null)
-        const id = cleNiveau(code)
-        const etat = { ...suivi, charges: { ...suivi.charges, [id]: n } }
-        setSuivi(etat)
-        ecrireCache(etat)
-        envoyerMuscu({ action: 'charge', id, kg: n })
-            .then(() => setSynchro('ok'))
-            .catch(() => {
-                mettreEnAttente({ charges: { [id]: n } })
-                setSynchro('hors-ligne')
-            })
+    /** Enregistre des « charges » spéciales (niveaux, défis) sur l'appareil et en ligne. */
+    function majCharges(nouvelles: Record<string, number>) {
+        setSuivi((prec) => {
+            const etat = { ...prec, charges: { ...prec.charges, ...nouvelles } }
+            ecrireCache(etat)
+            return etat
+        })
+        for (const [id, kg] of Object.entries(nouvelles))
+            envoyerMuscu({ action: 'charge', id, kg })
+                .then(() => setSynchro('ok'))
+                .catch(() => {
+                    mettreEnAttente({ charges: { [id]: kg } })
+                    setSynchro('hors-ligne')
+                })
     }
 
-    function reussirDefi() {
-        const d = seance.defi
+    function changerNiveau(n: number, c: CodeSeance = code) {
+        const actuel = seanceParCode(c, niveaux[c]?.n).niveau
+        if (n === actuel) return
+        setNiveaux((prec) => {
+            const nouveaux = { ...prec, [c]: { n, depuis: new Date().toISOString() } }
+            ecrireNiveaux(nouveaux)
+            return nouveaux
+        })
+        if (c === code) {
+            setConseils(null)
+            setZoom(null)
+        }
+        majCharges({ [cleNiveau(c)]: n })
+    }
+
+    /** Défi d'un niveau réussi : par le défi lui-même, ou par l'étape de figure qui lui correspond. */
+    function defiFait(c: CodeSeance, niveau: number): string | undefined {
+        const s = seanceParCode(c, niveau)
+        const f = s.defi?.figure
+        return defis[cleDefi(c, niveau)] ?? (f ? defis[cleFigure(f.id, f.etape)] : undefined)
+    }
+
+    function etapeFaite(id: FigureId, etape: number): boolean {
+        if (defis[cleFigure(id, etape)] !== undefined) return true
+        const lien = lienFigure(id, etape)
+        return lien !== null && defis[cleDefi(lien.code, lien.niveau)] !== undefined
+    }
+
+    function noterReussite(cles: string[]) {
+        const date = new Date().toISOString()
+        setDefis((prec) => {
+            const nouveaux = { ...prec, ...Object.fromEntries(cles.map((k) => [k, date])) }
+            ecrireDefis(nouveaux)
+            return nouveaux
+        })
+        majCharges(Object.fromEntries(cles.map((k) => [k, 1])))
+    }
+
+    function reussirDefi(c: CodeSeance = code) {
+        const s = seanceParCode(c, niveaux[c]?.n)
+        const d = s.defi
         if (!d) return
-        const dernier = seance.niveau >= seance.nbNiveaux
-        if (!window.confirm(`Tu as réussi le défi « ${d.titre.replace('🏅 ', '')} » ?${dernier ? '' : ` Tu passes au niveau ${seance.niveau + 1}.`}`)) return
-        const id = cleDefi(code, seance.niveau)
-        const nouveaux = { ...defis, [id]: new Date().toISOString() }
-        setDefis(nouveaux)
-        ecrireDefis(nouveaux)
-        const etat = { ...suivi, charges: { ...suivi.charges, [id]: 1 } }
-        setSuivi(etat)
-        ecrireCache(etat)
-        envoyerMuscu({ action: 'charge', id, kg: 1 }).catch(() => mettreEnAttente({ charges: { [id]: 1 } }))
-        if (!dernier) changerNiveau(seance.niveau + 1)
-        setMessage(dernier ? `🏅 Objectif réussi : ${d.titre.replace('🏅 ', '')}. Énorme, bravo !` : `🎉 Défi réussi ! Bienvenue au niveau ${seance.niveau + 1}.`)
+        const dernier = s.niveau >= s.nbNiveaux
+        if (!window.confirm(`Tu as réussi le défi « ${d.titre.replace('🏅 ', '')} » ?${dernier ? '' : ` Tu passes au niveau ${s.niveau + 1} de la séance ${c}.`}`)) return
+        noterReussite([cleDefi(c, s.niveau), ...(d.figure ? [cleFigure(d.figure.id, d.figure.etape)] : [])])
+        if (!dernier) changerNiveau(s.niveau + 1, c)
+        setMessage(dernier ? `🏅 Objectif réussi : ${d.titre.replace('🏅 ', '')}. Énorme, bravo !` : `🎉 Défi réussi ! Bienvenue au niveau ${s.niveau + 1} de la séance ${c}.`)
+    }
+
+    function validerEtape(id: FigureId, etape: number) {
+        const f = FIGURES.find((x) => x.id === id)
+        if (!f) return
+        // Si l'étape est le défi du niveau actuel d'une séance, on passe aussi au niveau suivant.
+        const lien = lienFigure(id, etape)
+        if (lien && seanceParCode(lien.code, niveaux[lien.code]?.n).niveau === lien.niveau) return reussirDefi(lien.code)
+        const e = f.etapes[etape - 1]
+        if (!window.confirm(`Tu as réussi « ${e.titre} » ?`)) return
+        noterReussite([cleFigure(id, etape)])
+        setMessage(etape === f.etapes.length ? `🏅 ${f.nom} maîtrisé ! Énorme, bravo !` : `🎉 Étape réussie : ${e.titre}.`)
+    }
+
+    function ouvrirSeance(c: CodeSeance) {
+        setCode(c)
+        setConseils(null)
+        basculerDetail(true)
+        window.setTimeout(() => document.querySelector('.mu-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+
+    // --- Exercices faits en plus du programme ---
+
+    function ajouterExtra() {
+        if (!ajout) return
+        let e: Exercice
+        if (ajout.choisi) {
+            e = { ...ajout.choisi, series: ajout.series }
+        } else {
+            const nom = ajout.texte.trim()
+            if (!nom) return setAjout({ ...ajout, erreur: 'Écris le nom de l’exercice.' })
+            const id = idPerso(nom)
+            retenirPerso(id, nom, ajout.mesure)
+            e = { ...(exercicePerso(id, { nom, mesure: ajout.mesure }) as Exercice), series: ajout.series }
+        }
+        if (exercices.some((x) => x.id === e.id)) return setAjout({ ...ajout, erreur: 'Cet exercice est déjà dans la séance.' })
+        const n = { ...extras, [code]: [...extrasSeance, e] }
+        setExtras(n)
+        ecrire('muscu.extras', n)
+        setAjout(null)
+    }
+
+    function retirerExtra(id: string) {
+        const n = { ...extras, [code]: extrasSeance.filter((e) => e.id !== id) }
+        setExtras(n)
+        ecrire('muscu.extras', n)
+        const s = { ...series }
+        delete s[id]
+        setSeries(s)
+        ecrire('muscu.series', s)
     }
 
     function ajusterCharge(id: string, delta: number) {
@@ -306,7 +448,7 @@ export default function MuscuView() {
                 const faitesExo = (series[e.id] || []).filter(Boolean).length
                 if (faitesExo === 0) return []
                 const ressenti: Ressenti = faitesExo >= e.series ? 'bien' : 'dur'
-                return [{ id: e.id, faites: faitesExo, total: e.series, kg: avecCharge(e) || e.mesure === 'km' ? versKg(charges[e.id]) : null, ressenti }]
+                return [{ id: e.id, faites: faitesExo, total: e.series, kg: uniteDe(e) ? versKg(charges[e.id]) : null, ressenti }]
             })
         )
         setRepos(null)
@@ -339,6 +481,9 @@ export default function MuscuView() {
         for (const e of exercices) delete s[e.id]
         setSeries(s)
         ecrire('muscu.series', s)
+        const sansExtras = { ...extras, [code]: [] }
+        setExtras(sansExtras)
+        ecrire('muscu.extras', sansExtras)
         const duJour = taches.find(
             (t) => t.date_debut && memeJour(new Date(t.date_debut), new Date()) && codeDeTache(t) === code && t.statut !== 'fait'
         )
@@ -409,6 +554,160 @@ export default function MuscuView() {
         const debut = new Date(`${deplacement.date}T${deplacement.heure}`)
         if (isNaN(debut.getTime())) return
         deplacerVers(creneauManuel(seanceParCode(c), debut, lireReglages()))
+    }
+
+    function carteExo(bloc: Bloc, e: Exercice, extra = false) {
+            const faitesExo = series[e.id] || []
+            const ouvert = conseils === e.id
+            const passes = passesDe(e.id, suivi.seances)
+            const dernier = passes[0]
+            const conseil = conseilPour(e, passes, versKg(charges[e.id]))
+            const reco = recommandation(e, profil, new Date())
+            return (
+                <div key={e.id} className={`mu-exo${extra ? ' mu-exo-extra' : ''}`}>
+                    <div className="mu-exo-haut">
+                        {aUneIllustration(e.id) ? (
+                            <button
+                                className={`mu-exo-ill${zoom === e.id ? ' actif' : ''}`}
+                                onClick={() => setZoom(zoom === e.id ? null : e.id)}
+                                aria-label={`Voir l’exercice ${e.nom} en grand`}
+                                aria-expanded={zoom === e.id}
+                            >
+                                <ExoIllustration id={e.id} titre={`${e.nom} : ${legendeDe(e.id)}`} />
+                            </button>
+                        ) : (
+                            <span className="mu-exo-icone" title={MATERIEL[e.materiel].libelle}>
+                                {MATERIEL[e.materiel].emoji}
+                            </span>
+                        )}
+                        <div className="mu-exo-nom">
+                            <b>{e.nom.toUpperCase()}</b>
+                            <span>{e.machine}</span>
+                            <span className="mu-cible">
+                                {e.reps ? `${e.series > 1 ? `${e.series} × ` : ''}${e.reps}` : `${e.series} série${e.series > 1 ? 's' : ''}`}
+                            </span>
+                        </div>
+                        {extra && (
+                            <button className="mu-exo-retirer" onClick={() => retirerExtra(e.id)} aria-label={`Retirer ${e.nom} de la séance`}>
+                                ×
+                            </button>
+                        )}
+                    </div>
+                    {zoom === e.id && (
+                        <figure className="mu-exo-zoom">
+                            <ExoIllustration id={e.id} grand titre={`${e.nom} : ${legendeDe(e.id)}`} />
+                            <figcaption>
+                                <b>{legendeDe(e.id)}</b>
+                                <span>
+                                    {MATERIEL[e.materiel].emoji} {e.machine}
+                                </span>
+                            </figcaption>
+                        </figure>
+                    )}
+                    <div className="mu-exo-bas">
+                        <div className="mu-series">
+                            {Array.from({ length: e.series }, (_, i) => (
+                                <button
+                                    key={i}
+                                    className={`mu-serie ${faitesExo[i] ? 'fait' : ''}`}
+                                    onClick={() => basculerSerie(bloc, e, i)}
+                                    aria-label={`Série ${i + 1}`}
+                                >
+                                    {faitesExo[i] ? '✓' : i + 1}
+                                </button>
+                            ))}
+                        </div>
+                        {avecCharge(e) ? (
+                            <div className="mu-charge">
+                                <button onClick={() => ajusterCharge(e.id, -2.5)} aria-label="Moins">
+                                    −
+                                </button>
+                                <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.5"
+                                    min="0"
+                                    placeholder="0"
+                                    value={charges[e.id] ?? ''}
+                                    onChange={(ev) => changerCharge(e.id, ev.target.value)}
+                                    aria-label={`Charge pour ${e.nom}`}
+                                />
+                                <span>{e.parHaltere ? 'kg/haltère' : e.assistance ? 'kg aide' : 'kg'}</span>
+                                <button onClick={() => ajusterCharge(e.id, 2.5)} aria-label="Plus">
+                                    +
+                                </button>
+                            </div>
+                        ) : e.mesure ? (
+                            <div className="mu-charge">
+                                <button onClick={() => ajusterCharge(e.id, -pasDe(e))} aria-label="Moins">
+                                    −
+                                </button>
+                                <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step={pasDe(e)}
+                                    min="0"
+                                    placeholder="0"
+                                    value={charges[e.id] ?? ''}
+                                    onChange={(ev) => changerCharge(e.id, ev.target.value)}
+                                    aria-label={e.mesure === 'km' ? `Distance parcourue pour ${e.nom}` : e.mesure === 'reps' ? `Meilleure série (reps) pour ${e.nom}` : `Meilleure tenue (secondes) pour ${e.nom}`}
+                                />
+                                <span>{e.mesure === 'km' ? 'km' : e.mesure === 'reps' ? 'reps max' : 's max'}</span>
+                                <button onClick={() => ajusterCharge(e.id, pasDe(e))} aria-label="Plus">
+                                    +
+                                </button>
+                            </div>
+                        ) : null}
+                    </div>
+                    {reco?.type === 'charge' && !dernier && (
+                        <div className="mu-passe">
+                            <span className="mu-reco">
+                                🎯 Pour toi : {reco.min === reco.max ? `≈ ${fmtKg(reco.min)}` : `${fmtKg(reco.min)}–${fmtKg(reco.max)}`} kg
+                                {e.parHaltere ? ' par haltère' : e.assistance ? ' d’assistance' : ''}
+                                {versKg(charges[e.id]) === null && (
+                                    <button onClick={() => changerCharge(e.id, String(reco.min))}>Utiliser {fmtKg(reco.min)} kg</button>
+                                )}
+                            </span>
+                        </div>
+                    )}
+                    {reco?.type === 'texte' && (
+                        <div className="mu-passe">
+                            <span className="mu-reco-texte">{reco.texte}</span>
+                        </div>
+                    )}
+                    {dernier && (
+                        <div className="mu-passe">
+                            <span>
+                                Dernière fois : {dernier.kg !== null ? `${fmtKg(dernier.kg)} ${uniteCourte(e)} · ` : ''}
+                                {dernier.faites}/{dernier.total} · {RESSENTIS[dernier.ressenti].emoji}
+                            </span>
+                            {conseil && (
+                                <span className={`mu-conseil ${conseil.sens}`}>
+                                    {conseil.sens === 'monte' ? '⬆' : conseil.sens === 'descend' ? '⬇' : '='} {conseil.texte}
+                                    {conseil.kg !== undefined && versKg(charges[e.id]) !== conseil.kg && (
+                                        <button onClick={() => changerCharge(e.id, String(conseil.kg))}>Appliquer</button>
+                                    )}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {e.consignes.length > 0 && (
+                        <button className="mu-conseils-lien" onClick={() => setConseils(ouvert ? null : e.id)}>
+                            {ouvert ? '▾ Masquer les conseils' : '▸ Conseils'} · {e.muscles.map((m) => MUSCLES[m]).join(', ')}
+                        </button>
+                    )}
+                    {ouvert && (
+                        <div className="mu-conseils">
+                            <ul>
+                                {e.consignes.map((c) => (
+                                    <li key={c}>{c}</li>
+                                ))}
+                            </ul>
+                            {e.alternative && <p>🔁 Si c’est pris : {e.alternative}</p>}
+                        </div>
+                    )}
+                </div>
+            )
     }
 
     const parJour = Array.from({ length: 7 }, (_, i) => {
@@ -590,10 +889,76 @@ export default function MuscuView() {
                         </tbody>
                     </table>
                 )}
-                {message && <p className="mu-message">{message}</p>}
                     </>
                 )}
             </section>
+
+            {/* Objectifs muscu : les figures de callisthénie, étape par étape */}
+            {(() => {
+                const toutes = FIGURES.reduce((n, f) => n + f.etapes.length, 0)
+                const reussies = FIGURES.reduce((n, f) => n + f.etapes.filter((_, i) => etapeFaite(f.id, i + 1)).length, 0)
+                return (
+                    <div className="mu-carte mu-objectif mu-figures" style={{ '--c': '#ffb020' } as React.CSSProperties}>
+                        <div className="mu-objectif-tete">
+                            <span className="mu-objectif-titre">🏆 MES OBJECTIFS : LES FIGURES</span>
+                            <span className="mu-objectif-delai">
+                                {reussies}/{toutes} étapes
+                            </span>
+                        </div>
+                        <ul className="mu-figures-liste">
+                            {FIGURES.map((f) => {
+                                const faites = f.etapes.map((_, i) => etapeFaite(f.id, i + 1))
+                                const n = faites.filter(Boolean).length
+                                const prochaine = faites.findIndex((x) => !x)
+                                const ouverte = figureOuverte === f.id
+                                const s = seanceParCode(f.seance, niveaux[f.seance]?.n)
+                                return (
+                                    <li key={f.id} className={`mu-figure${ouverte ? ' ouverte' : ''}${prochaine === -1 ? ' finie' : ''}`}>
+                                        <button className="mu-figure-tete" aria-expanded={ouverte} onClick={() => setFigureOuverte(ouverte ? null : f.id)}>
+                                            <span className="mu-figure-emoji">{f.emoji}</span>
+                                            <span className="mu-figure-nom">
+                                                <b>{f.nom}</b>
+                                                <small>{prochaine === -1 ? '🏅 Maîtrisé !' : f.etapes[prochaine].titre}</small>
+                                            </span>
+                                            <span className="mu-objectif-barre mu-figure-barre" aria-label={`${n} étapes sur ${f.etapes.length}`}>
+                                                {faites.map((ok, i) => (
+                                                    <span key={i} className={ok ? 'fait' : i === prochaine ? 'actuel' : ''} />
+                                                ))}
+                                            </span>
+                                        </button>
+                                        {ouverte && (
+                                            <div className="mu-figure-detail">
+                                                <ol className="mu-jalons">
+                                                    {f.etapes.map((e, i) => (
+                                                        <li key={e.titre} className={faites[i] ? 'fait' : i === prochaine ? 'actuel' : ''}>
+                                                            <span className="mu-jalon-puce">{faites[i] ? '✓' : i + 1}</span>
+                                                            <span className="mu-jalon-texte">
+                                                                {e.titre}
+                                                                {i === prochaine && <small> · {e.detail}</small>}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ol>
+                                                <div className="mu-figure-actions">
+                                                    {prochaine !== -1 && (
+                                                        <button className="mu-defi-btn" onClick={() => validerEtape(f.id, prochaine + 1)}>
+                                                            ✅ J’ai réussi : {f.etapes[prochaine].titre}
+                                                        </button>
+                                                    )}
+                                                    <button className="mu-btn-sec" onClick={() => ouvrirSeance(f.seance)}>
+                                                        {s.emoji} Séance {f.seance} · niv. {s.niveau}
+                                                    </button>
+                                                </div>
+                                                <p className="mu-gris">Se travaille en {f.ou}.</p>
+                                            </div>
+                                        )}
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </div>
+                )
+            })()}
 
             {/* Objectif de l'année : 10 km, et les défis du cardio comme étapes */}
             {(() => {
@@ -679,7 +1044,7 @@ export default function MuscuView() {
             >
                 <div className="mu-detail-hero">
                     <div className="mu-detail-texte">
-                        <span className="mu-detail-lieu">{seance.lieu === 'maison' ? '🏠 À LA MAISON' : '🏋️ EN SALLE'}</span>
+                        <span className="mu-detail-lieu">{seance.lieu === 'maison' ? '🏠 MAISON OU 🏋️ SALLE' : '🏋️ EN SALLE'}</span>
                         <h2 className="mu-detail-titre">
                             <BoutonRepli ouvert={detailOuvert} onClick={() => basculerDetail()}>
                                 {seance.emoji} SÉANCE {seance.code}
@@ -726,6 +1091,11 @@ export default function MuscuView() {
                             {defiReussi !== undefined ? (
                                 <p className="mu-defi-ok">
                                     ✅ Réussi{defiReussi ? ` le ${new Date(defiReussi).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : ''}
+                                    {seance.niveau < seance.nbNiveaux && (
+                                        <button className="mu-defi-suivant" onClick={() => changerNiveau(seance.niveau + 1)}>
+                                            Passer au niveau {seance.niveau + 1} ›
+                                        </button>
+                                    )}
                                 </p>
                             ) : (
                                 <>
@@ -742,7 +1112,7 @@ export default function MuscuView() {
                                             ? '💪 Tu as fait assez de séances : tente le défi dès que tu te sens prêt !'
                                             : `Encore ${seance.defi.apres - faitesAuNiveau} séance${seance.defi.apres - faitesAuNiveau > 1 ? 's' : ''} conseillée${seance.defi.apres - faitesAuNiveau > 1 ? 's' : ''} avant de tenter (tu peux essayer avant si tu te sens prêt).`}
                                     </p>
-                                    <button className="mu-defi-btn" onClick={reussirDefi}>
+                                    <button className="mu-defi-btn" onClick={() => reussirDefi()}>
                                         {seance.niveau >= seance.nbNiveaux ? '🏅 J’ai réussi l’objectif' : '✅ J’ai réussi le défi'}
                                     </button>
                                 </>
@@ -789,155 +1159,100 @@ export default function MuscuView() {
                         {bloc.exercices.length > 1 && bloc.tours > 1 && (
                             <p className="mu-bloc-info">Enchaîne les exercices sans pause, puis repos.</p>
                         )}
-                        {bloc.exercices.map((e) => {
-                            const faitesExo = series[e.id] || []
-                            const ouvert = conseils === e.id
-                            const passes = passesDe(e.id, suivi.seances)
-                            const dernier = passes[0]
-                            const conseil = conseilPour(e, passes, versKg(charges[e.id]))
-                            const reco = recommandation(e, profil, new Date())
-                            return (
-                                <div key={e.id} className="mu-exo">
-                                    <div className="mu-exo-haut">
-                                        {aUneIllustration(e.id) ? (
-                                            <button
-                                                className={`mu-exo-ill${zoom === e.id ? ' actif' : ''}`}
-                                                onClick={() => setZoom(zoom === e.id ? null : e.id)}
-                                                aria-label={`Voir l’exercice ${e.nom} en grand`}
-                                                aria-expanded={zoom === e.id}
-                                            >
-                                                <ExoIllustration id={e.id} titre={`${e.nom} : ${legendeDe(e.id)}`} />
-                                            </button>
-                                        ) : (
-                                            <span className="mu-exo-icone" title={MATERIEL[e.materiel].libelle}>
-                                                {MATERIEL[e.materiel].emoji}
-                                            </span>
-                                        )}
-                                        <div className="mu-exo-nom">
-                                            <b>{e.nom.toUpperCase()}</b>
-                                            <span>{e.machine}</span>
-                                            <span className="mu-cible">
-                                                {e.series > 1 ? `${e.series} × ` : ''}
-                                                {e.reps}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {zoom === e.id && (
-                                        <figure className="mu-exo-zoom">
-                                            <ExoIllustration id={e.id} grand titre={`${e.nom} : ${legendeDe(e.id)}`} />
-                                            <figcaption>
-                                                <b>{legendeDe(e.id)}</b>
-                                                <span>
-                                                    {MATERIEL[e.materiel].emoji} {e.machine}
-                                                </span>
-                                            </figcaption>
-                                        </figure>
-                                    )}
-                                    <div className="mu-exo-bas">
-                                        <div className="mu-series">
-                                            {Array.from({ length: e.series }, (_, i) => (
-                                                <button
-                                                    key={i}
-                                                    className={`mu-serie ${faitesExo[i] ? 'fait' : ''}`}
-                                                    onClick={() => basculerSerie(bloc, e, i)}
-                                                    aria-label={`Série ${i + 1}`}
-                                                >
-                                                    {faitesExo[i] ? '✓' : i + 1}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {avecCharge(e) ? (
-                                            <div className="mu-charge">
-                                                <button onClick={() => ajusterCharge(e.id, -2.5)} aria-label="Moins">
-                                                    −
-                                                </button>
-                                                <input
-                                                    type="number"
-                                                    inputMode="decimal"
-                                                    step="0.5"
-                                                    min="0"
-                                                    placeholder="0"
-                                                    value={charges[e.id] ?? ''}
-                                                    onChange={(ev) => changerCharge(e.id, ev.target.value)}
-                                                    aria-label={`Charge pour ${e.nom}`}
-                                                />
-                                                <span>{e.parHaltere ? 'kg/haltère' : e.assistance ? 'kg aide' : 'kg'}</span>
-                                                <button onClick={() => ajusterCharge(e.id, 2.5)} aria-label="Plus">
-                                                    +
-                                                </button>
-                                            </div>
-                                        ) : e.mesure === 'km' ? (
-                                            <div className="mu-charge">
-                                                <button onClick={() => ajusterCharge(e.id, -0.5)} aria-label="Moins">
-                                                    −
-                                                </button>
-                                                <input
-                                                    type="number"
-                                                    inputMode="decimal"
-                                                    step="0.5"
-                                                    min="0"
-                                                    placeholder="0"
-                                                    value={charges[e.id] ?? ''}
-                                                    onChange={(ev) => changerCharge(e.id, ev.target.value)}
-                                                    aria-label={`Distance parcourue pour ${e.nom}`}
-                                                />
-                                                <span>km</span>
-                                                <button onClick={() => ajusterCharge(e.id, 0.5)} aria-label="Plus">
-                                                    +
-                                                </button>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                    {reco?.type === 'charge' && !dernier && (
-                                        <div className="mu-passe">
-                                            <span className="mu-reco">
-                                                🎯 Pour toi : {reco.min === reco.max ? `≈ ${fmtKg(reco.min)}` : `${fmtKg(reco.min)}–${fmtKg(reco.max)}`} kg
-                                                {e.parHaltere ? ' par haltère' : e.assistance ? ' d’assistance' : ''}
-                                                {versKg(charges[e.id]) === null && (
-                                                    <button onClick={() => changerCharge(e.id, String(reco.min))}>Utiliser {fmtKg(reco.min)} kg</button>
-                                                )}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {reco?.type === 'texte' && (
-                                        <div className="mu-passe">
-                                            <span className="mu-reco-texte">{reco.texte}</span>
-                                        </div>
-                                    )}
-                                    {dernier && (
-                                        <div className="mu-passe">
-                                            <span>
-                                                Dernière fois : {dernier.kg !== null ? `${fmtKg(dernier.kg)} ${e.mesure === 'km' ? 'km' : 'kg'} · ` : ''}
-                                                {dernier.faites}/{dernier.total} · {RESSENTIS[dernier.ressenti].emoji}
-                                            </span>
-                                            {conseil && (
-                                                <span className={`mu-conseil ${conseil.sens}`}>
-                                                    {conseil.sens === 'monte' ? '⬆' : conseil.sens === 'descend' ? '⬇' : '='} {conseil.texte}
-                                                    {conseil.kg !== undefined && versKg(charges[e.id]) !== conseil.kg && (
-                                                        <button onClick={() => changerCharge(e.id, String(conseil.kg))}>Appliquer</button>
-                                                    )}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                    <button className="mu-conseils-lien" onClick={() => setConseils(ouvert ? null : e.id)}>
-                                        {ouvert ? '▾ Masquer les conseils' : '▸ Conseils'} · {e.muscles.map((m) => MUSCLES[m]).join(', ')}
-                                    </button>
-                                    {ouvert && (
-                                        <div className="mu-conseils">
-                                            <ul>
-                                                {e.consignes.map((c) => (
-                                                    <li key={c}>{c}</li>
-                                                ))}
-                                            </ul>
-                                            {e.alternative && <p>🔁 Si c’est pris : {e.alternative}</p>}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
+                        {bloc.exercices.map((e) => carteExo(bloc, e))}
                     </div>
                 ))}
+
+                <div className="mu-bloc mu-extras">
+                    <div className="mu-bloc-tete">
+                        <span className="mu-etape-num">+</span>
+                        <b>EXERCICES EN PLUS</b>
+                        {extrasSeance.length > 0 && (
+                            <span className="mu-tags">
+                                <span className="mu-tag">{extrasSeance.length}</span>
+                            </span>
+                        )}
+                    </div>
+                    {extrasSeance.length === 0 && !ajout && (
+                        <p className="mu-bloc-info">Tu as fait un exercice qui n’est pas dans la liste ? Ajoute-le : ses séries comptent dans la séance et dans ton historique.</p>
+                    )}
+                    {extrasSeance.map((e) => carteExo(BLOC_EXTRA, e, true))}
+                    {ajout ? (
+                        <div className="mu-ajout">
+                            <label className="mu-ajout-label" htmlFor="mu-ajout-nom">
+                                Quel exercice ?
+                            </label>
+                            <input
+                                id="mu-ajout-nom"
+                                className="mu-ajout-nom"
+                                type="text"
+                                autoComplete="off"
+                                placeholder="Ex. : tractions, gainage, corde à sauter…"
+                                value={ajout.choisi ? ajout.choisi.nom : ajout.texte}
+                                onChange={(ev) => setAjout({ ...ajout, texte: ev.target.value, choisi: null, erreur: null })}
+                                autoFocus
+                            />
+                            {!ajout.choisi && ajout.texte.trim().length >= 2 && (() => {
+                                const q = sansAccents(ajout.texte.trim())
+                                const trouves = CATALOGUE.filter((x) => sansAccents(`${x.nom} ${x.machine}`).includes(q) && !exercices.some((p) => p.id === x.id)).slice(0, 6)
+                                return trouves.length > 0 ? (
+                                    <div className="mu-ajout-choix">
+                                        {trouves.map((x) => (
+                                            <button key={x.id} onClick={() => setAjout({ ...ajout, choisi: x, series: x.series, erreur: null })}>
+                                                <b>{x.nom}</b>
+                                                <small>{x.machine}</small>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : null
+                            })()}
+                            <div className="mu-ajout-ligne">
+                                <span>Séries</span>
+                                <div className="mu-charge">
+                                    <button onClick={() => setAjout({ ...ajout, series: Math.max(1, ajout.series - 1) })} aria-label="Une série de moins">
+                                        −
+                                    </button>
+                                    <b className="mu-ajout-nb">{ajout.series}</b>
+                                    <button onClick={() => setAjout({ ...ajout, series: Math.min(10, ajout.series + 1) })} aria-label="Une série de plus">
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                            {ajout.choisi ? (
+                                <p className="mu-gris">
+                                    Exercice du catalogue{uniteDe(ajout.choisi) ? ` · tu noteras : ${uniteDe(ajout.choisi)}` : ''}.{' '}
+                                    <button className="mu-lien" onClick={() => setAjout({ ...ajout, choisi: null })}>
+                                        Changer
+                                    </button>
+                                </p>
+                            ) : (
+                                <div className="mu-ajout-ligne">
+                                    <span>Je note</span>
+                                    <div className="mu-ajout-mesures" role="radiogroup" aria-label="Ce que tu notes">
+                                        {MESURES_PERSO.map((m) => (
+                                            <button key={m.v} role="radio" aria-checked={ajout.mesure === m.v} className={ajout.mesure === m.v ? 'actif' : ''} onClick={() => setAjout({ ...ajout, mesure: m.v })}>
+                                                {m.libelle}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {ajout.erreur && <p className="mu-erreur">{ajout.erreur}</p>}
+                            <div className="mu-boutons">
+                                <button className="mu-btn-sec" onClick={() => setAjout(null)}>
+                                    ANNULER
+                                </button>
+                                <button className="mu-btn" onClick={ajouterExtra}>
+                                    AJOUTER
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button className="mu-ajout-btn" onClick={() => setAjout({ texte: '', choisi: null, series: 3, mesure: 'reps', erreur: null })}>
+                            ➕ Ajouter un exercice fait en plus
+                        </button>
+                    )}
+                </div>
 
                 <div className="mu-etape">
                     <span className="mu-etape-num">✓</span>
@@ -960,7 +1275,7 @@ export default function MuscuView() {
                         <h3>BILAN DE LA SÉANCE</h3>
                         <p className="mu-gris">
                             {bilan.length > 0
-                                ? `Comment c’était pour chaque exercice ? Ça sert à te dire quand monter de ${fmtKg(PAS_KG)} kg.`
+                                ? `Comment c’était pour chaque exercice ? Ça sert à te dire quand progresser (charge, reps ou niveau).`
                                 : 'Aucune série cochée : la séance sera notée sans détail. La prochaine fois, touche les ronds de séries pendant la séance.'}
                         </p>
                         <table className="mu-table mu-table-bilan">
@@ -972,7 +1287,8 @@ export default function MuscuView() {
                                             <td>
                                                 <b>{exo?.nom ?? b.id}</b>
                                                 <small>
-                                                    {b.faites}/{b.total} séries{b.kg !== null ? ` · ${fmtKg(b.kg)} ${exo?.mesure === 'km' ? 'km' : 'kg'}` : ''}
+                                                    {b.faites}/{b.total} séries{b.kg !== null ? ` · ${fmtKg(b.kg)} ${uniteCourte(exo)}` : ''}
+                                                    {exo && extrasSeance.includes(exo) ? ' · en plus' : ''}
                                                 </small>
                                             </td>
                                             <td className="mu-droite">
@@ -1030,6 +1346,12 @@ export default function MuscuView() {
             <MontreMuscu />
 
             <ProgressionMuscu seances={suivi.seances} lundi={debutDeSemaine(new Date())} synchro={synchro} onSupprimer={supprimerSeance} />
+
+            {message && (
+                <div className={`mu-toast${repos ? ' haut' : ''}`} role="status" onClick={() => setMessage(null)}>
+                    {message}
+                </div>
+            )}
 
             {repos && (
                 <div className="mu-repos" role="timer">

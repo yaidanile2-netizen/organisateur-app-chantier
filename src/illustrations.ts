@@ -1019,7 +1019,194 @@ const MOLLETS_MARCHE = (uneJambe: boolean): Def => ({
 ILLUSTRATIONS['d-mollets-marche'] = MOLLETS_MARCHE(false)
 ILLUSTRATIONS['d-mollets-une-jambe'] = MOLLETS_MARCHE(true)
 
+// ===== Callisthénie (novembre 2026) =====
+const barreHaute = (y = 4.5, x1 = 28, x2 = 76): Element[] => [{ t: 'l', a: [x1, y], b: [x2, y], k: 'machine', w: 3 }]
+const SOL_BAS = 88.5 // sol plus bas pour les figures à l'envers (le corps entier tient dans le cadre)
+const mur = (x: number): Element => ({ t: 'r', x, y: 0, w: 8, h: 90, rx: 1, k: 'piece' })
+
+const TRACTIONS: Def = {
+    legende: 'Bras tendus en bas, menton au-dessus de la barre en haut',
+    pauses: true,
+    accent: ['tronc', 'bras'],
+    poses: [
+        { hanche: [50, 54], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [41, 86], genou: -1, orteil: 120 },
+        { hanche: [50, 38], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [41, 70], genou: -1, orteil: 120 },
+    ],
+    decor: barreHaute(),
+}
+ILLUSTRATIONS['a-tractions'] = TRACTIONS
+ILLUSTRATIONS['a-negatives'] = { ...TRACTIONS, legende: 'Menton au-dessus de la barre, descends le plus lentement possible', pauses: false, duree: 5, poses: [TRACTIONS.poses[1], TRACTIONS.poses[0]] }
+ILLUSTRATIONS['a-tractions-explosives'] = {
+    ...TRACTIONS,
+    legende: 'Tire vite et haut : la poitrine vers la barre',
+    duree: 1.8,
+    poses: [TRACTIONS.poses[0], { ...(TRACTIONS.poses[1] as PoseCote), hanche: [52, 36], main: [51, 5], pied: [43, 68] }],
+}
+ILLUSTRATIONS['a-australiennes'] = {
+    legende: 'Corps gainé sous la barre, tire la poitrine jusqu’à la barre',
+    pauses: true,
+    accent: ['tronc', 'bras'],
+    poses: [
+        { hanche: [51, 75], epaule: [74.5, 70], tete: 0, main: [76, 44], coude: 1, pied: [15, 83], genou: 1, orteil: -80 },
+        { hanche: [47, 65], epaule: [68, 53], tete: 0, main: [76, 44], coude: 1, pied: [15, 83], genou: 1, orteil: -80 },
+    ],
+    decor: [sol(), { t: 'l', a: [60, 44], b: [100, 44], k: 'machine', w: 3 }, { t: 'l', a: [96, 44], b: [96, SOL], k: 'machine', w: 3 }],
+}
+const MUSCLE_UP: Def = {
+    legende: 'Traction explosive, bascule au-dessus de la barre, puis pousse',
+    pauses: true,
+    accent: ['tronc', 'bras', 'epaules'],
+    poses: [
+        { hanche: [46, 70], epaule: [50, 46], tete: 0, main: [57, 40], coude: -1, pied: [38, 92], genou: -1, orteil: 120 },
+        { hanche: [52, 39], epaule: [55, 15], tete: 4, main: [58, 40], coude: -1, pied: [46, 74], genou: -1, orteil: 120 },
+    ],
+    decor: barreHaute(40, 30, 84),
+}
+ILLUSTRATIONS['a-muscle-up-elastique'] = {
+    ...MUSCLE_UP,
+    decor: [...MUSCLE_UP.decor, { t: 'l', a: [40, 40], b: J('genou', [0, 3]), k: 'elastique', w: 1.8 }, { t: 'l', a: J('genou', [0, 3]), b: [62, 40], k: 'elastique', w: 1.8 }],
+}
+ILLUSTRATIONS['a-muscle-up-negatif'] = { ...MUSCLE_UP, legende: 'Au-dessus de la barre, redescends lentement jusqu’en bas', pauses: false, duree: 5, poses: [MUSCLE_UP.poses[1], MUSCLE_UP.poses[0]] }
+ILLUSTRATIONS['a-dips-barre-droite'] = {
+    legende: 'Barre contre le ventre, descends coudes à 90°, puis pousse',
+    pauses: true,
+    accent: ['bras', 'ab', 'epaules'],
+    poses: [
+        { hanche: [52, 46], epaule: [55, 22], tete: 4, main: [58, 48], coude: -1, pied: [42, 80], genou: -1, orteil: 120 },
+        { hanche: [44, 58], epaule: [57, 38], tete: 8, main: [58, 48], coude: -1, pied: [30, 86], genou: -1, orteil: 120 },
+    ],
+    decor: [sol(), ...barreHaute(48.5, 30, 90), { t: 'l', a: [86, 48], b: [86, SOL], k: 'machine', w: 3 }],
+}
+
+// Pistol squat : une jambe tendue devant, l'autre plie jusqu'en bas.
+const PISTOL: Def = {
+    legende: 'Jambe libre tendue devant, descends tout en bas sur une jambe',
+    pauses: true,
+    accent: ['cuisse', 'fessiers'],
+    poses: [
+        { hanche: [50, 46], tronc: -88, tete: 0, main: [72, 30], coude: 1, pied: [52, 83], genou: -1, orteil: 0, pied2: [84, 70], genou2: -1, orteil2: -40 },
+        { hanche: [42, 73], tronc: -58, tete: -18, main: [80, 52], coude: 1, pied: [54, 83], genou: -1, orteil: 0, pied2: [88, 74], genou2: -1, orteil2: -60 },
+    ],
+    decor: [sol()],
+}
+ILLUSTRATIONS['b-pistol'] = PISTOL
+ILLUSTRATIONS['b-box-pistol'] = { ...PISTOL, legende: 'Sur une jambe, descends lentement jusqu’à t’asseoir sur le banc', decor: [sol(), ...banc(22, 73, 24)] }
+ILLUSTRATIONS['b-pistol-assiste'] = {
+    ...PISTOL,
+    legende: 'Tiens-toi au poteau, descends tout en bas sur une jambe',
+    poses: [
+        { ...(PISTOL.poses[0] as PoseCote), main: [94, 44] },
+        { ...(PISTOL.poses[1] as PoseCote), main: [94, 60] },
+    ],
+    decor: [sol(), { t: 'l', a: [97, 4], b: [97, SOL], k: 'machine', w: 3.4 }],
+}
+ILLUSTRATIONS['b-nordic'] = {
+    legende: 'À genoux, talons bloqués : bascule vers l’avant le plus lentement possible',
+    duree: 4,
+    accent: ['cuisse'],
+    poses: [
+        { hanche: [40, 63], tronc: -90, tete: 0, main: { rel: 'epaule', d: [8, 9] }, coude: 1, pied: [22, 82], genou: -1, orteil: 180 },
+        { hanche: [53.4, 68.6], tronc: -38, tete: 4, main: { rel: 'epaule', d: [9, 7] }, coude: 1, pied: [22, 82], genou: -1, orteil: 180 },
+    ],
+    decor: [sol(), { t: 'l', a: [14, 77], b: [26, 77], k: 'piece', w: 4.5, avant: true }, { t: 'l', a: [14, 77], b: [14, SOL], k: 'machine', w: 3 }],
+}
+const parallettes: Element[] = [
+    sol(),
+    { t: 'l', a: [46, 74], b: [60, 74], k: 'machine', w: 3.4, avant: true },
+    { t: 'l', a: [48, 74], b: [45, SOL], k: 'machine', w: 2.6 },
+    { t: 'l', a: [58, 74], b: [61, SOL], k: 'machine', w: 2.6 },
+]
+const lsit = (pied: P, legende: string, pied2?: P): Def => ({
+    legende,
+    duree: 3,
+    accent: ['tronc', 'cuisse'],
+    poses: [
+        { hanche: [50, 71], tronc: -92, tete: 0, main: [53, 74], coude: -1, pied, genou: -1, orteil: -10, ...(pied2 ? { pied2, genou2: -1 as Sens, orteil2: 10 } : {}) },
+        { hanche: [50, 70.5], tronc: -92, tete: 0, main: [53, 74], coude: -1, pied: [pied[0], pied[1] - 0.6], genou: -1, orteil: -10, ...(pied2 ? { pied2, genou2: -1 as Sens, orteil2: 10 } : {}) },
+    ],
+    decor: parallettes,
+})
+ILLUSTRATIONS['b-lsit-groupe'] = lsit([62, 78], 'Bras tendus, épaules basses, genoux remontés, pieds décollés')
+ILLUSTRATIONS['b-lsit-une-jambe'] = lsit([86, 71], 'Une jambe tendue à l’horizontale, l’autre groupée', [62, 78])
+ILLUSTRATIONS['d-lsit'] = lsit([86, 71], 'Jambes tendues à l’horizontale, épaules basses')
+
+// Équilibres sur les mains.
+ILLUSTRATIONS['d-corbeau'] = {
+    legende: 'Genoux sur les coudes, penche-toi jusqu’à décoller les pieds',
+    pauses: true,
+    accent: ['bras', 'epaules', 'tronc'],
+    poses: [
+        { hanche: [44, 60], epaule: [62, 66], tete: 30, main: [66, 83], coude: -1, pied: [44, 83], genou: -1, orteil: 0 },
+        { hanche: [47, 52], epaule: [67, 64], tete: 30, main: [66, 83], coude: -1, pied: [40, 66], genou: -1, orteil: 160 },
+    ],
+    decor: [sol()],
+}
+ILLUSTRATIONS['d-handstand-mur'] = {
+    legende: 'Ventre face au mur, monte en marchant avec les pieds, corps droit',
+    pauses: true,
+    accent: ['bras', 'epaules', 'tronc'],
+    poses: [
+        { hanche: [76, 44], epaule: [66, 64], tete: 10, main: [60, SOL_BAS], coude: 1, pied: [97, 54], genou: 1, orteil: 0 },
+        { hanche: [86, 38], epaule: [84, 62], tete: 0, main: [83, SOL_BAS], coude: 1, pied: [96, 3], genou: 1, orteil: -90 },
+    ],
+    decor: [sol(4, 98, SOL_BAS), mur(98)],
+}
+ILLUSTRATIONS['d-handstand-libre'] = {
+    legende: 'Monte d’un coup de pied, corps droit, corrige avec les doigts',
+    duree: 3,
+    accent: ['bras', 'epaules', 'tronc'],
+    poses: [
+        { hanche: [61, 38], epaule: [60, 62], tete: 0, main: [60, SOL_BAS], coude: 1, pied: [63, 1.5], genou: 1, orteil: -90 },
+        { hanche: [59, 38], epaule: [60, 62], tete: 0, main: [60, SOL_BAS], coude: 1, pied: [57, 1.5], genou: 1, orteil: -90 },
+    ],
+    decor: [sol(4, 116, SOL_BAS)],
+}
+ILLUSTRATIONS['d-pompes-equilibre'] = {
+    legende: 'En équilibre au mur, descends lentement la tête vers le coussin',
+    pauses: true,
+    accent: ['bras', 'epaules'],
+    poses: [
+        { hanche: [88, 38], epaule: [85, 62], tete: 0, main: [82, SOL_BAS], coude: -1, pied: [96, 3], genou: 1, orteil: -90 },
+        { hanche: [90, 50], epaule: [88, 74], tete: 0, main: [82, SOL_BAS], coude: -1, pied: [96, 15], genou: 1, orteil: -90 },
+    ],
+    decor: [sol(4, 98, SOL_BAS), mur(98), { t: 'r', x: 80, y: SOL_BAS - 3, w: 16, h: 3, rx: 1.5, k: 'piece' }],
+}
+
+// Front lever : sous la barre, corps à l'horizontale, bras tendus.
+const frontLever = (pied: P, genou: Sens, legende: string, pied2?: P): Def => ({
+    legende,
+    duree: 3,
+    accent: ['tronc', 'bras'],
+    poses: [
+        { hanche: [44, 34], epaule: [68, 33], tete: -6, main: [80, 8], coude: 1, pied, genou, orteil: 180, ...(pied2 ? { pied2, genou2: 1 as Sens, orteil2: 180 } : {}) },
+        { hanche: [44, 35], epaule: [68, 33.5], tete: -6, main: [80, 8], coude: 1, pied: [pied[0], pied[1] + 0.8], genou, orteil: 180, ...(pied2 ? { pied2, genou2: 1 as Sens, orteil2: 180 } : {}) },
+    ],
+    decor: barreHaute(8, 60, 104),
+})
+ILLUSTRATIONS['d-front-lever-groupe'] = frontLever([47, 21], 1, 'Bras tendus, genoux contre la poitrine, corps à l’horizontale')
+ILLUSTRATIONS['d-front-lever-avance'] = frontLever([28, 16], 1, 'Dos plat, cuisses à 90°, hanches à hauteur des épaules')
+ILLUSTRATIONS['d-front-lever-une-jambe'] = frontLever([8, 35], 1, 'Une jambe tendue dans l’alignement, l’autre groupée', [28, 16])
+ILLUSTRATIONS['d-suspension-active'] = {
+    legende: 'Bras tendus : descends puis remonte les épaules',
+    pauses: true,
+    accent: ['tronc', 'epaules'],
+    poses: [
+        { hanche: [50, 55], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [51, 91], genou: -1, orteil: 60 },
+        { hanche: [50, 51], tronc: -90, tete: 0, main: [51, 5], coude: 1, pied: [51, 87], genou: -1, orteil: 60 },
+    ],
+    decor: barreHaute(),
+}
+
 const ALIAS: Record<string, string> = {
+    'a-dips-assistes': 'a-dips',
+    'a-pompes-diamant': 'd-pompes',
+    'a-pompes-archer': 'd-pompes',
+    'a-pompes-claquees': 'd-pompes',
+    'a-emom': 'd-pompes',
+    'b-sdt-une-jambe': 'b-sdt-roumain-halteres',
+    'b-circuit': 'd-squat-saute',
+    'd-circuit': 'd-pompes',
+    'd-arch': 'd-superman',
     'a-tirage-serre': 'a-lat-pulldown',
     'a-elev-lat-poulie': 'a-elev-lat-halteres',
     'e-endurance': 'c-course',

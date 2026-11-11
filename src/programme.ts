@@ -1,6 +1,6 @@
-// Programme de la semaine : 4 séances, la muscu d'abord.
-//   A haut du corps (salle) · B bas du corps + abdos (salle) · C cardio athlétique (salle / dehors)
-//   D maison (épaules, posture, fessiers, gainage).
+// Programme de la semaine : 4 séances, la muscu d'abord, orientée callisthénie (novembre 2026).
+//   A tirer + pousser (vers le muscle-up) · B jambes + gainage (vers le pistol et le L-sit)
+//   C cardio athlétique (salle / dehors) · D skills (handstand, front lever), à la salle ou à la maison.
 // Objectif cardio de Daniel : retrouver la forme de quand il jouait au basket — se sentir fort,
 // rapide et léger, enchaîner des efforts comme dans un match sans être fatigué. Les 10 km sans
 // s'arrêter d'ici fin juin 2027 sont un bonus, pas la priorité.
@@ -70,7 +70,7 @@ export type Exercice = {
     charge?: boolean // false pour les exercices sans charge (planche, cardio)
     parHaltere?: boolean // la charge notée est celle d'un seul haltère
     assistance?: boolean // machine d'assistance : moins de kg = plus dur
-    mesure?: 'km' // course : on note la distance parcourue (km) au lieu d'une charge
+    mesure?: 'km' | 'reps' | 'sec' // on note la distance (km), le meilleur nombre de reps ou la meilleure tenue (s)
 }
 
 export type Bloc = { titre: string; tours: number; repos: number; exercices: Exercice[] }
@@ -90,7 +90,7 @@ export type NiveauSeance = {
 }
 
 /** Un défi à tenter quand on se sent prêt, conseillé après `apres` séances au niveau. */
-export type Defi = { titre: string; detail: string; apres: number }
+export type Defi = { titre: string; detail: string; apres: number; figure?: { id: FigureId; etape: number } }
 
 export type SeanceBase = {
     code: CodeSeance
@@ -433,10 +433,259 @@ const D = {
     ]),
 }
 
+
+// ---------- Callisthénie (programme hybride, novembre 2026) ----------
+// Choix de Daniel : priorité au poids du corps et à l'endurance musculaire plutôt qu'à soulever lourd,
+// avec quelques charges légères (jambes, épaules) pour garder tout le corps. Les défis de chaque niveau
+// sont les étapes vers 5 figures : muscle-up, handstand, front lever, L-sit et pistol squat.
+
+const BARRE = 'Barre de traction (salle, parc ou barre de porte)'
+const reps = (e: Exercice, series: number, r: string): Exercice => ({ ...e, series, reps: r, mesure: 'reps' })
+const tenue = (e: Exercice, series: number, r: string): Exercice => ({ ...e, series, reps: r, mesure: 'sec' })
+
+const KA = {
+    australiennes: ex('a-australiennes', 'Tractions australiennes', 'Barre basse (Smith machine ou rack), corps sous la barre', 'corps', ['dos', 'biceps', 'deltoides-arriere'], 3, '10–12', [
+        'Corps gainé comme une planche, talons au sol',
+        'Tire la poitrine jusqu’à la barre et serre les omoplates 1 seconde',
+        'Plus dur : pieds plus loin, ou posés sur un banc',
+    ], { mesure: 'reps', alternative: 'Tirage horizontal à la poulie' }),
+    negatives: ex('a-negatives', 'Tractions négatives', `${BARRE}, avec un banc pour monter`, 'corps', ['dos', 'biceps', 'avant-bras'], 3, '3 descentes lentes (5 s)', [
+        'Monte avec le banc, menton au-dessus de la barre',
+        'Descends le plus lentement possible jusqu’aux bras tendus',
+        'Note ta descente la plus longue, en secondes',
+    ], { mesure: 'sec', alternative: 'Tractions assistées' }),
+    tractions: ex('a-tractions', 'Tractions strictes', `${BARRE}, prise pronation`, 'corps', ['dos', 'biceps', 'avant-bras'], 4, 'max − 1', [
+        'Bras tendus en bas, menton au-dessus de la barre en haut',
+        'Aucun élan : jambes serrées, abdos gainés',
+        'Bloqué avant la fin ? Termine la série avec 1 ou 2 négatives',
+    ], { mesure: 'reps', alternative: 'Tractions assistées' }),
+    explosives: ex('a-tractions-explosives', 'Tractions explosives', BARRE, 'corps', ['dos', 'biceps', 'trapezes'], 4, '3–5', [
+        'Tire le plus vite possible : vise la poitrine à la barre, pas le menton',
+        'Descends contrôlé, puis repars aussitôt',
+        'Arrête la série dès que la vitesse baisse',
+    ], { mesure: 'reps' }),
+    muscleUpElastique: ex('a-muscle-up-elastique', 'Muscle-up avec élastique', `${BARRE} + gros élastique sous les genoux`, 'corps', ['dos', 'pectoraux', 'triceps', 'epaules'], 5, '1–3', [
+        'Traction explosive vers le bas de la poitrine, légèrement en arc',
+        'En haut : bascule vite poignets et épaules au-dessus de la barre',
+        'Finis par une poussée de dips sur la barre',
+    ], { mesure: 'reps', alternative: 'Tractions explosives puis dips sur barre droite' }),
+    muscleUpNegatif: ex('a-muscle-up-negatif', 'Muscle-up négatif', `${BARRE}, monte au-dessus avec un banc`, 'corps', ['dos', 'pectoraux', 'triceps'], 3, '2–3 descentes lentes', [
+        'Départ bras tendus au-dessus de la barre',
+        'Descends lentement : dips, transition, puis traction jusqu’en bas',
+    ], { mesure: 'reps' }),
+    dipsBarre: ex('a-dips-barre-droite', 'Dips sur barre droite', 'Barre de Smith réglée à hauteur de hanche', 'corps', ['pectoraux', 'triceps', 'epaules'], 3, '6–10', [
+        'Buste au-dessus de la barre, barre contre le bas du ventre',
+        'Descends coudes à 90°, pousse en te penchant vers l’avant',
+        'C’est la dernière partie du muscle-up',
+    ], { mesure: 'reps', alternative: 'Dips aux barres parallèles' }),
+    dipsAssistes: ex('a-dips-assistes', 'Dips assistés', 'Machine de tractions / dips avec contrepoids', 'machine', ['pectoraux', 'triceps', 'epaules'], 3, '10–12', [
+        'Buste légèrement penché, descends coudes à 90°',
+        'Ici, moins de kg = plus dur : baisse l’assistance quand c’est facile',
+    ], { assistance: true, alternative: 'Dips sur un banc, pieds au sol' }),
+    pompesDiamant: ex('a-pompes-diamant', 'Pompes diamant', 'Mains rapprochées sous la poitrine (pouces et index en losange)', 'corps', ['triceps', 'pectoraux'], 3, '8–12', [
+        'Coudes qui frôlent le corps en descendant',
+        'Corps gainé, poitrine jusqu’aux mains',
+    ], { mesure: 'reps', alternative: 'Pompes classiques' }),
+    pompesArcher: ex('a-pompes-archer', 'Pompes archer', 'Mains très écartées, un bras tendu sur le côté', 'corps', ['pectoraux', 'triceps', 'epaules'], 3, '5 par côté', [
+        'Descends vers une main, l’autre bras reste tendu',
+        'Étape vers la pompe à un bras, et force utile pour le muscle-up',
+    ], { mesure: 'reps' }),
+    pompesClaquees: ex('a-pompes-claquees', 'Pompes explosives', 'Poids du corps, sur un tapis', 'corps', ['pectoraux', 'triceps', 'epaules'], 3, '5–8', [
+        'Pousse assez fort pour décoller les mains (claque si tu peux)',
+        'Réception souple, coudes légèrement fléchis',
+    ], { mesure: 'reps' }),
+    emomPompes: ex('a-emom', 'EMOM pompes + australiennes', 'Chrono : une série au début de chaque minute', 'corps', ['pectoraux', 'dos', 'triceps', 'cardio'], 8, '8 min · chaque minute : 6 pompes + 5 australiennes', [
+        'Au top de chaque minute : fais les reps, puis repos jusqu’à la minute suivante',
+        'Coche un rond par minute. Trop dur ? Enlève 1 rep, pas une minute',
+    ]),
+    emomTractions: ex('a-emom', 'EMOM tractions + pompes', 'Chrono : une série au début de chaque minute', 'corps', ['pectoraux', 'dos', 'triceps', 'cardio'], 10, '10 min · chaque minute : 2–3 tractions + 8 pompes', [
+        'Au top de chaque minute : fais les reps, puis repos jusqu’à la minute suivante',
+        'Des reps faciles et propres : c’est de l’endurance, pas de l’échec',
+    ]),
+}
+
+const KB = {
+    boxPistol: ex('b-box-pistol', 'Pistol sur un banc', 'Banc ou box derrière toi, sur une jambe', 'corps', ['quadriceps', 'fessiers'], 3, '5–8 par jambe', [
+        'Une jambe tendue devant, bras devant pour l’équilibre',
+        'Descends lentement jusqu’à t’asseoir sur le banc, sans te laisser tomber',
+        'Remonte sur une jambe. Facile ? Prends un banc plus bas',
+    ], { mesure: 'reps', alternative: 'Fentes bulgares' }),
+    pistolAssiste: ex('b-pistol-assiste', 'Pistol assisté', 'Tenu à un poteau du rack ou à des sangles (TRX)', 'corps', ['quadriceps', 'fessiers', 'mollets'], 4, '5 par jambe', [
+        'Descends tout en bas sur une jambe, talon au sol',
+        'Les mains aident le moins possible, surtout à la remontée',
+    ], { mesure: 'reps', alternative: 'Pistol sur un banc bas' }),
+    pistol: ex('b-pistol', 'Pistol squat', 'Poids du corps, sur une jambe', 'corps', ['quadriceps', 'fessiers', 'mollets', 'abdos'], 4, '3–5 par jambe', [
+        'Bras et jambe libre tendus devant pour faire contrepoids',
+        'Descends contrôlé jusqu’en bas, talon collé au sol',
+        'Petit poids (2 kg) dans les mains si tu bascules en arrière',
+    ], { mesure: 'reps', alternative: 'Pistol assisté' }),
+    nordic: ex('b-nordic', 'Nordic curl négatif', 'À genoux sur un tapis, talons bloqués sous une barre ou une machine', 'corps', ['ischios'], 3, '4–6', [
+        'Corps droit des genoux à la tête, fesses serrées',
+        'Descends le plus lentement possible vers l’avant',
+        'Rattrape-toi avec les mains, repousse pour remonter',
+    ], { mesure: 'reps', alternative: 'Leg curl' }),
+    lsitGroupe: ex('b-lsit-groupe', 'L-sit groupé', 'Barres de dips, ou 2 haltères posés au sol', 'corps', ['abdos', 'triceps', 'epaules'], 4, '10–20 s', [
+        'Bras tendus, épaules basses (pousse le sol)',
+        'Genoux remontés vers la poitrine, pieds décollés',
+        'Note ta meilleure tenue en secondes',
+    ], { mesure: 'sec', alternative: 'Relevés de genoux à la chaise romaine' }),
+    lsitUneJambe: ex('b-lsit-une-jambe', 'L-sit une jambe', 'Barres de dips ou parallettes', 'corps', ['abdos', 'triceps', 'quadriceps'], 4, '8–12 s', [
+        'Une jambe tendue à l’horizontale, l’autre groupée',
+        'Change de jambe à chaque série',
+    ], { mesure: 'sec' }),
+    sdtUneJambe: ex('b-sdt-une-jambe', 'Soulevé de terre une jambe', '1 haltère léger, dans la main opposée', 'halteres', ['ischios', 'fessiers', 'moyen-fessier'], 3, '10 par jambe', [
+        'Bascule le buste en avant, jambe arrière tendue dans l’alignement',
+        'Hanches bien de face, remonte en serrant le fessier',
+    ], { alternative: 'Soulevé de terre roumain aux haltères' }),
+    circuit: ex('b-circuit', 'Circuit endurance jambes', 'Sans matériel, à enchaîner', 'corps', ['quadriceps', 'fessiers', 'mollets', 'cardio'], 3, '15 squats + 10 fentes sautées + 30 s de chaise au mur', [
+        'Un rond = un tour complet, 1 min de repos entre les tours',
+        'Rythme régulier : c’est l’endurance des jambes qui compte, pas la vitesse',
+    ]),
+}
+
+const KD = {
+    corbeau: ex('d-corbeau', 'Corbeau (crow)', 'Au sol, mains à plat, genoux posés sur les coudes', 'corps', ['epaules', 'abdos', 'avant-bras'], 4, 'jusqu’à 20 s', [
+        'Regarde devant tes mains, pas tes pieds',
+        'Penche-toi en avant jusqu’à ce que les pieds décollent tout seuls',
+        'Coussin devant la tête au début. Note ta meilleure tenue',
+    ], { mesure: 'sec' }),
+    handstandMur: ex('d-handstand-mur', 'Équilibre ventre au mur', 'Ventre face au mur : monte en marchant avec les pieds', 'corps', ['epaules', 'triceps', 'abdos'], 4, '20–30 s', [
+        'Mains à 20-30 cm du mur, bras tendus, pousse le sol',
+        'Corps droit : côtes rentrées, fesses serrées, regard entre les mains',
+        'Redescends en marchant, jamais en te laissant tomber',
+    ], { mesure: 'sec', alternative: 'Pompes piquées pieds sur un banc' }),
+    handstandLibre: ex('d-handstand-libre', 'Handstand libre', 'Sol dégagé, coussin ou tapis devant', 'corps', ['epaules', 'triceps', 'abdos', 'avant-bras'], 6, 'essais de 5–15 s', [
+        'Monte d’un coup de pied (kick-up), une jambe après l’autre',
+        'Corrige avec les doigts : appuie fort si tu pars vers l’avant',
+        'Sortie de secours : pivote sur une main et redescends sur le côté',
+    ], { mesure: 'sec' }),
+    pompesEquilibre: ex('d-pompes-equilibre', 'Pompes en équilibre au mur', 'Dos au mur, en équilibre, tête vers un coussin', 'corps', ['epaules', 'triceps', 'trapezes'], 3, '3–5 (amplitude partielle)', [
+        'Descends lentement la tête vers le coussin, coudes vers l’avant',
+        'Commence à mi-hauteur, puis descends un peu plus chaque semaine',
+    ], { mesure: 'reps', alternative: 'Pompes piquées pieds surélevés' }),
+    suspension: ex('d-suspension-active', 'Suspension active', BARRE, 'corps', ['dos', 'trapezes', 'avant-bras'], 3, '10 tirages d’épaules + 20 s', [
+        'Bras tendus : descends puis remonte les épaules sans plier les coudes',
+        'Finis suspendu, épaules engagées. Note ta tenue en secondes',
+    ], { mesure: 'sec' }),
+    frontGroupe: ex('d-front-lever-groupe', 'Front lever groupé', BARRE, 'corps', ['dos', 'abdos', 'epaules'], 4, '8–15 s', [
+        'Bras tendus, tire la barre vers les hanches pour basculer à l’horizontale',
+        'Genoux serrés contre la poitrine, dos arrondi',
+        'Note ta meilleure tenue',
+    ], { mesure: 'sec', alternative: 'Sans barre : hollow hold' }),
+    frontAvance: ex('d-front-lever-avance', 'Front lever groupé avancé', BARRE, 'corps', ['dos', 'abdos', 'epaules', 'lombaires'], 4, '6–10 s', [
+        'Comme le groupé, mais dos plat et cuisses à 90° du buste',
+        'Hanches à la hauteur des épaules',
+    ], { mesure: 'sec' }),
+    frontUneJambe: ex('d-front-lever-une-jambe', 'Front lever une jambe', BARRE, 'corps', ['dos', 'abdos', 'epaules', 'lombaires'], 4, '5–8 s', [
+        'Une jambe tendue dans l’alignement du corps, l’autre groupée',
+        'Change de jambe à chaque série',
+    ], { mesure: 'sec' }),
+    lsit: ex('d-lsit', 'L-sit jambes tendues', 'Barres de dips, parallettes ou 2 chaises solides', 'corps', ['abdos', 'quadriceps', 'triceps'], 4, '5–15 s', [
+        'Jambes tendues et serrées à l’horizontale, pointes de pieds',
+        'Épaules basses, bras verrouillés',
+    ], { mesure: 'sec' }),
+    arch: ex('d-arch', 'Arch hold', 'Allongé sur le ventre, bras tendus devant', 'corps', ['lombaires', 'fessiers', 'deltoides-arriere'], 3, '20–30 s', [
+        'Décolle bras, poitrine et jambes, regard vers le sol',
+        'L’opposé du hollow : les deux ensemble font un corps solide',
+    ], { mesure: 'sec' }),
+    circuit: ex('d-circuit', 'Circuit endurance', 'Sans matériel, à enchaîner', 'corps', ['pectoraux', 'quadriceps', 'abdos', 'cardio'], 3, '10 pompes + 15 squats + 10 relevés de genoux + 30 s de planche', [
+        'Un rond = un tour complet, 1 min de repos entre les tours',
+        'Tout propre, sans pause dans le tour',
+    ]),
+}
+
+const ECHAUFFEMENT_POIGNETS = 'Poignets : cercles, puis appui sur les paumes et le dos des mains (1 min)'
+
+// ---------- Figures de callisthénie : les objectifs muscu de Daniel ----------
+
+export type FigureId = 'muscle-up' | 'handstand' | 'front-lever' | 'l-sit' | 'pistol'
+export type Figure = {
+    id: FigureId
+    nom: string
+    emoji: string
+    seance: CodeSeance // séance où elle se travaille le plus
+    ou: string
+    etapes: { titre: string; detail: string }[]
+}
+
+export const FIGURES: Figure[] = [
+    {
+        id: 'muscle-up',
+        nom: 'Muscle-up',
+        emoji: '🧗',
+        seance: 'A',
+        ou: 'Séance A (tirer + pousser)',
+        etapes: [
+            { titre: '1 traction stricte', detail: 'Bras tendus en bas, menton au-dessus de la barre, sans élan.' },
+            { titre: '8 tractions strictes', detail: 'D’affilée, sans balancer.' },
+            { titre: '5 tractions explosives', detail: 'Poitrine à la hauteur de la barre à chaque rep.' },
+            { titre: '1 muscle-up avec élastique', detail: 'Traction, transition et dips sur la barre, avec l’aide d’un élastique.' },
+            { titre: '1 muscle-up strict', detail: 'Sans élastique et sans gros balancier.' },
+        ],
+    },
+    {
+        id: 'handstand',
+        nom: 'Handstand',
+        emoji: '🤸',
+        seance: 'D',
+        ou: 'Séance D (skills)',
+        etapes: [
+            { titre: '20 s de corbeau', detail: 'En équilibre sur les mains, genoux sur les coudes.' },
+            { titre: '30 s ventre au mur', detail: 'Corps droit, bras tendus.' },
+            { titre: '60 s ventre au mur', detail: 'Tu tiens 1 minute sans t’effondrer dans les épaules.' },
+            { titre: '10 s de handstand libre', detail: 'Sans mur, sans marcher sur les mains.' },
+            { titre: '30 s de handstand libre', detail: 'L’équilibre parfait.' },
+        ],
+    },
+    {
+        id: 'front-lever',
+        nom: 'Front lever',
+        emoji: '🛸',
+        seance: 'D',
+        ou: 'Séance D (skills)',
+        etapes: [
+            { titre: '30 s de suspension active', detail: 'Épaules engagées, bras tendus.' },
+            { titre: '15 s de front lever groupé', detail: 'Corps à l’horizontale, genoux contre la poitrine.' },
+            { titre: '10 s groupé avancé', detail: 'Dos plat, cuisses à 90°.' },
+            { titre: '8 s avec une jambe tendue', detail: 'De chaque côté.' },
+            { titre: '5 s de front lever complet', detail: 'Corps tendu à l’horizontale sous la barre.' },
+        ],
+    },
+    {
+        id: 'l-sit',
+        nom: 'L-sit',
+        emoji: '🪑',
+        seance: 'B',
+        ou: 'Séances B et D (gainage)',
+        etapes: [
+            { titre: '30 s de hollow hold', detail: 'Au sol, bas du dos collé.' },
+            { titre: '20 s de L-sit groupé', detail: 'Sur des barres ou des haltères, pieds décollés.' },
+            { titre: '10 s de L-sit une jambe', detail: 'Une jambe tendue à l’horizontale, de chaque côté.' },
+            { titre: '15 s de L-sit jambes tendues', detail: 'Les deux jambes tendues à l’horizontale.' },
+        ],
+    },
+    {
+        id: 'pistol',
+        nom: 'Pistol squat',
+        emoji: '🦵',
+        seance: 'B',
+        ou: 'Séance B (jambes)',
+        etapes: [
+            { titre: '15 fentes bulgares par jambe', detail: 'Au poids du corps, genou arrière qui frôle le sol.' },
+            { titre: '8 pistols sur un banc par jambe', detail: 'Descente lente jusqu’au banc, remontée sur une jambe.' },
+            { titre: '5 pistols assistés par jambe', detail: 'Tout en bas, en t’aidant le moins possible.' },
+            { titre: '5 pistols libres par jambe', detail: 'Sans aide, talon au sol.' },
+        ],
+    },
+]
+
+const fig = (id: FigureId, etape: number) => ({ id, etape })
+
 // ---------- Les séances, par niveau ----------
 
 export const OBJECTIF_KM = 10 // bonus de fin d'année
 export const OBJECTIF_DATE = '2027-06-30'
+
 
 export const PROGRAMME: SeanceBase[] = [
     {
@@ -444,57 +693,73 @@ export const PROGRAMME: SeanceBase[] = [
         lieu: 'salle',
         emoji: '💪',
         degrade: ['#0b2a6b', '#1e5bd8'],
-        titre: 'Haut du corps',
-        court: 'Haut du corps (pecs, dos, épaules, bras)',
+        titre: 'Haut du corps : tirer + pousser',
+        court: 'Haut du corps en callisthénie (tractions, dips, pompes) + épaules',
         couleur: '#4d9fff',
-        focus: 'Musculation : pectoraux, dos, épaules, biceps et triceps.',
+        focus: 'Callisthénie : tractions, dips et pompes jusqu’au muscle-up, avec un peu de poulie légère pour les épaules. Des reps propres et beaucoup d’endurance, plutôt que du lourd.',
         niveaux: [
             {
-                nom: 'Machines guidées',
-                resume: 'Les grands mouvements sur machines, pour apprendre la technique sans risque.',
-                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, puis 1 série légère de 15 reps au chest press'],
+                nom: 'Bases',
+                resume: 'Australiennes, négatives et tractions assistées pour construire ta première traction, pompes et dips assistés pour pousser.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, 10 tirages d’épaules suspendu à la barre, 10 pompes faciles'],
                 blocs: [
-                    bloc('Pousser + tirer', 3, 75, [A.chestPress, A.latPulldown]),
-                    bloc('Épaules + dos', 3, 75, [A.shoulderPress, A.seatedRow]),
-                    bloc('Pecs + arrière d’épaules', 3, 60, [A.pecDeck, A.oiseauMachine]),
-                    bloc('Bras', 3, 45, [A.curlPoulie, A.tricepsCorde]),
+                    bloc('Tirer', 3, 75, [KA.australiennes, KA.negatives]),
+                    bloc('Tractions assistées', 3, 75, [avec(A.tractionsAssistees, 3, '8–10')]),
+                    bloc('Pousser', 3, 60, [reps(D.pompes, 3, 'max − 2'), KA.dipsAssistes]),
+                    bloc('Épaules (léger)', 2, 45, [avec(A.facePull, 2, '15–20'), avec(A.elevLatPoulie, 2, '15 par bras')]),
+                    bloc('Finisher', 1, 0, [KA.emomPompes]),
                 ],
-                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
-                progression: 'Toutes les séries réussies en haut de la fourchette ? +2,5 kg la prochaine fois.',
-                monter: 'Niveau 2 quand tout te semble facile 2 séances de suite (souvent après 4 à 6 semaines).',
-                defi: { titre: 'Chest press et tirage vertical : 3 × 12 propres', detail: 'Avec ta charge actuelle, les 3 séries de 12 sans tricher (dos collé, descente lente) sur les deux machines.', apres: 8 },
+                retourAuCalme: ['Suspension passive à la barre (20 s)', '2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Négatives : +1 s de descente par séance. Assistance : −2,5 kg quand les 3 séries de 10 passent. Pompes : +1 rep par série.',
+                monter: 'Niveau 2 quand tu réussis ta première traction stricte.',
+                defi: { titre: '1 traction stricte', detail: 'Bras tendus en bas, menton au-dessus de la barre, sans élan. La 1re étape du muscle-up.', apres: 8, figure: fig('muscle-up', 1) },
             },
             {
-                nom: 'Haltères',
-                resume: 'Les haltères obligent chaque bras à se stabiliser seul : plus de muscles travaillent.',
-                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', '1 série de 12 au développé couché avec des haltères légers'],
+                nom: 'Tractions',
+                resume: 'Les vraies tractions arrivent : tu accumules les reps, et les dips passent au poids du corps.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, 10 tirages d’épaules à la barre', '1 série facile de 5 australiennes et 8 pompes'],
                 blocs: [
-                    bloc('Développé couché', 4, 90, [A.dcHalteres]),
-                    bloc('Dos + épaules', 3, 75, [A.tirageSerre, A.militaireHalteres]),
-                    bloc('Rowing', 3, 60, [A.rowingHaltere]),
-                    bloc('Épaules 3D', 3, 45, [A.elevLatHalteres, A.facePull]),
-                    bloc('Bras', 3, 45, [A.curlIncline, A.tricepsNuque]),
+                    bloc('Tractions', 4, 90, [KA.tractions]),
+                    bloc('Dips', 3, 75, [reps(A.dips, 3, '6–10')]),
+                    bloc('Tirer + pousser', 3, 60, [avec(KA.australiennes, 3, '12, pieds sur un banc'), KA.pompesDiamant]),
+                    bloc('Épaules', 3, 45, [reps(D.pike, 3, '8–10'), avec(A.facePull, 3, '15–20')]),
+                    bloc('Finisher', 1, 0, [KA.emomTractions]),
                 ],
-                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
-                progression: 'Haltères : passe à la paire suivante quand tu fais le haut de la fourchette sur toutes les séries.',
-                monter: 'Niveau 3 quand tu es à l’aise techniquement avec les haltères et que tout est facile 2 séances de suite.',
-                defi: { titre: 'Développé couché haltères : 4 × 10 avec 2 × 14 kg', detail: 'Environ 40 % de ton poids au total. Omoplates serrées, descente jusqu’à la poitrine.', apres: 10 },
+                retourAuCalme: ['Suspension passive à la barre (20 s)', '2 min d’étirements pectoraux, dos et épaules'],
+                progression: '+1 rep au total des tractions chaque séance (par exemple 3-3-2-2, puis 3-3-3-2).',
+                monter: 'Niveau 3 quand tu fais 8 tractions strictes d’affilée.',
+                defi: { titre: '8 tractions strictes d’affilée', detail: 'Sans balancer, bras tendus à chaque rep.', apres: 10, figure: fig('muscle-up', 2) },
             },
             {
-                nom: 'Barre et force',
-                resume: 'Barre, tractions et dips : moins de répétitions, plus lourd, pour gagner en force.',
-                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', 'Montée au développé couché : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
+                nom: 'Explosif',
+                resume: 'Tirer vite et haut : tractions explosives, pompes archer et claquées. C’est ce qui prépare le muscle-up.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, 5 tractions faciles, 10 pompes'],
                 blocs: [
-                    bloc('Développé couché', 4, 120, [A.dcBarre]),
-                    bloc('Tractions', 4, 90, [A.tractionsAssistees]),
-                    bloc('Incliné + rowing', 3, 90, [A.inclineHalteres, A.rowingBarre]),
-                    bloc('Épaules + dips', 3, 60, [A.elevLatPoulie, A.dips]),
-                    bloc('Bras + posture', 3, 45, [A.curlEz, A.facePull]),
+                    bloc('Tractions explosives', 4, 90, [KA.explosives]),
+                    bloc('Dips', 4, 75, [reps(A.dips, 4, '10–15'), KA.dipsBarre]),
+                    bloc('Pousser', 3, 60, [KA.pompesArcher, KA.pompesClaquees]),
+                    bloc('Tirer + épaules', 3, 45, [avec(KA.tractions, 3, 'max − 2, prise serrée'), avec(A.elevLatPoulie, 3, '15 par bras')]),
+                    bloc('Finisher', 1, 0, [KA.emomTractions]),
                 ],
-                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
-                progression: 'Barre : +2,5 kg dès que les 4 séries sont faites en haut de la fourchette. Tractions : −2,5 kg d’assistance.',
-                monter: 'Dernier niveau : continue d’ajouter du poids. Quand les tractions se font sans assistance, on pourra ajouter un niveau 4.',
-                defi: { titre: '🏅 1 traction stricte, sans assistance', detail: 'Bras tendus en bas, menton au-dessus de la barre, sans élan. Le défi ultime du haut du corps.', apres: 12 },
+                retourAuCalme: ['Suspension passive à la barre (20 s)', '2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Tractions explosives : monte un peu plus haut chaque semaine (menton → clavicules → poitrine).',
+                monter: 'Niveau 4 quand tu fais 5 tractions explosives poitrine à la barre.',
+                defi: { titre: '5 tractions explosives, poitrine à la barre', detail: 'Les 5 dans la même série, aussi hautes la dernière que la première.', apres: 10, figure: fig('muscle-up', 3) },
+            },
+            {
+                nom: 'Muscle-up',
+                resume: 'Les transitions avec élastique, les négatives et les dips sur barre : tu assembles le muscle-up.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et de poignets, 5 tractions explosives faciles, 5 dips sur barre'],
+                blocs: [
+                    bloc('Muscle-up', 5, 120, [KA.muscleUpElastique]),
+                    bloc('Négatives', 3, 90, [KA.muscleUpNegatif]),
+                    bloc('Force', 3, 75, [avec(KA.explosives, 3, '4–5'), avec(KA.dipsBarre, 3, '10–12')]),
+                    bloc('Pousser', 3, 60, [avec(KA.pompesArcher, 3, '6 par côté'), avec(A.facePull, 3, '15–20')]),
+                ],
+                retourAuCalme: ['Suspension passive à la barre (20 s)', '2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Élastique plus fin dès que tu enchaînes 3 muscle-up propres.',
+                monter: 'Dernier niveau : après le muscle-up, vise 3 puis 5 d’affilée.',
+                defi: { titre: '🏅 1 muscle-up strict', detail: 'Sans élastique : traction, transition, dips. L’objectif final du haut du corps.', apres: 12, figure: fig('muscle-up', 5) },
             },
         ],
     },
@@ -503,58 +768,73 @@ export const PROGRAMME: SeanceBase[] = [
         lieu: 'salle',
         emoji: '🦵',
         degrade: ['#063b26', '#0f9a5c'],
-        titre: 'Bas du corps + abdos',
-        court: 'Bas du corps et abdos',
+        titre: 'Jambes + gainage',
+        court: 'Jambes (vers le pistol squat) et gainage (vers le L-sit)',
         couleur: '#00c46a',
-        focus: 'Musculation : cuisses, fessiers, ischios, mollets et gainage. Des jambes fortes = plus d’explosivité et moins de blessures.',
+        focus: 'Jambes sur une jambe jusqu’au pistol squat, ischios au nordic, gainage vers le L-sit, et un peu de charge légère en séries longues pour l’endurance.',
         niveaux: [
             {
-                nom: 'Machines + squat',
-                resume: 'Les machines pour charger les jambes, et le squat goblet pour apprendre le mouvement roi.',
-                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide et 10 fentes alternées'],
+                nom: 'Bases',
+                resume: 'Squat goblet léger et fentes bulgares en séries longues, ischios et mollets, puis gainage.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes alternées, 10 ponts fessiers'],
                 blocs: [
-                    bloc('Squat goblet', 3, 75, [B.gobletSquat]),
-                    bloc('Presse + ischios', 3, 75, [B.legPress, B.legCurl]),
-                    bloc('Cuisses + mollets', 3, 60, [B.legExtension, B.mollets]),
-                    bloc('Fessiers', 2, 45, [B.abducteurs]),
-                    bloc('Gainage', 3, 45, [B.crunch, B.planche]),
+                    bloc('Squat', 3, 60, [avec(B.gobletSquat, 3, '15 (léger)')]),
+                    bloc('Une jambe', 3, 60, [reps(D.bulgare, 3, '10–15 par jambe'), avec(B.sdtHalteres, 3, '12')]),
+                    bloc('Mollets', 3, 45, [avec(B.molletsDebout, 3, '20')]),
+                    bloc('Gainage', 3, 45, [reps(B.releveGenoux, 3, '10–12'), tenue(D.hollow, 3, '20–30 s')]),
+                    bloc('Finisher', 1, 0, [KB.circuit]),
                 ],
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
-                progression: 'Machines : +2,5 kg (presse : +5 kg) quand toutes les séries sont réussies et faciles.',
-                monter: 'Niveau 2 quand le squat goblet est propre avec un haltère lourd et que tout est facile 2 séances de suite.',
-                defi: { titre: 'Squat goblet : 3 × 10 avec un haltère de 20 kg', detail: 'Cuisses au moins parallèles au sol, talons au sol, dos droit.', apres: 8 },
+                progression: 'Fentes bulgares : +1 rep par jambe et par série. Charges légères : +2,5 kg seulement quand les 15 reps sont faciles.',
+                monter: 'Niveau 2 quand tu fais 15 fentes bulgares par jambe, propres.',
+                defi: { titre: '15 fentes bulgares par jambe', detail: 'Au poids du corps, genou arrière qui frôle le sol à chaque rep. La 1re étape du pistol squat.', apres: 8, figure: fig('pistol', 1) },
             },
             {
-                nom: 'Poids libres',
-                resume: 'Squat guidé, soulevé de terre roumain et fentes : les jambes travaillent avec l’équilibre.',
-                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', '1 série légère de 10 à la Smith machine'],
+                nom: 'Une jambe',
+                resume: 'Pistol sur un banc, nordic et soulevé de terre une jambe : chaque jambe travaille seule. Le L-sit groupé commence.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers une jambe', ECHAUFFEMENT_POIGNETS],
                 blocs: [
-                    bloc('Squat', 4, 90, [B.squatSmith]),
-                    bloc('Ischios', 3, 75, [B.sdtHalteres, avec(B.legCurl, 3, '10–12')]),
-                    bloc('Fentes', 3, 75, [B.fentesMarchees]),
-                    bloc('Fessiers + mollets', 3, 60, [B.hipThrust, B.molletsDebout]),
-                    bloc('Abdos', 3, 45, [B.releveGenoux, B.pallof]),
+                    bloc('Pistol sur banc', 3, 75, [KB.boxPistol]),
+                    bloc('Ischios', 3, 75, [avec(KB.nordic, 3, '3–5'), KB.sdtUneJambe]),
+                    bloc('Fentes', 3, 60, [avec(B.fentesBulgares, 3, '12 par jambe (léger)'), avec(D.molletsUneJambe, 3, '15 par jambe')]),
+                    bloc('Gainage', 4, 45, [KB.lsitGroupe, reps(B.releveJambes, 4, '8–10')]),
+                    bloc('Finisher', 1, 0, [KB.circuit]),
                 ],
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
-                progression: 'Squat et hip thrust : +2,5 à 5 kg quand toutes les séries sont réussies. Haltères : paire suivante.',
-                monter: 'Niveau 3 quand le squat guidé est solide (environ ton poids sur la barre) et que tout est facile 2 séances de suite.',
-                defi: { titre: 'Squat à la Smith : 4 × 8 avec ton poids du corps', detail: 'Environ 67 kg sur la barre, cuisses parallèles à chaque répétition.', apres: 10 },
+                progression: 'Pistol sur banc : banc plus bas dès que les 8 reps passent. Nordic : descente plus lente.',
+                monter: 'Niveau 3 quand tu fais 8 pistols sur un banc par jambe.',
+                defi: { titre: '8 pistols sur un banc par jambe', detail: 'Descente lente jusqu’au banc, remontée sur une jambe sans élan.', apres: 10, figure: fig('pistol', 2) },
             },
             {
-                nom: 'Barre et force',
-                resume: 'Squat barre libre, soulevé de terre roumain et fentes bulgares : le vrai programme force.',
-                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', 'Montée au squat : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
+                nom: 'Pistol assisté',
+                resume: 'Pistols tout en bas en te tenant, sauts pour l’explosivité, L-sit une jambe.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats, 5 pistols sur banc par jambe, 10 squats sautés légers', ECHAUFFEMENT_POIGNETS],
                 blocs: [
-                    bloc('Squat barre', 4, 120, [B.squatBarre]),
-                    bloc('Soulevé de terre roumain', 3, 90, [B.sdtBarre]),
-                    bloc('Fentes bulgares', 3, 75, [B.fentesBulgares]),
-                    bloc('Fessiers + ischios', 3, 60, [avec(B.hipThrust, 3, '8–10'), avec(B.legCurl, 3, '10')]),
-                    bloc('Abdos', 3, 45, [B.releveJambes, B.crunchPoulie]),
+                    bloc('Pistol assisté', 4, 75, [KB.pistolAssiste]),
+                    bloc('Explosivité', 3, 75, [reps(D.squatSaute, 3, '8'), KB.nordic]),
+                    bloc('Une jambe', 3, 60, [avec(KB.sdtUneJambe, 3, '12 par jambe'), avec(D.molletsUneJambe, 3, '15 par jambe')]),
+                    bloc('Gainage', 4, 45, [KB.lsitUneJambe, reps(B.releveJambes, 4, '10–12')]),
+                    bloc('Finisher', 1, 0, [KB.circuit]),
                 ],
                 retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
-                progression: 'Squat et soulevé : +2,5 kg dès que les séries sont faites en haut de la fourchette.',
-                monter: 'Dernier niveau : continue d’ajouter du poids, les séances restent efficaces très longtemps.',
-                defi: { titre: '🏅 Squat barre : 5 répétitions avec ton poids du corps', detail: 'Barre libre, cuisses parallèles, barres de sécurité du rack bien réglées.', apres: 12 },
+                progression: 'Aide-toi de moins en moins avec les mains, d’abord à la descente, puis à la remontée.',
+                monter: 'Niveau 4 quand tu fais 5 pistols assistés par jambe en t’aidant à peine.',
+                defi: { titre: '5 pistols assistés par jambe', detail: 'Tout en bas, talon au sol, mains presque sans effort.', apres: 10, figure: fig('pistol', 3) },
+            },
+            {
+                nom: 'Pistol',
+                resume: 'Pistols libres, sauts et nordic complet : des jambes fortes, légères et explosives.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats, 3 pistols assistés par jambe, 10 squats sautés', ECHAUFFEMENT_POIGNETS],
+                blocs: [
+                    bloc('Pistol', 4, 90, [KB.pistol]),
+                    bloc('Explosivité', 3, 75, [reps(D.squatSaute, 3, '10'), avec(KB.nordic, 3, '5–6')]),
+                    bloc('Une jambe', 3, 60, [avec(KB.sdtUneJambe, 3, '12 par jambe'), avec(D.molletsUneJambe, 3, '20 par jambe')]),
+                    bloc('Gainage', 4, 45, [tenue(KD.lsit, 4, '5–10 s'), reps(B.releveJambes, 4, '12')]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Quand 5 pistols par jambe passent : tiens 2 s en bas, ou prends un petit poids.',
+                monter: 'Dernier niveau : vise 10 pistols par jambe d’affilée.',
+                defi: { titre: '🏅 5 pistols libres par jambe', detail: 'Sans aide, talon au sol, contrôlés. L’objectif final des jambes.', apres: 12, figure: fig('pistol', 4) },
             },
         ],
     },
@@ -677,62 +957,79 @@ export const PROGRAMME: SeanceBase[] = [
     {
         code: 'D',
         lieu: 'maison',
-        emoji: '🏠',
+        emoji: '🤸',
         degrade: ['#2b0a45', '#8b2fd6'],
-        titre: 'Maison : épaules, posture, fessiers',
-        court: 'À la maison (élastiques) : épaules, posture, fessiers, gainage',
+        titre: 'Skills : équilibre et gainage',
+        court: 'Skills (salle ou maison) : handstand, front lever, L-sit, endurance',
         couleur: '#cc44ff',
-        focus: 'Ce que la salle ne travaille pas assez : épaules (côté et arrière), trapèzes, moyen fessier, mollets, lombaires, obliques et avant-bras.',
+        focus: 'Les figures : équilibre sur les mains jusqu’au handstand, front lever à la barre, L-sit, et un circuit d’endurance. À la salle ou à la maison (une barre de traction suffit).',
         niveaux: [
             {
-                nom: 'Élastiques',
-                resume: 'Épaules, posture et fessiers avec les élastiques.',
-                duree: 35,
-                echauffement: ['Rotations des bras et des épaules (1 min)', '20 jumping jacks et 10 squats à vide'],
+                nom: 'Équilibre',
+                resume: 'Corbeau, montée au mur, suspension active et gainage : les bases de toutes les figures.',
+                duree: 40,
+                echauffement: [ECHAUFFEMENT_POIGNETS, 'Rotations des épaules, 20 jumping jacks, 5 pompes'],
                 blocs: [
-                    bloc('Épaules et posture', 3, 45, [D.elevLat, D.facePull]),
-                    bloc('Trapèzes et pectoraux', 3, 45, [D.haussements, D.pompes]),
-                    bloc('Fessiers', 3, 45, [D.pontFessier, D.pasLateraux]),
-                    bloc('Gainage et avant-bras', 2, 30, [D.superman, D.gainageLateral, D.fingerGrip]),
+                    bloc('Équilibre', 4, 60, [KD.corbeau, avec(KD.handstandMur, 4, '10–20 s')]),
+                    bloc('Barre', 3, 60, [KD.suspension]),
+                    bloc('Gainage', 3, 45, [tenue(D.hollow, 3, '20–30 s'), KD.arch]),
+                    bloc('Épaules', 3, 45, [reps(D.pike, 3, '8–10'), D.facePull]),
+                    bloc('Endurance', 1, 0, [KD.circuit]),
                 ],
-                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
-                progression: 'Quand c’est facile : élastique plus dur, ou +1 pompe par séance.',
-                monter: 'Niveau 2 quand tu fais 15 pompes propres et que les élastiques sont faciles.',
-                defi: { titre: '15 pompes propres d’affilée', detail: 'Corps gainé, poitrine près du sol à chaque répétition.', apres: 6 },
+                retourAuCalme: ['Étirements poignets, épaules et dos (2 min)'],
+                progression: 'Corbeau et mur : +2 à 3 s par séance. Le hollow : +5 s par semaine.',
+                monter: 'Niveau 2 quand tu tiens 20 s de corbeau.',
+                defi: { titre: '20 s de corbeau', detail: 'En équilibre sur les mains, genoux sur les coudes, pieds décollés. La 1re étape du handstand.', apres: 6, figure: fig('handstand', 1) },
             },
             {
-                nom: 'Poids du corps +',
-                resume: 'Rowing, pompes piquées, fentes bulgares et mollets : plus de muscles, et des jambes plus réactives.',
-                duree: 35,
-                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
+                nom: 'Mur',
+                resume: 'Handstand ventre au mur, front lever groupé et L-sit groupé : tu commences les vraies figures.',
+                duree: 40,
+                echauffement: [ECHAUFFEMENT_POIGNETS, 'Rotations des épaules, 20 jumping jacks, 20 s de corbeau'],
                 blocs: [
-                    bloc('Pousser + tirer', 4, 45, [avec(D.pompes, 4, 'max − 2'), D.rowingElastique]),
-                    bloc('Épaules', 3, 45, [D.pike, D.elevLat]),
-                    bloc('Jambes', 3, 45, [D.bulgare, D.mollets]),
-                    bloc('Fessiers + posture', 3, 30, [D.pontUneJambe, D.facePull]),
-                    bloc('Gainage', 2, 30, [D.deadBug, avec(D.gainageLateral, 2, '40 s par côté'), D.fingerGrip]),
+                    bloc('Handstand au mur', 4, 75, [KD.handstandMur]),
+                    bloc('Front lever', 4, 75, [KD.frontGroupe]),
+                    bloc('L-sit + gainage', 3, 45, [KB.lsitGroupe, tenue(D.hollow, 3, '30 s')]),
+                    bloc('Épaules', 3, 45, [reps(D.pompesSurelevees, 3, 'max − 2'), D.facePull]),
+                    bloc('Endurance', 1, 0, [KD.circuit]),
                 ],
-                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
-                progression: '+1 ou 2 reps par série à chaque séance, puis élastique plus dur.',
-                monter: 'Niveau 3 quand tu fais 10 pompes piquées et 12 fentes bulgares par jambe.',
-                defi: { titre: '10 pompes piquées + 12 fentes bulgares par jambe', detail: 'Dans la même séance, technique propre.', apres: 8 },
+                retourAuCalme: ['Étirements poignets, épaules et dos (2 min)'],
+                progression: 'Mur : rapproche les mains du mur, corps de plus en plus droit. Front lever : +2 s par séance.',
+                monter: 'Niveau 3 quand tu tiens 30 s ventre au mur.',
+                defi: { titre: '30 s ventre au mur', detail: 'Corps droit, bras tendus, sans t’effondrer dans les épaules.', apres: 8, figure: fig('handstand', 2) },
             },
             {
-                nom: 'Athlétique',
-                resume: 'Pompes surélevées, sauts, Y-T-W et hollow : fort et explosif, comme sur un terrain.',
-                duree: 35,
-                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
+                nom: 'Avancé',
+                resume: 'Plus long au mur et premiers essais libres, front lever avancé, pompes en équilibre partielles.',
+                duree: 40,
+                echauffement: [ECHAUFFEMENT_POIGNETS, 'Rotations des épaules, 20 jumping jacks, 20 s ventre au mur'],
                 blocs: [
-                    bloc('Pousser + tirer', 4, 60, [D.pompesSurelevees, avec(D.rowingElastique, 4, '10–12 (élastique fort)')]),
-                    bloc('Explosivité', 3, 60, [D.squatSaute, D.molletsUneJambe]),
-                    bloc('Épaules', 3, 45, [avec(D.pike, 3, '8–10, pieds sur une chaise'), D.ytw]),
-                    bloc('Fessiers', 3, 45, [avec(D.pontUneJambe, 3, '12, épaules sur le canapé'), D.pasLateraux]),
-                    bloc('Gainage', 3, 30, [D.hollow, avec(D.gainageLateral, 3, '45 s par côté')]),
+                    bloc('Handstand', 4, 75, [avec(KD.handstandMur, 4, '45–60 s'), avec(KD.handstandLibre, 4, '4 essais libres')]),
+                    bloc('Front lever', 4, 75, [KD.frontAvance]),
+                    bloc('Force épaules', 3, 75, [KD.pompesEquilibre]),
+                    bloc('L-sit + gainage', 3, 45, [KB.lsitUneJambe, KD.arch]),
+                    bloc('Endurance', 1, 0, [KD.circuit]),
                 ],
-                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
-                progression: 'Charge un sac à dos (livres, bouteilles) pour les mollets, et un élastique plus fort.',
-                monter: 'Dernier niveau : ajoute du poids dans le sac à dos petit à petit.',
-                defi: { titre: '🏅 25 pompes d’affilée', detail: 'Le défi final de la séance maison.', apres: 10 },
+                retourAuCalme: ['Étirements poignets, épaules et dos (2 min)'],
+                progression: 'Essais libres : compte les secondes du meilleur essai et note-le.',
+                monter: 'Niveau 4 quand tu tiens 60 s ventre au mur.',
+                defi: { titre: '60 s ventre au mur', detail: 'Une minute complète, corps gainé.', apres: 10, figure: fig('handstand', 3) },
+            },
+            {
+                nom: 'Libre',
+                resume: 'Handstand libre, front lever une jambe et L-sit tendu : les figures complètes.',
+                duree: 40,
+                echauffement: [ECHAUFFEMENT_POIGNETS, 'Rotations des épaules, 20 jumping jacks, 30 s ventre au mur'],
+                blocs: [
+                    bloc('Handstand libre', 6, 60, [KD.handstandLibre]),
+                    bloc('Front lever', 4, 75, [KD.frontUneJambe]),
+                    bloc('Force épaules', 3, 75, [avec(KD.pompesEquilibre, 3, '5 (plus bas)')]),
+                    bloc('L-sit', 4, 45, [KD.lsit, KD.arch]),
+                ],
+                retourAuCalme: ['Étirements poignets, épaules et dos (2 min)'],
+                progression: 'Handstand libre : un essai de plus par séance, puis des tenues plus longues.',
+                monter: 'Dernier niveau : vise 30 s libres, puis la pompe en équilibre complète.',
+                defi: { titre: '🏅 30 s de handstand libre', detail: 'Sans mur, sans marcher sur les mains. L’objectif final de l’équilibre.', apres: 12, figure: fig('handstand', 5) },
             },
         ],
     },
@@ -748,7 +1045,7 @@ export const TOUS_LES_EXERCICES: Exercice[] = (() => {
     const vus = new Map<string, Exercice>()
     for (const s of PROGRAMME) for (const n of s.niveaux) for (const b of n.blocs) for (const e of b.exercices) if (!vus.has(e.id)) vus.set(e.id, e)
     // Exercices des anciennes versions du programme : gardés pour l'historique et les courbes.
-    for (const e of [...Object.values(A), ...Object.values(B), ...Object.values(D)]) if (!vus.has(e.id)) vus.set(e.id, e)
+    for (const e of [...Object.values(A), ...Object.values(B), ...Object.values(D), ...Object.values(KA), ...Object.values(KB), ...Object.values(KD)]) if (!vus.has(e.id)) vus.set(e.id, e)
     return [...vus.values()]
 })()
 

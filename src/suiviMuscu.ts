@@ -27,8 +27,61 @@ function ecrire(cle: string, valeur: unknown): void {
 }
 
 const EXERCICES: Record<string, Exercice> = Object.fromEntries(TOUS_LES_EXERCICES.map((e) => [e.id, e]))
-export const exerciceParId = (id: string): Exercice | undefined => EXERCICES[id]
+export const exerciceParId = (id: string): Exercice | undefined => EXERCICES[id] ?? exercicePerso(id)
 export const avecCharge = (e: Exercice) => e.charge !== false && ['machine', 'poulie', 'halteres', 'barre'].includes(e.materiel)
+
+/** Unité de ce qu'on note pour l'exercice (null : rien à noter). */
+export function uniteDe(e: Exercice): string | null {
+    if (avecCharge(e)) return e.parHaltere ? 'kg/haltère' : e.assistance ? 'kg aide' : 'kg'
+    if (e.mesure === 'km') return 'km'
+    if (e.mesure === 'reps') return 'reps'
+    if (e.mesure === 'sec') return 's'
+    return null
+}
+/** Unité courte pour l'historique (« 12 kg », « 8 reps », « 20 s »). */
+export const uniteCourte = (e: Exercice | undefined) => (!e ? '' : e.mesure === 'km' ? 'km' : e.mesure === 'reps' ? 'reps' : e.mesure === 'sec' ? 's' : 'kg')
+
+// --- Exercices ajoutés par Daniel pendant une séance (hors programme) ---
+// L'id « perso-nom-de-l-exo » part avec la séance ; le nom exact et l'unité restent sur l'appareil.
+
+export type MesurePerso = 'kg' | 'reps' | 'sec' | 'km' | 'aucune'
+type InfoPerso = { nom: string; mesure: MesurePerso }
+const CLE_PERSO = 'muscu.nomsPerso'
+
+export function idPerso(nom: string): string {
+    const slug = nom
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 34)
+        .replace(/-+$/, '')
+    return `perso-${slug || 'exercice'}`
+}
+
+export function exercicePerso(id: string, info?: InfoPerso): Exercice | undefined {
+    if (!id.startsWith('perso-')) return undefined
+    const i = info ?? lire<Record<string, InfoPerso>>(CLE_PERSO, {})[id]
+    const nomSlug = id.slice(6).replace(/-/g, ' ')
+    const mesure = i?.mesure ?? 'aucune'
+    return {
+        id,
+        nom: i?.nom ?? nomSlug.charAt(0).toUpperCase() + nomSlug.slice(1),
+        machine: 'Ajouté pendant la séance',
+        materiel: mesure === 'kg' ? 'halteres' : mesure === 'km' ? 'cardio' : 'corps',
+        muscles: [],
+        series: 3,
+        reps: '',
+        consignes: [],
+        ...(mesure === 'kg' ? {} : { charge: false }),
+        ...(mesure === 'reps' || mesure === 'sec' || mesure === 'km' ? { mesure } : {}),
+    }
+}
+
+export function retenirPerso(id: string, nom: string, mesure: MesurePerso): void {
+    ecrire(CLE_PERSO, { ...lire<Record<string, InfoPerso>>(CLE_PERSO, {}), [id]: { nom, mesure } })
+}
 
 export function versKg(v: string | number | null | undefined): number | null {
     const n = Math.round(Number(String(v ?? '').replace(',', '.')) * 2) / 2
@@ -127,6 +180,8 @@ export function conseilPour(e: Exercice, passes: ExoFait[], chargeActuelle: numb
         return { sens: 'garde', texte: `Garde ${fmtKg(base)}${unite}` }
     }
     if (complet(dernier) && dernier.ressenti === 'facile') {
+        if (e.mesure === 'sec') return { sens: 'monte', texte: '+2 à 3 s par tenue la prochaine fois' }
+        if (e.mesure === 'reps') return { sens: 'monte', texte: '+1 rep par série la prochaine fois' }
         if (e.materiel === 'cardio') return { sens: 'monte', texte: '+0,5 km/h sur la course la prochaine fois' }
         if (e.materiel === 'elastique') return { sens: 'monte', texte: 'Élastique plus dur, ou +2 reps' }
         return { sens: 'monte', texte: '+2 reps par série' }
@@ -179,14 +234,20 @@ export function avisNiveau(
 export function seancesAuNiveau(code: CodeSeance, depuis: string | undefined, ids: string[], seances: SeanceFaite[]): SeanceFaite[] {
     return seances
         .filter((s) => s.code === code && s.exercices.length > 0 && (!depuis || s.date >= depuis))
-        .filter((s) => ids.length === 0 || s.exercices.every((e) => ids.includes(e.id)))
+        // Les exercices ajoutés en plus ne comptent pas : il faut surtout ceux du niveau.
+        .filter((s) => {
+            if (ids.length === 0) return true
+            const prevus = s.exercices.filter((e) => ids.includes(e.id)).length
+            return prevus > 0 && prevus * 2 >= s.exercices.length
+        })
 }
 
 // --- Défis réussis (objectifs pour passer au niveau suivant) ---
 // Gardés sur l'appareil avec la date, et synchronisés comme une « charge » defi-c1, defi-a2… = 1.
 
 export type DefisReussis = Record<string, string> // clé → date ISO (ou '' si la date est inconnue)
-export const cleDefi = (code: CodeSeance, niveau: number) => `defi-${code.toLowerCase()}${niveau}`
+// Depuis le passage à la callisthénie (nov. 2026), les défis de A, B et D ont changé : nouvelles clés « defi-a1k ».
+export const cleDefi = (code: CodeSeance, niveau: number) => `defi-${code.toLowerCase()}${niveau}${code === 'C' ? '' : 'k'}`
 
 export function lireDefis(): DefisReussis {
     return lire<DefisReussis>('muscu.defis', {})
@@ -197,6 +258,10 @@ export function ecrireDefis(d: DefisReussis): void {
 /** Ajoute les défis enregistrés en ligne à ceux de l'appareil. */
 export function defisDepuis(charges: Record<string, number>, locaux: DefisReussis): DefisReussis {
     const res = { ...locaux }
-    for (const [id, v] of Object.entries(charges)) if (id.startsWith('defi-') && v > 0 && !(id in res)) res[id] = ''
+    for (const [id, v] of Object.entries(charges)) if ((id.startsWith('defi-') || id.startsWith('fig-')) && v > 0 && !(id in res)) res[id] = ''
     return res
 }
+
+/** Étape réussie d'une figure de callisthénie : « fig-muscle-up-2 ». */
+export const cleFigure = (id: string, etape: number) => `fig-${id}-${etape}`
+

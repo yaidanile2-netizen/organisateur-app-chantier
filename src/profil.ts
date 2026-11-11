@@ -150,6 +150,11 @@ export function recommandation(e: Exercice, p: Profil, aujourdhui: Date): Recomm
         const el = { debutant: 'léger', intermediaire: 'moyen', confirme: 'fort' }[p.niveau]
         return { type: 'texte', texte: `🎗️ Élastique ${el} : finis avec 2-3 reps en réserve` }
     }
+    if (e.id === 'a-australiennes') return { type: 'texte', texte: '🤸 Commence le corps à 45° (pieds près de la barre), puis descends-le petit à petit' }
+    if (e.id === 'a-negatives') return { type: 'texte', texte: '🤸 Vise 3 à 5 s de descente au début, puis +1 s par séance' }
+    if (e.id === 'a-tractions') return { type: 'texte', texte: '🤸 Même 1 ou 2 reps par série, c’est parfait : complète avec des négatives' }
+    if (e.id === 'd-corbeau' || e.id === 'd-handstand-mur') return { type: 'texte', texte: '🤸 Quelques secondes au début, c’est normal : note ta meilleure tenue' }
+    if (e.id === 'b-nordic') return { type: 'texte', texte: '🤸 Au début, contrôle juste les 20 premiers centimètres de la descente' }
     if (e.id === 'd-pompes') {
         const t = { debutant: '6 à 10 reps, genoux au sol si besoin', intermediaire: '10 à 15 reps', confirme: '15 à 20 reps' }[p.niveau]
         return { type: 'texte', texte: `🤸 ${t}` }

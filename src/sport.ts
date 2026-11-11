@@ -13,7 +13,7 @@ export type Reglages = {
     duree: number // minutes de séance
     retourAvant: string // 'HH:MM' : être rentré de la salle avant
     departAuPlusTot: string // 'HH:MM' : pas de séance qui commence avant (départ pour la salle)
-    seanceMaison: boolean // ajouter la séance D à la maison
+    seanceMaison: boolean // ajouter la séance D (skills, à la maison ou à la salle)
     maisonAvant: string // 'HH:MM' : séance maison terminée avant
 }
 
@@ -247,7 +247,7 @@ export function descriptionSeance(c: Creneau): string {
     const exos = s.blocs.flatMap((b) => b.exercices.map((e) => `• ${e.nom} — ${e.series} × ${e.reps}`))
     const entete =
         s.lieu === 'maison'
-            ? `Séance à la maison ${hm(c.debut)}–${hm(c.fin)} (élastiques et poids du corps)`
+            ? `Séance skills ${hm(c.debut)}–${hm(c.fin)} (à la maison ou à la salle : une barre de traction suffit)`
             : `Départ ${hm(c.depart)} · séance ${hm(c.debut)}–${hm(c.fin)} au Basic-Fit Atlantis · retour vers ${hm(c.retour)}`
     return [entete, `Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
 }

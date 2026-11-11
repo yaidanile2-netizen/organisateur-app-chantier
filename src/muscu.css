@@ -1547,3 +1547,261 @@
   font-weight: 600;
   color: var(--mu-txt3);
 }
+
+/* ---------- Message flottant ---------- */
+.mu-toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  max-width: 560px;
+  margin: 0 auto;
+  z-index: 40;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--mu-flottant);
+  color: var(--mu-txt);
+  border: 1px solid color-mix(in srgb, var(--mu-ok) 55%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  font-weight: 600;
+  animation: mu-toast-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.mu-toast.haut {
+  bottom: calc(146px + env(safe-area-inset-bottom));
+}
+@keyframes mu-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+/* ---------- Figures de callisthénie (objectifs muscu) ---------- */
+.mu-figures-liste {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mu-figure {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mu-ink) 4%, transparent);
+}
+.mu-figure.ouverte {
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+}
+.mu-figure-tete {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.mu-figure-emoji {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.mu-figure-nom {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mu-figure-nom b {
+  font-size: 14px;
+  color: var(--mu-txt);
+}
+.mu-figure-nom small {
+  font-size: 12px;
+  color: var(--mu-txt3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mu-figure.finie .mu-figure-nom small {
+  color: var(--mu-ok);
+  font-weight: 700;
+}
+.mu-objectif-barre.mu-figure-barre {
+  flex: 0 0 78px;
+  margin: 0;
+  gap: 3px;
+}
+.mu-objectif-barre.mu-figure-barre span {
+  height: 8px;
+}
+.mu-objectif-barre.mu-figure-barre span:last-child::after {
+  content: none;
+}
+.mu-figure-detail {
+  padding: 0 12px 12px;
+}
+.mu-figure-detail .mu-jalons {
+  margin-top: 2px;
+}
+.mu-figure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.mu-figure-actions .mu-btn-sec {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  font-size: 15px;
+  border-radius: 999px;
+}
+.mu-figure-actions .mu-defi-btn {
+  margin: 0;
+  color: #1d1300;
+}
+.mu-defi-suivant {
+  margin-left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c);
+  background: none;
+  color: var(--c);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ---------- Exercices en plus ---------- */
+.mu-extras .mu-etape-num {
+  background: color-mix(in srgb, var(--c) 20%, transparent);
+  color: var(--c);
+}
+.mu-exo-extra {
+  border-left-style: dashed;
+}
+.mu-exo-retirer {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  background: none;
+  color: var(--mu-txt3);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.mu-ajout-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--c) 60%, transparent);
+  background: color-mix(in srgb, var(--c) 6%, transparent);
+  color: var(--mu-txt);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.mu-ajout {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mu-ink) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  animation: mu-toast-in 0.25s ease-out;
+}
+.mu-ajout-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mu-txt3);
+  margin-bottom: 6px;
+}
+.mu-ajout-nom {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 18%, transparent);
+  background: var(--mu-surface);
+  color: var(--mu-txt);
+  font-size: 16px;
+}
+.mu-ajout-choix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.mu-ajout-choix button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 10%, transparent);
+  background: var(--mu-surface);
+  color: var(--mu-txt);
+  text-align: left;
+  cursor: pointer;
+}
+.mu-ajout-choix b {
+  font-size: 14px;
+}
+.mu-ajout-choix small {
+  font-size: 11px;
+  color: var(--mu-txt3);
+}
+.mu-ajout-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mu-txt2);
+}
+.mu-ajout-nb {
+  min-width: 28px;
+  text-align: center;
+  font-size: 16px;
+  color: var(--mu-txt);
+}
+.mu-ajout-mesures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.mu-ajout-mesures button {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mu-ink) 15%, transparent);
+  background: none;
+  color: var(--mu-txt2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mu-ajout-mesures button.actif {
+  background: var(--c);
+  border-color: var(--c);
+  color: #fff;
+}
+.mu-lien {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--c);
+  font-weight: 700;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
