@@ -3,6 +3,8 @@ import { getTachesEntre } from './api'
 import { ecouter, type ItemRevision } from './evenements'
 import { fournirContexte } from './ia'
 import { programmeRevision } from './revision'
+import { QuestionsTD } from './AvancementTD'
+import { resumeAvancement } from './suiviTD'
 
 // L'app de révision vit dans public/cours/ (fichiers statiques, même origine) : on la charge
 // dans un cadre et on lui parle directement via window.Cours (programme du jour, ouverture
@@ -69,14 +71,16 @@ export default function CoursView({ actif }: { actif: boolean }) {
         () =>
             fournirContexte('cours', () => {
                 const c = api()?.contexte()
-                if (!c) return 'Onglet Cours (révisions) : la bibliothèque des matières.'
-                return `Onglet Cours (révisions)${c.matiere ? ` · matière : ${c.matiere}` : ''} · page : ${c.titre}\n${c.texte}`
+                const av = resumeAvancement()
+                if (!c) return `Onglet Cours (révisions) : la bibliothèque des matières.${av ? `\n${av}` : ''}`
+                return `Onglet Cours (révisions)${c.matiere ? ` · matière : ${c.matiere}` : ''} · page : ${c.titre}${av ? `\n${av}` : ''}\n${c.texte}`
             }),
         []
     )
 
     return (
         <div className="cours-zone" hidden={!actif}>
+            {actif && <QuestionsTD bandeau />}
             {monte && (
                 <iframe
                     ref={cadre}

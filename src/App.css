@@ -1690,7 +1690,13 @@
 .cours-zone[hidden] {
   display: none;
 }
+.cours-zone:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
 .cours-zone iframe {
+  flex: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
   border: 0;

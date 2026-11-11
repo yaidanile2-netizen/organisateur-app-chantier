@@ -9,6 +9,7 @@ import EtudesPlanner from './EtudesPlanner'
 import SportPlanner from './SportPlanner'
 import NutritionCoach from './NutritionCoach'
 import MuscuView from './MuscuView'
+import { QuestionsTD, SuiviTD } from './AvancementTD'
 import CoursView from './CoursView'
 import AssistantIA from './AssistantIA'
 import { ecouter } from './evenements'
@@ -107,6 +108,8 @@ function App() {
             <main className="content">
                 {onglet === 'agenda' && (
                     <>
+                        <QuestionsTD />
+
                         <DayView rafraichir={version} onVoirSeance={() => {
                                 definirOuvert('muscu.seance', true)
                                 choisir('muscu')
@@ -115,6 +118,8 @@ function App() {
                         <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 
                         <EtudesPlanner version={version} onPlanifie={() => setVersion((v) => v + 1)} />
+
+                        <SuiviTD />
 
                         <Repliable cle="agenda.notifications" className="card" titre="🔔 Notifications" resume={etat === 'actif' ? '✅ activées' : undefined}>
                             {etat === 'chargement' && <p className="muted">Vérification…</p>}

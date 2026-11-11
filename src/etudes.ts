@@ -4,6 +4,7 @@
 import type { Cours, Tache } from './api'
 import { cleDuType, nomModule } from './coursType'
 import { MARQUEUR as MARQUEUR_SPORT, lireReglages } from './sport'
+import { consignesDS, consignesTD, exosRestants, lireAvancement, prevoirDS, trouverMatiere } from './suiviTD'
 
 export const MARQUEUR_ETUDE = '#etude-auto'
 export const MARQUEUR_ECHEANCE = '#echeance'
@@ -62,7 +63,8 @@ export type EtapeProgramme = { nom: string; duree: number; avant: number; consig
 
 // Programme de préparation : chaque étape est un créneau, à valider (marquer « fait ») une fois terminée.
 // `avant` = jour idéal, en jours avant l'échéance (pour les TD : après le TD).
-export function programme(type: TypeEcheance, r: ReglagesEtudes): EtapeProgramme[] {
+// Avec la matière, la préparation d'un TD tient compte de l'avancement noté (exos à finir, à revoir).
+export function programme(type: TypeEcheance, r: ReglagesEtudes, matiere?: string): EtapeProgramme[] {
     switch (type) {
         case 'ds':
             return [
@@ -86,15 +88,21 @@ export function programme(type: TypeEcheance, r: ReglagesEtudes): EtapeProgramme
             ]
         case 'tp':
             return [{ nom: 'Préparer', duree: 30, avant: 1, consignes: ['Lis l’énoncé du TP', 'Revois la théorie et les formules utiles', 'Prépare les tableaux de mesures et les questions préparatoires'] }]
-        case 'td':
+        case 'td': {
+            const avancement = matiere ? consignesTD(matiere) : []
+            const aFinir = matiere ? exosRestants(trouverMatiere(lireAvancement(), matiere)).length > 0 : false
             return [
                 {
                     nom: 'Préparer',
-                    duree: Math.min(30, Math.max(15, r.dureeTD)),
+                    // Des exos à finir : la préparation passe à 30 min.
+                    duree: aFinir ? 30 : Math.min(30, Math.max(15, r.dureeTD)),
                     avant: 1,
-                    consignes: ['Relis le cours lié au TD de demain', 'Refais un exercice du TD précédent de cette matière', 'Lis l’énoncé du TD si tu l’as et note tes questions'],
+                    consignes: avancement.length
+                        ? [...avancement, 'Relis le cours lié au TD de demain']
+                        : ['Relis le cours lié au TD de demain', 'Refais un exercice du TD précédent de cette matière', 'Lis l’énoncé du TD si tu l’as et note tes questions'],
                 },
             ]
+        }
     }
 }
 
@@ -305,7 +313,7 @@ export function planifierEtudes(
     // Place les étapes d'une échéance. `secours` : DS très proche dont tout ne tient pas le soir →
     // on prend les premiers créneaux libres (journée comprise), sans limite par jour.
     function placer(e: Echeance, urgent: boolean, secours: boolean): { nouveaux: BlocEtude[]; manquants: number[] } {
-        const prog = programme(e.type, r)
+        const prog = programme(e.type, r, e.matiere)
         const nouveaux: BlocEtude[] = []
         const manquants: number[] = []
         let precedent: number | null = null // fin de l'étape précédente (prévue ou placée)
@@ -390,21 +398,25 @@ const dateLongue = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'num
 export function titreBloc(b: BlocEtude, r: ReglagesEtudes): string {
     const e = b.echeance
     const t = TYPES_ECHEANCE[e.type]
-    const prog = programme(e.type, r)
+    const prog = programme(e.type, r, e.matiere)
     const etape = prog[b.etape]
     if (e.type === 'td') return `${t.emoji} Préparer le TD de demain · ${e.matiere}`
     if (e.type === 'tp') return `${t.emoji} Préparer le TP · ${e.matiere}`
     return `${t.emoji} ${t.court} ${e.matiere} · ${b.etape + 1}/${prog.length} ${etape.nom}`
 }
 
-export function descriptionBloc(b: BlocEtude, r: ReglagesEtudes): string {
+export function descriptionBloc(b: BlocEtude, r: ReglagesEtudes, cours: Cours[] = []): string {
     const e = b.echeance
     const t = TYPES_ECHEANCE[e.type]
-    const prog = programme(e.type, r)
+    const prog = programme(e.type, r, e.matiere)
     const etape = prog[b.etape]
+    // DS : programme probable (d'après l'avancement des TD) et exos « à revoir » en priorité.
+    const enPlus =
+        e.type === 'ds' ? consignesDS(e.matiere, b.etape, prevoirDS(trouverMatiere(lireAvancement(), e.matiere), e.date, cours, new Date())) : []
     const quoi = e.type === 'td' ? `TD de ${e.matiere}, ${dateLongue.format(e.date)}` : `${t.libelle} ${e.matiere}, ${dateLongue.format(e.date)}`
     return [
         `Étape ${b.etape + 1}/${prog.length} — ${etape.nom} (${etape.duree} min) · ${quoi}`,
+        ...enPlus.map((c) => `☐ ${c}`),
         ...etape.consignes.map((c) => `☐ ${c}`),
         prog.length > 1 ? `Programme : ${prog.map((p, i) => `${i + 1} ${p.nom}`).join(' · ')}` : '',
         b.mode === 'urgence' ? '⚡ Hors de ton créneau du soir : le DS est très proche et cette étape n’était pas validée.' : '',

@@ -1,8 +1,7 @@
-import Repliable from './Repliable'
 // Carte « Révisions » de l'onglet Agenda : échéances à venir avec leur programme (Réviser → Appliquer → Valider),
 // ajout d'une échéance, et placement des créneaux d'étude le soir.
 import { useEffect, useState } from 'react'
-import { creerTache, getCategories, getCoursEntre, getTachesEntre, supprimerTache, type Tache } from './api'
+import { creerTache, getCategories, getCoursEntre, getTachesEntre, supprimerTache, type Cours, type Tache } from './api'
 import {
     MARQUEUR_ECHEANCE,
     MARQUEUR_ETUDE,
@@ -70,6 +69,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
     const [voirReglages, setVoirReglages] = useState(false)
     const [voirProgramme, setVoirProgramme] = useState(false)
     const [ajout, setAjout] = useState<{ type: TypeEcheance; matiere: string; date: string; heure: string } | null>(null)
+    const [coursFenetre, setCoursFenetre] = useState<Cours[]>([])
 
     // Échéances des 3 prochaines semaines (tableau « À venir »).
     useEffect(() => {
@@ -123,6 +123,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
             const liste = echeances(cours, gardees, maintenant, finFenetre, reglages)
             const { blocs, restants } = planifierEtudes(lundi, cours, gardees, liste, reglages, maintenant)
             setARemplacer(remplacees)
+            setCoursFenetre(cours)
             setPropositions(blocs)
             setManques(restants)
             setEtape('apercu')
@@ -141,7 +142,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
             for (const b of propositions) {
                 await creerTache({
                     titre: titreBloc(b, reglages),
-                    description: descriptionBloc(b, reglages),
+                    description: descriptionBloc(b, reglages, coursFenetre),
                     categorie_id: categorie,
                     date_debut: b.debut.toISOString(),
                     date_fin: b.fin.toISOString(),
@@ -189,7 +190,8 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
     const prog = programme('ds', reglages)
 
     return (
-        <Repliable cle="agenda.etudes" className="card etudes" titre="📚 Révisions">
+        <section className="card etudes">
+            <h2>📚 Révisions</h2>
             <p className="muted">
                 Le soir de {reglages.debut.replace(':', 'h')} à {reglages.fin.replace(':', 'h')} (au plus {duree(reglages.maxJourCours)} un jour de cours). DS
                 d’abord, puis oraux, projets, TP et de courtes révisions de TD.
@@ -391,7 +393,7 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                             <tbody>
                                 {propositions.map((b) => {
                                     const t = TYPES_ECHEANCE[b.echeance.type]
-                                    const p = programme(b.echeance.type, reglages)
+                                    const p = programme(b.echeance.type, reglages, b.echeance.matiere)
                                     return (
                                         <tr key={`${b.echeance.cle}-${b.etape}`}>
                                             <td className="et-quand">
@@ -436,6 +438,6 @@ export default function EtudesPlanner({ onPlanifie, version = 0 }: { onPlanifie:
                     </div>
                 </>
             )}
-        </Repliable>
+        </section>
     )
 }
