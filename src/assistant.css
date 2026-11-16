@@ -55,7 +55,8 @@
   pointer-events: none;
 }
 .ia-fab.haut {
-  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 92px);
+  /* onglet Cours : au-dessus de la barre d'onglets de l'app de révision */
+  bottom: calc(max(env(safe-area-inset-bottom), 8px) + 142px);
 }
 @keyframes ia-apparait {
   from {

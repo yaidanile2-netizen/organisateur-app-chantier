@@ -2,6 +2,7 @@
 import type { Tache } from './api'
 import { MARQUEUR_ETUDE } from './etudes'
 import type { ItemRevision } from './evenements'
+import { lireAvancement, suggestion, trouverMatiere } from './suiviTD'
 
 const heure = (d: Date) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 const jourCourt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -46,7 +47,14 @@ export function itemRevision(t: Tache, maintenant: Date = new Date()): ItemRevis
         type,
         fait: t.statut === 'fait',
         echeance: ech ? `${COURT[type] ?? ''} ${ech[1]}`.trim() : undefined,
+        // TD à préparer : celui en cours d'après l'avancement noté (ou le suivant s'il est fini).
+        td: type === 'td' ? tdAPreparer(matiere.trim()) : undefined,
     }
+}
+
+function tdAPreparer(matiere: string): number | undefined {
+    const s = trouverMatiere(lireAvancement(), matiere)
+    return s ? suggestion(s).td : undefined
 }
 
 /** Les révisions d'aujourd'hui ; s'il n'y en a pas, les prochaines (3 jours). */

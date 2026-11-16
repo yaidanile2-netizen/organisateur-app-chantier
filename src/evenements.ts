@@ -9,6 +9,8 @@ export type ItemRevision = {
     type: string
     fait: boolean
     echeance?: string
+    /** Préparation d'un TD : numéro du TD à préparer (d'après l'avancement noté). */
+    td?: number
 }
 
 type Evenements = {
