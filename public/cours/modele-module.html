@@ -358,7 +358,8 @@ const XSCHEMA = [
    si : condition pour garder le tirage (ex. résultat entier) ; dans les textes, {{expression}}
    est remplacé par sa valeur. Une question est soit à choix (choix + bonne = n° de la bonne,
    à partir de 0), soit chiffrée (rep = l'expression de la réponse, unite, tol = tolérance, 3 % par défaut).
-   Fonctions : sqrt, exp, ln, log, abs, round(x, n), min, max, entier(x), si(condition, a, b), pi. */
+   Fonctions : sqrt, exp, ln, log, abs, round(x, n), min, max, entier(x), si(condition, a, b),
+   parmi(k, a, b, c…) (le k-ième, à partir de 0), mod(a, b), pi. Textes entre guillemets : si(v==0, "s’ouvre", "se ferme"). */
 const XAPP = [
   {
     id: "a-mur", titre: "Flux à travers un mur", mod: "bases", schema: "sch-mur",
@@ -431,7 +432,8 @@ const XVARIANTES = {
     ok.push(XSCHEMA.length + ' schéma(s) pas à pas'); }
   if (typeof XAPP !== 'undefined') {
     var FN = { sqrt: Math.sqrt, racine: Math.sqrt, exp: Math.exp, ln: Math.log, log: Math.log10, abs: Math.abs, sin: Math.sin, cos: Math.cos, tan: Math.tan, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, pow: Math.pow,
-      round: function (x, n) { var k = Math.pow(10, n || 0); return Math.round(x * k) / k; }, entier: function (x) { return Math.abs(x - Math.round(x)) < 1e-9 ? 1 : 0; }, si: function (c, a, b) { return c ? a : b; } };
+      round: function (x, n) { var k = Math.pow(10, n || 0); return Math.round(x * k) / k; }, entier: function (x) { return Math.abs(x - Math.round(x)) < 1e-9 ? 1 : 0; }, si: function (c, a, b) { return c ? a : b; },
+      parmi: function (k) { var l = [].slice.call(arguments, 1); return l[Math.max(0, Math.min(l.length - 1, Math.round(k)))]; }, mod: function (a, b) { return ((a % b) + b) % b; } };
     FN.arrondi = FN.round;
     var calc = function (src, V) { var s = String(src), i = 0; function sp() { while (i < s.length && /\s/.test(s[i])) i++; } function eat(t) { sp(); if (s.substr(i, t.length) === t) { i += t.length; return true; } return false; }
       function prim() { sp(); var c = s[i]; if (c === '(') { i++; var v = or(); if (!eat(')')) throw 'parenthèse'; return v; } if (c === '-' || c === '−') { i++; return -pw(); }
