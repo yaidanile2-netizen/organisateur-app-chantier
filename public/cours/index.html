@@ -1414,8 +1414,8 @@ function navGroup(){const v=route.v;
 function renderNav(){const g=navGroup();
   $('#navIn').innerHTML=NAVS.map(n=>'<button data-v="'+n.v+'" class="'+(g===n.v?'on':'')+'" aria-label="'+n.l+'"><svg viewBox="0 0 24 24">'+n.i+'</svg>'+n.l+'</button>').join('');
   $$('#navIn button').forEach(b=>b.onclick=()=>tab(b.dataset.v));}
-const XREV_TOP=['cours','quiz','flash','comp','exercices','examen','fiches'];
-const XSUB=[['cours','📖 Cours'],['quiz','🎯 QCM'],['flash','🃏 Flashcards'],['comp','🧭 Compétences'],['exercices','✍️ Exercices'],['examen','⏱️ Examen'],['fiches','∑ Formules']];
+const XREV_TOP=['cours','quiz','flash','comp','exercices','dscorr','examen','fiches'];
+const XSUB=[['cours','📖 Cours'],['quiz','🎯 QCM'],['flash','🃏 Flashcards'],['comp','🧭 Compétences'],['exercices','✍️ Exercices'],['dscorr','📝 DS corrigés'],['examen','⏱️ Examen'],['fiches','∑ Formules']];
 function xSubNav(){return `<div class="x-sub">${XSUB.map(s=>`<button class="${route.v===s[0]?'on':''}" data-go="${s[0]}">${s[1]}</button>`).join('')}</div>`;}
 
 /* ---------- Actions déclarées dans le HTML (data-x) ---------- */
@@ -1819,7 +1819,7 @@ XA.openM=d=>go('methode',{id:d.m});
 function vReviser(){const due=xFlashDue('mix').length;
   const tiles=[['cours','📖','Cours',`Plan, carte mentale et les ${NOT.length} notions, à lire ou à écouter`],['quiz','🎯','QCM',`Par ${SECW} ou mixte, et les contrôles du parcours`],
     ['flash','🃏','Flashcards',`${DEFS.length?'Formules, définitions':PK.cartes&&PK.cartes.length?'Formules, cartes du prof':'Formules'}, notions à expliquer${due?' · '+due+' à revoir':''}`],['comp','🧭','Compétences',`${SKILLS.length} savoir-faire à maîtriser, avec méthode et test`],
-    ['exercices','✍️','Exercices corrigés','TD et DS corrigés étape par étape'],['examen','⏱️','Examen blanc','QCM chronométré sur tout le cours'],
+    ['exercices','✍️','Exercices corrigés','TD et DS corrigés étape par étape'],['dscorr','📝','DS corrigés',ORG.dscSous()],['examen','⏱️','Examen blanc','QCM chronométré sur tout le cours'],
     ['fiches','∑','Formules','Flashcards de formules et formulaire complet'],['reglages','🎙️','Le prof audio','Voix, vitesse, niveau de détail, questions']];
   return `<div class="fade"><div class="eyebrow">Réviser</div><h2 class="disp">Tout le cours</h2><p class="lead">Choisis ce que tu veux travailler.</p><div class="sp"></div>
   <div class="x-tiles">${tiles.map(t=>`<button class="x-tile" data-go="${t[0]}"><span class="ic">${t[1]}</span><b>${t[2]}</b><small>${t[3]}</small></button>`).join('')}</div>
@@ -2321,7 +2321,7 @@ function render(){
   const V={home:vHome,cours:vCours,module:()=>vModule(route.id),quiz:vQuizHub,examen:vExamIntro,fiches:vFiches,exercices:vExercicesHub,
     'exercice-detail':()=>vExerciceDetail(route.id),'quiz-run':vQuizRun,'quiz-end':vQuizEnd,'exam-run':vExamRun,'exam-end':vExamEnd,
     review:()=>{startReview();return'';},reviser:vReviser,flash:vFlash,comp:vComp,td:vTD,'td-run':vTdRun,ds:vDS,'ds-run':vDsRun,'x-review':vXReview,'x-fiche':vXFiche,
-    reglages:vReglages,lib:vLib,fx:vFx,pq:vPq,p2:vP2,methode:vMethode,p3:vP3,app:vApp,melange:vMel,dsx:vDsx};
+    reglages:vReglages,lib:vLib,dscorr:()=>ORG.vDsc(),'dscorr-ex':()=>ORG.vDscEx(),fx:vFx,pq:vPq,p2:vP2,methode:vMethode,p3:vP3,app:vApp,melange:vMel,dsx:vDsx};
   let html=(V[route.v]||vHome)();
   if(html&&XREV_TOP.includes(route.v))html=xSubNav()+html;
   if(html==='')return;
@@ -2473,6 +2473,44 @@ ORG.dsHTML=function(dansDS){const P=ORG.planDS();
 ORG.cacheDS=function(P){try{const c=lsGet('cours.ds',{})||{};const noms=ids=>[...new Set(ids.map(id=>SBY[NBY[id].secteur].nom))];
   c[P.cle]={sujet:SUBJ.titre,T:P.T,prio:P.prio.map(x=>NBY[x.id].titre).slice(0,8),voir:noms(P.voir.concat(P.prio.map(x=>x.id))),laisser:noms(P.laisser).filter(x=>!noms(P.voir.concat(P.prio.map(y=>y.id))).includes(x)),at:Date.now()};lsSet('cours.ds',c);}catch(e){}};
 window.addEventListener('storage',e=>{if(['td.avancement','td.previsions'].includes(e.key)&&['home','ds'].includes(route.v))render();});
+/* ---------- Réviser → DS corrigés : les sujets de DS, exercice par exercice et dans l'ordre ----------
+   Exercices dont le titre commence par « DS 2025 — », « DS1 — », « Contrôle — »… (ils restent aussi dans
+   « Exercices corrigés »), et pour les matières intégrées, les vrais sujets de l'onglet DS. */
+ORG.DSRE=/^\s*((?:DS|D\.S\.|devoir surveill[ée]|contr[ôo]le(?: continu)?|partiel|examen)(?![a-zà-ÿ])[^—:–]*?)\s*[—:–]/i;
+ORG.dsCorr=function(){if(ORG._dsc)return ORG._dsc;const G=new Map();
+  const annee=t=>{const y=(String(t).match(/(?:19|20)\d{2}/g)||[]).map(Number);return y.length?Math.max(...y):0;};
+  const num=t=>{const m=String(t).match(/\bex(?:ercice|o|\.)?\s*(\d+)/i);return m?+m[1]:99;};
+  const add=(label,it)=>{const k=String(label).replace(/\s+/g,' ').trim();if(!G.has(k))G.set(k,{label:k,items:[]});G.get(k).items.push(it);};
+  if(!PK.legacy)(PK.ds||[]).filter(d=>!d.gen&&Array.isArray(d.exercices)&&d.exercices.length).forEach(d=>d.exercices.forEach((e,i)=>add(d.titre,{k:'sujet',ds:d.id,i,titre:e.titre,n:i+1,pts:e.points,nq:(e.questions||[]).length})));
+  const sujets=[...G.keys()].map(k=>ORG.norm(k));
+  EXERCICES.forEach((e,j)=>{const ex=(e.meth&&e.meth.exemple)||{};const m=ORG.DSRE.exec(e.titre)||ORG.DSRE.exec((ex.source||'')+' —');if(!m)return;
+    /* « DS d'entraînement, exercice 2 » : le n° d'exercice ne fait pas partie du nom du sujet */
+    const nx=m[1].match(/[,;]?\s*\bex(?:ercice|o|\.)?\s*(\d+)\s*$/i);const label=nx?m[1].slice(0,nx.index):m[1];
+    /* déjà dans un vrai sujet corrigé de la matière (matières intégrées) : pas de doublon */
+    if(sujets.some(k=>k.startsWith(ORG.norm(label).trim())))return;
+    add(label,{k:'exo',id:e.id,titre:e.titre.replace(ORG.DSRE,'').trim()||e.titre,n:nx?+nx[1]:num(e.titre),j,nq:(ex.etapes||[]).length});});
+  const out=[...G.values()];out.forEach(g=>{g.y=annee(g.label);g.items.sort((a,b)=>a.n-b.n||(a.j||0)-(b.j||0));});
+  out.sort((a,b)=>b.y-a.y||a.label.localeCompare(b.label,'fr',{numeric:true}));
+  return ORG._dsc=out;};
+ORG.dscSous=function(){const G=ORG.dsCorr();const n=G.reduce((s,g)=>s+g.items.length,0);
+  return G.length?G.length+' sujet'+(G.length>1?'s':'')+' · '+n+' exercice'+(n>1?'s':'')+' corrigé'+(n>1?'s':'')+', dans l’ordre':'Les sujets de DS corrigés, exercice par exercice';};
+ORG.vDsc=function(){const G=ORG.dsCorr();
+  const carte=(it,i)=>it.k==='exo'
+    ?`<button class="mod ${ST.doneEx[it.id]?'done':''}" data-ex="${esc(it.id)}"><span class="num c" style="--c:var(--accent)">${it.n<99?it.n:i+1}</span><span class="mt"><h3>${esc(it.titre)}</h3><span class="small mut">${it.nq} étape${it.nq>1?'s':''} corrigée${it.nq>1?'s':''}${ST.doneEx[it.id]?' · ✓ compris':''}</span></span><span class="arr">›</span></button>`
+    :`<button class="mod" data-x="dscEx" data-ds="${esc(it.ds)}" data-i="${it.i}"><span class="num c" style="--c:var(--accent)">${it.n}</span><span class="mt"><h3>${esc(it.titre)}</h3><span class="small mut">${it.nq} question${it.nq>1?'s':''}${it.pts?' · '+it.pts+' pts':''}</span></span><span class="arr">›</span></button>`;
+  return `<div class="fade"><div class="eyebrow">Réviser</div><h2 class="disp">DS corrigés</h2>
+  <p class="lead">Les sujets de DS, exercice par exercice et dans l’ordre, avec leur corrigé. Ils restent aussi dans « Exercices corrigés ».</p>
+  ${G.length?G.map(g=>`<div class="eyebrow" style="margin:18px 0 8px">📝 ${esc(g.label)} · ${g.items.length} exercice${g.items.length>1?'s':''}</div><div class="grid">${g.items.map(carte).join('')}</div>`).join('')
+    :`<div class="card"><p class="small mut">Pas encore de sujet de DS corrigé dans cette matière. Dans un module, titre les exercices « DS 2025 — Exercice 1 : … » pour qu’ils apparaissent ici.</p></div>`}
+  <div class="sp"></div><button class="btn ghost block" data-go="ds">🎯 Faire un DS en conditions réelles</button></div>`;};
+XA.dscEx=d=>go('dscorr-ex',{ds:d.ds,i:+d.i});
+ORG.vDscEx=function(){const def=(PK.ds||[]).find(x=>x.id===route.ds);const e=def&&def.exercices&&def.exercices[route.i];if(!e)return ORG.vDsc();
+  return withK(()=>`<div class="fade" data-scope><div class="eyebrow">${esc(def.titre)} · exercice ${route.i+1}/${def.exercices.length}</div><h2 class="disp">${rich(e.titre)}</h2>
+  ${e.enonce?`<div class="exo-enonce"><div class="eyebrow mut">Énoncé</div><div style="margin-top:6px">${rich(e.enonce)}</div></div>`:''}
+  <p class="small mut" style="margin-bottom:8px">Cherche d’abord sur ton brouillon, puis ouvre le corrigé de chaque question.</p>
+  ${(e.questions||[]).map((q,k)=>`<div class="exo-step"><div class="exo-head"><span class="stepnum">${k+1}</span><h3>${rich(q.q)}</h3></div><details><summary class="small">Voir le corrigé${q.pts?' ('+q.pts+' pt'+(q.pts>1?'s':'')+')':''}</summary><div class="exo-calc" style="margin-top:8px">${rich(q.corrige||'')}</div></details></div>`).join('')}
+  <div class="btnrow">${route.i>0?`<button class="btn ghost" style="flex:1" data-x="dscEx" data-ds="${esc(def.id)}" data-i="${route.i-1}">‹ Exercice ${route.i}</button>`:''}${route.i<def.exercices.length-1?`<button class="btn primary" style="flex:1" data-x="dscEx" data-ds="${esc(def.id)}" data-i="${route.i+1}">Exercice ${route.i+2} ›</button>`:''}</div>
+  <div class="sp"></div><button class="btn ghost block" data-go="dscorr">← Tous les DS corrigés</button></div>`);};
 XA.orgGo=d=>ORG.ouvrir(ORG.items[+d.i]);
 window.Cours={
   jour(items){ORG.items=Array.isArray(items)?items:[];if(['home','lib'].includes(route.v))render();},
