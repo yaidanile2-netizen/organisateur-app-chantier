@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  MODÈLE DE MODULE « Réviser le DS » — pour l'onglet Cours de l'Organisateur
+  ============================================================================
+  Comment l'utiliser
+    1. Copie ce fichier et renomme-le (ex. : module-thermique-batiment.html).
+    2. Remplace le contenu d'EXEMPLE (une matière fictive « Conduction thermique »)
+       par ta matière : en-tête, couleurs, puis le bloc « DONNÉES DE LA MATIÈRE » plus bas.
+       Le plus simple : donne ce modèle + tes cours (PDF, photos, TD corrigés, sujets
+       de DS) à Claude et demande-lui de le remplir en gardant exactement la structure.
+    3. Ouvre le fichier dans un navigateur : un contrôle s'affiche (tout doit être vert).
+    4. Dans l'app : onglet Cours → « ⇄ matières » → « Importer un module (.html) ».
+       La matière est synchronisée sur ton téléphone et ton PC.
+
+  Ce que l'app construit toute seule à partir de ces données
+    - Partie 1 · Cours : une notion par leçon, avec le prof audio et une flashcard
+      « explique » (tirée des encadrés À retenir, des formules et des mots en gras).
+    - Partie 2 · Méthodes : une méthode par chapitre qui a des exercices corrigés.
+    - Partie 3 · Application : les étapes des exercices deviennent des questions
+      (réponse chiffrée si l'étape a un résultat avec un seul nombre).
+    - Partie 4 · Vrai DS : chaque exercice dont le titre commence par « DS 2025 — »
+      (ou « DS 2024-25 — ») forme un vrai sujet ; + un DS blanc tiré au hasard.
+    - Onglet TD : préparer chaque TD la veille (pré-test, l'essentiel, exercice
+      corrigé pas à pas, bilan). Les TD d'id « td1 », « td2 »… sont ouverts directement
+      depuis l'agenda (« Préparer le TD 2 »).
+    - Onglet DS : 3 séances de 30 min (la 3e est un mini DS blanc).
+
+  Règles à respecter
+    - Garde les noms des constantes : APP, COURSE, QUESTIONS, FAMILY_LABEL, FORMULAS,
+      EXERCICES (obligatoires) et XTD, XESS, XFICHE, XFLASH (facultatifs).
+    - Les « id » sont courts, sans espace ni accent, et uniques (ex. : "bases", "q1").
+    - Le champ « m » d'une question, d'une formule ou d'un exercice = l'id d'un module
+      de COURSE.
+    - Dans les leçons (h) : HTML simple. Encadrés reconnus : <div class="retenir">,
+      <div class="piege">, <div class="tip">, <div class="exemple"> (pas de <div> à
+      l'intérieur d'un encadré). Formule en bloc : <div class="blockf">…</div>.
+      Les mots en <b>gras</b> deviennent les mots clés de la flashcard.
+    - Indices et exposants : <sub>…</sub> et <sup>…</sup> dans COURSE, QUESTIONS,
+      FORMULAS et EXERCICES ; écriture courte T^(4), λ_(1) dans XESS, XFICHE, XFLASH.
+    - Le code du module (ex. R3.08) dans le sous-titre aide l'app à relier la matière
+      aux cours de ton emploi du temps.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conduction thermique — Réviser le DS</title>
+<style>
+/* ---- Couleurs de la matière (l'app les reprend). Garde les mêmes noms. ---- */
+:root{
+  --night:#13202B; --night2:#1B2C3A; --night3:#26394A;   /* en-tête, fonds sombres */
+  --paper:#F4F2EE; --card:#FFFFFF;                     /* fond de page, cartes */
+  --ink:#1D1A16; --muted:#62594F; --faint:#A39A8E;     /* textes */
+  --accent:#C2410C; --accent-hi:#EA580C; --accent-bg:#FDE8DC; /* couleur de la matière */
+  --green:#1E7A46; --green-bg:#E3F1E8;
+  --red:#C23B2E; --red-bg:#FBE7E5;
+  --blue:#2E6F9E; --blue-bg:#E6EFF5;
+  --gold:#FDBA74;                                      /* accent lumineux */
+  --line:#E6E0D4;
+}
+.spectrum-stripe{height:4px;background:linear-gradient(90deg,#FDBA74 0 33%,#EA580C 33% 66%,#9A3412 66% 100%)}
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--paper);color:var(--ink)}
+header{background:var(--night);color:#fff}
+.hd-in{max-width:860px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:12px}
+.logo-sign{width:40px;height:40px}
+.hd-t .disp{font-weight:900;text-transform:uppercase;letter-spacing:.4px;font-size:19px}
+.hd-t small{color:#C9BBA9;font-size:12px}
+main{max-width:860px;margin:0 auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.ok{color:var(--green)}.ko{color:var(--red);font-weight:700}
+li{margin:4px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd-in">
+    <!-- Logo : un petit dessin SVG de 100 × 100 (garde class="logo-sign") -->
+    <svg class="logo-sign" viewBox="0 0 100 100" role="img" aria-label="logo"><rect x="14" y="20" width="22" height="60" rx="3" fill="#FDBA74"/><rect x="40" y="20" width="22" height="60" rx="3" fill="#EA580C"/><rect x="66" y="20" width="22" height="60" rx="3" fill="#9A3412"/><path d="M8 50 H94" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M84 42 L94 50 L84 58" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <!-- Titre et sous-titre de la matière (l'app les lit ici) -->
+    <div class="hd-t">
+      <div class="disp">Conduction thermique</div>
+      <small>R3.99 · Transferts de chaleur (EXEMPLE)</small>
+    </div>
+  </div>
+</header>
+<div class="spectrum-stripe"></div>
+<main id="verif"><div class="card">Chargement du contrôle…</div></main>
+
+<script>
+/* ============================================================================
+   DONNÉES DE LA MATIÈRE — c'est la seule partie à remplir
+   ============================================================================ */
+
+/* Réglages des examens blancs (onglet Réviser) */
+const APP = {
+  storageKey: "revision-conduction-v1",   // nom unique pour la sauvegarde
+  examQuestionsPerModule: 3,              // questions par module dans l'examen blanc
+  examMinutes: 25,                        // durée de l'examen blanc
+  moduleQuizSize: 6,                      // QCM d'un module
+  mixQuizSize: 12                         // QCM mélangé
+};
+
+/* LE COURS : des modules (chapitres), chacun avec ses leçons (= notions).
+   Garde l'ordre du cours : l'app suit cet ordre (du plus simple au plus complexe). */
+const COURSE = [
+  {
+    id: "bases",                     // id court du module
+    num: 1,
+    title: "Les bases de la conduction",
+    desc: "Loi de Fourier, flux, résistance thermique d’une paroi plane.",
+    lessons: [
+      {
+        id: "fourier",
+        t: "La loi de Fourier",
+        h: `
+  <p>La <b>conduction</b> est le transfert de chaleur dans la matière, sans déplacement de matière : du plus chaud vers le plus froid.</p>
+  <p>Pour une paroi plane d’épaisseur e, de surface S, dont les faces sont à T<sub>1</sub> et T<sub>2</sub> :</p>
+  <div class="blockf">Φ = λ · S · (T<sub>1</sub> − T<sub>2</sub>) / e</div>
+  <ul>
+    <li>Φ : <b>flux thermique</b> en W</li>
+    <li>λ : <b>conductivité thermique</b> en W/(m·K) (béton ≈ 1,75 ; laine minérale ≈ 0,04)</li>
+    <li>e en m, S en m², T en °C ou K (seule la différence compte)</li>
+  </ul>
+  <div class="retenir"><b>À retenir.</b> Plus λ est petit, plus le matériau est isolant ; doubler l’épaisseur divise le flux par deux.</div>
+  <div class="piege"><b>Piège.</b> L’épaisseur se met en mètres : 20 cm = 0,20 m, pas 20.</div>`
+      },
+      {
+        id: "resistance",
+        t: "La résistance thermique",
+        h: `
+  <p>On écrit la loi de Fourier comme une loi d’Ohm : l’écart de température « pousse » le flux à travers une <b>résistance thermique</b>.</p>
+  <div class="blockf">R = e / (λ · S) &nbsp;[K/W] &nbsp;&nbsp;·&nbsp;&nbsp; Φ = (T<sub>1</sub> − T<sub>2</sub>) / R</div>
+  <div class="tip"><b>Astuce.</b> Analogie électrique : ΔT ↔ tension, Φ ↔ courant, R ↔ résistance.</div>
+  <div class="retenir"><b>À retenir.</b> Des couches traversées l’une après l’autre sont <b>en série</b> : leurs résistances s’additionnent.</div>`
+      }
+    ]
+  },
+  {
+    id: "parois",
+    num: 2,
+    title: "Parois composées et convection",
+    desc: "Murs multicouches, échanges avec l’air, coefficient U.",
+    lessons: [
+      {
+        id: "multicouche",
+        t: "La paroi multicouche",
+        h: `
+  <p>Pour un mur fait de plusieurs couches, on additionne les résistances de chaque couche.</p>
+  <div class="blockf">R<sub>tot</sub> = Σ e<sub>i</sub> / (λ<sub>i</sub> · S)</div>
+  <div class="exemple"><b>Exemple.</b> 20 cm de béton (λ = 1,75) + 10 cm d’isolant (λ = 0,04), pour 1 m² : R = 0,114 + 2,5 = 2,61 K/W. C’est l’isolant qui fait presque tout.</div>`
+      },
+      {
+        id: "convection",
+        t: "Convection et coefficient U",
+        h: `
+  <p>À la surface du mur, l’air échange de la chaleur par <b>convection</b> : Φ = h · S · (T<sub>surface</sub> − T<sub>air</sub>).</p>
+  <div class="blockf">R<sub>conv</sub> = 1 / (h · S)</div>
+  <p>Le <b>coefficient de transmission U</b> regroupe tout, pour 1 m² de paroi :</p>
+  <div class="blockf">1/U = 1/h<sub>i</sub> + Σ e<sub>i</sub>/λ<sub>i</sub> + 1/h<sub>e</sub> &nbsp;&nbsp;·&nbsp;&nbsp; Φ = U · S · ΔT</div>
+  <div class="retenir"><b>À retenir.</b> U s’exprime en W/(m²·K) : plus il est petit, mieux la paroi isole.</div>
+  <div class="piege"><b>Piège.</b> Ne pas oublier les deux résistances superficielles 1/h<sub>i</sub> et 1/h<sub>e</sub>.</div>`
+      }
+    ]
+  }
+];
+
+/* Nom court de chaque module (même ids que COURSE) */
+const FAMILY_LABEL = {
+  bases: "Bases de la conduction",
+  parois: "Parois composées"
+};
+
+/* QCM : q = question, c = propositions, a = numéro de la bonne réponse (0 = la 1re),
+   e = explication affichée après la réponse, m = id du module. Vise 6 à 10 par module. */
+const QUESTIONS = [
+  { id: "q1", m: "bases", q: "Unité de la conductivité thermique λ :", c: ["W/(m·K)", "W/(m²·K)", "K/W", "J/kg/K"], a: 0, e: "λ en W/(m·K) ; U en W/(m²·K)." },
+  { id: "q2", m: "bases", q: "On double l’épaisseur d’une paroi : le flux…", c: ["double", "est divisé par 2", "ne change pas", "est divisé par 4"], a: 1, e: "Φ = λ·S·ΔT/e : e au dénominateur." },
+  { id: "q3", m: "bases", q: "Résistance thermique d’une paroi plane :", c: ["R = λ·S/e", "R = e/(λ·S)", "R = e·λ/S", "R = 1/(h·S)"], a: 1, e: "R = e/(λ·S), en K/W." },
+  { id: "q4", m: "bases", q: "Deux couches traversées l’une après l’autre :", c: ["résistances en parallèle", "résistances en série (on additionne)", "on multiplie les λ", "on garde la plus grande"], a: 1, e: "Le flux traverse les deux : c’est un montage en série." },
+  { id: "q5", m: "parois", q: "Résistance de convection d’une surface S :", c: ["h·S", "1/(h·S)", "h/S", "S/h"], a: 1, e: "Φ = h·S·ΔT donc R = 1/(h·S)." },
+  { id: "q6", m: "parois", q: "Une paroi a U = 0,36 W/(m²·K). Pour 10 m² et ΔT = 20 K :", c: ["7,2 W", "36 W", "72 W", "720 W"], a: 2, e: "Φ = U·S·ΔT = 0,36 × 10 × 20 = 72 W." },
+  { id: "q7", m: "parois", q: "Dans un mur béton + isolant, la plus grande résistance vient :", c: ["du béton", "de l’isolant", "de l’air intérieur", "elles sont égales"], a: 1, e: "e/λ = 0,10/0,04 = 2,5 contre 0,20/1,75 = 0,11 pour le béton." }
+];
+
+/* Formules (flashcards et fiche de dernière minute). n = nom, f = formule, d = détail. */
+const FORMULAS = [
+  { id: "f1", m: "bases", n: "Loi de Fourier (paroi plane)", f: "Φ = λ · S · (T<sub>1</sub> − T<sub>2</sub>) / e", d: "Φ en W, λ en W/(m·K), e en m." },
+  { id: "f2", m: "bases", n: "Résistance de conduction", f: "R = e / (λ · S)", d: "En K/W. Φ = ΔT / R." },
+  { id: "f3", m: "parois", n: "Résistance de convection", f: "R = 1 / (h · S)", d: "h en W/(m²·K)." },
+  { id: "f4", m: "parois", n: "Coefficient U", f: "1/U = 1/h<sub>i</sub> + Σ e<sub>i</sub>/λ<sub>i</sub> + 1/h<sub>e</sub>", d: "Pour 1 m². Φ = U · S · ΔT." }
+];
+
+/* EXERCICES CORRIGÉS (TD, DS) : le cœur des parties 2, 3 et 4.
+   - titre : commence par « TD 1 — », « TD 2 — »… ou « DS 2025 — Ex.1 : … » pour un vrai sujet de DS.
+   - etapes : une étape = une question ou un calcul. methode = comment faire,
+     calc = les lignes de calcul, resultat = le résultat (UN seul nombre avec son unité
+     si possible : l'app en fait une question à réponse chiffrée). */
+const EXERCICES = [
+  {
+    id: "td1-mur", m: "bases", num: 1,
+    titre: "TD 1 — Flux à travers un mur en béton",
+    enonce: "Un mur en béton sépare une pièce à 20 °C de l’extérieur à 5 °C (températures des faces). Calculer sa résistance thermique puis le flux qui le traverse.",
+    donnees: "e = 0,20 m ; λ = 1,75 W/(m·K) ; S = 10 m².",
+    etapes: [
+      { titre: "Calculer la résistance thermique du mur", methode: "R = e/(λ·S), avec e en mètres.",
+        calc: ["R = 0,20 / (1,75 × 10)", "R = 0,0114 K/W"], resultat: "R ≈ 0,0114 K/W" },
+      { titre: "Calculer le flux traversant le mur", methode: "Φ = ΔT / R avec ΔT = T<sub>1</sub> − T<sub>2</sub>.",
+        calc: ["ΔT = 20 − 5 = 15 K", "Φ = 15 / 0,01143"], resultat: "Φ ≈ 1312 W" }
+    ],
+    conclusion: "Un mur en béton seul laisse passer environ 1,3 kW : il faut l’isoler."
+  },
+  {
+    id: "td2-double", m: "parois", num: 2,
+    titre: "TD 2 — Paroi béton + isolant",
+    enonce: "On ajoute 10 cm d’isolant sur le mur du TD 1. Calculer la nouvelle résistance et le nouveau flux.",
+    donnees: "Béton : e = 0,20 m, λ = 1,75 W/(m·K). Isolant : e = 0,10 m, λ = 0,04 W/(m·K). S = 10 m² ; ΔT = 15 K.",
+    etapes: [
+      { titre: "Résistance de l’isolant", methode: "R = e/(λ·S).", calc: ["R<sub>iso</sub> = 0,10 / (0,04 × 10)"], resultat: "R<sub>iso</sub> = 0,25 K/W" },
+      { titre: "Résistance totale (en série)", methode: "On additionne les résistances des couches.", calc: ["R<sub>tot</sub> = 0,0114 + 0,25"], resultat: "R<sub>tot</sub> ≈ 0,261 K/W" },
+      { titre: "Nouveau flux", methode: "Φ = ΔT / R<sub>tot</sub>.", calc: ["Φ = 15 / 0,2614"], resultat: "Φ ≈ 57 W" }
+    ],
+    conclusion: "Le flux passe de 1312 W à 57 W : l’isolant divise les pertes par plus de 20."
+  },
+  {
+    id: "ds25-1", m: "parois", num: 3,
+    titre: "DS 2025 — Ex.1 : coefficient U d’un mur isolé",
+    enonce: "Mur : 20 cm de béton + 10 cm d’isolant. Intérieur 20 °C, extérieur 0 °C. Calculer la résistance totale pour 1 m², le coefficient U, puis la densité de flux.",
+    donnees: "λ<sub>béton</sub> = 1,75 ; λ<sub>iso</sub> = 0,04 W/(m·K) ; h<sub>i</sub> = 8 ; h<sub>e</sub> = 25 W/(m²·K).",
+    etapes: [
+      { titre: "Q1 — Résistance totale pour 1 m²", methode: "1/h<sub>i</sub> + e<sub>1</sub>/λ<sub>1</sub> + e<sub>2</sub>/λ<sub>2</sub> + 1/h<sub>e</sub>.",
+        calc: ["R = 1/8 + 0,20/1,75 + 0,10/0,04 + 1/25", "R = 0,125 + 0,114 + 2,5 + 0,04"], resultat: "R ≈ 2,78 m²·K/W" },
+      { titre: "Q2 — Coefficient U", methode: "U = 1/R.", calc: ["U = 1 / 2,779"], resultat: "U ≈ 0,36 W/(m²·K)" },
+      { titre: "Q3 — Densité de flux", methode: "φ = U · ΔT.", calc: ["φ = 0,36 × (20 − 0)"], resultat: "φ ≈ 7,2 W/m²" }
+    ],
+    conclusion: "U ≈ 0,36 W/(m²·K) : la paroi perd environ 7 W par m² pour 20 °C d’écart."
+  }
+];
+
+/* ---------------------------------------------------------------------------
+   FACULTATIF — si tu les enlèves, l'app les fabrique toute seule
+   --------------------------------------------------------------------------- */
+
+/* Préparation des TD (onglet TD). id "td1", "td2"… = le n° du TD en classe :
+   l'agenda ouvre directement le bon TD. pre = ids de 3 questions de pré-test,
+   ess = clé dans XESS, ex = id de l'exercice corrigé, mod = id du module. */
+const XTD = [
+  { id: "td1", title: "TD 1 — Loi de Fourier et résistance", mod: "bases", pre: ["q1", "q2", "q3"], ess: "bases", abq: [], ex: "td1-mur" },
+  { id: "td2", title: "TD 2 — Parois composées", mod: "parois", pre: ["q4", "q5", "q7"], ess: "parois", abq: [], ex: "td2-double" }
+];
+
+/* « L'essentiel en 5 lignes » de chaque TD (+ une image pour s'en souvenir). */
+const XESS = {
+  bases: {
+    lines: [
+      "La chaleur va toujours du chaud vers le froid.",
+      "Φ = λ·S·ΔT/e : le flux augmente avec λ, S et ΔT, diminue avec e.",
+      "λ petit = matériau isolant (laine ≈ 0,04 ; béton ≈ 1,75 W/(m·K)).",
+      "R = e/(λ·S) en K/W, puis Φ = ΔT/R.",
+      "Toujours e en mètres."
+    ],
+    analogy: "Comme un courant électrique : ΔT est la tension, R la résistance, Φ le courant."
+  },
+  parois: {
+    lines: [
+      "Couches traversées l’une après l’autre : on additionne les résistances.",
+      "Air intérieur et extérieur : R = 1/(h·S), à ajouter aussi.",
+      "Pour 1 m² : 1/U = 1/h_(i) + Σ e/λ + 1/h_(e).",
+      "Φ = U·S·ΔT ; U petit = paroi qui isole bien.",
+      "C’est presque toujours l’isolant qui porte la plus grande résistance."
+    ],
+    analogy: "Des barrières en file : il suffit d’une très haute (l’isolant) pour bloquer presque tout."
+  }
+};
+
+/* Fiche de dernière minute (onglet DS). */
+const XFICHE = {
+  formules: ["Φ = λ·S·ΔT / e", "R = e / (λ·S) ; R_(conv) = 1 / (h·S)", "1/U = 1/h_(i) + Σ e/λ + 1/h_(e) ; Φ = U·S·ΔT"],
+  pieges: ["Épaisseurs en mètres.", "Ne pas oublier 1/h_(i) et 1/h_(e).", "U en W/(m²·K), R en K/W (ou m²·K/W pour 1 m²)."],
+  plan: ["Lis tout le sujet et note les données avec leurs unités.", "Formule en lettres → valeurs → résultat encadré avec l’unité.", "Vérifie l’ordre de grandeur (un mur isolé : U entre 0,1 et 0,5)."]
+};
+
+/* Flashcards en plus (onglet Réviser). type : Rappel, Application ou Calcul. */
+const XFLASH = [
+  { id: "fl1", q: "Quelle couche porte la plus grande résistance dans un mur isolé ?", a: "L’isolant : e/λ = 0,10/0,04 = 2,5 m²·K/W.", type: "Rappel", topic: "Parois composées" },
+  { id: "fl2", q: "U = 0,25 W/(m²·K), 20 m², ΔT = 18 K : flux ?", a: "Φ = 0,25 × 20 × 18 = 90 W.", type: "Calcul", topic: "Parois composées" }
+];
+</script>
+
+<!-- Contrôle du module quand tu ouvres ce fichier dans un navigateur (l'app l'ignore). -->
+<script>
+(function () {
+  var err = [], ok = [];
+  var ids = {}; COURSE.forEach(function (m) { ids[m.id] = 1; });
+  var nl = COURSE.reduce(function (s, m) { return s + (m.lessons || []).length; }, 0);
+  ok.push(COURSE.length + ' modules, ' + nl + ' notions');
+  COURSE.forEach(function (m) { if (!m.lessons || !m.lessons.length) err.push('Le module « ' + m.id + ' » n’a pas de leçon.'); (m.lessons || []).forEach(function (l) { if (/<div class="(retenir|piege|tip|exemple)">(?:(?!<\/div>)[^])*<div/.test(l.h || '')) err.push('Leçon « ' + l.id + ' » : pas de <div> dans un encadré.'); }); });
+  var qid = {};
+  QUESTIONS.forEach(function (q) { qid[q.id] = 1; if (!ids[q.m]) err.push('Question ' + q.id + ' : module « ' + q.m + ' » inconnu.'); if (!q.c || q.c.length < 2 || q.a == null || q.a >= q.c.length) err.push('Question ' + q.id + ' : propositions ou bonne réponse (a) incorrectes.'); });
+  ok.push(QUESTIONS.length + ' QCM');
+  FORMULAS.forEach(function (f) { if (!ids[f.m]) err.push('Formule ' + f.id + ' : module « ' + f.m + ' » inconnu.'); });
+  ok.push(FORMULAS.length + ' formules');
+  var eid = {};
+  EXERCICES.forEach(function (e) { eid[e.id] = 1; if (!ids[e.m]) err.push('Exercice ' + e.id + ' : module « ' + e.m + ' » inconnu.'); if (!e.etapes || !e.etapes.length) err.push('Exercice ' + e.id + ' : aucune étape.'); });
+  var nds = EXERCICES.filter(function (e) { return /^DS\s*\d{4}/i.test(e.titre); }).length;
+  ok.push(EXERCICES.length + ' exercices corrigés (dont ' + nds + ' de vrais DS)');
+  if (typeof XTD !== 'undefined') { XTD.forEach(function (t) { if (!eid[t.ex]) err.push('TD ' + t.id + ' : exercice « ' + t.ex + ' » introuvable.'); if (!ids[t.mod]) err.push('TD ' + t.id + ' : module « ' + t.mod + ' » inconnu.'); (t.pre || []).forEach(function (p) { if (!qid[p]) err.push('TD ' + t.id + ' : question « ' + p + ' » introuvable.'); }); if (typeof XESS !== 'undefined' && t.ess && !XESS[t.ess]) err.push('TD ' + t.id + ' : « ' + t.ess + ' » absent de XESS.'); }); ok.push(XTD.length + ' TD à préparer'); }
+  if (!EXERCICES.length) err.push('Sans exercice corrigé, les parties 2 à 4 seront vides.');
+  document.getElementById('verif').innerHTML = '<div class="card"><h2 style="margin-top:0">Contrôle du module</h2><ul>' +
+    ok.map(function (t) { return '<li class="ok">✓ ' + t + '</li>'; }).join('') + err.map(function (t) { return '<li class="ko">✗ ' + t + '</li>'; }).join('') + '</ul>' +
+    (err.length ? '<p class="ko">Corrige les points en rouge avant d’importer.</p>' : '<p class="ok"><b>Tout est bon.</b> Importe ce fichier dans l’app : onglet Cours → ⇄ matières → Importer un module.</p>') + '</div>';
+})();
+</script>
+</body>
+</html>

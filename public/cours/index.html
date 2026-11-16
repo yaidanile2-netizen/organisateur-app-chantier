@@ -2058,7 +2058,8 @@ function vLib(){const all=allSubjects();const ix=lsGet(IDX_KEY,{});
   <div class="sp"></div><section class="card"><div class="eyebrow">Ajouter une matière</div>
    <p class="small" style="margin:6px 0 10px">Choisis un module de révision au format « Réviser le DS » (fichier .html). Il est lu sur ton téléphone puis transformé en parcours complet.</p>
    <label class="btn primary block x-file">➕ Importer un module (.html)<input type="file" accept=".html,.htm,text/html" id="libFile"></label>
-   <p class="small mut" style="margin-top:8px">Un module importé reste sur cet appareil. Pour l’avoir partout, mets-le dans la banque du projet et demande à Claude de l’ajouter.</p></section></div>`;}
+   <a class="btn ghost block" href="modele-module.html" download="modele-module-revision.html" style="margin-top:8px;text-decoration:none">📄 Télécharger le modèle de module</a>
+   <p class="small mut" style="margin-top:8px">Le modèle explique quoi remplir (tu peux le donner à Claude avec tes cours). Ouvre-le dans un navigateur pour vérifier qu’il est bon avant de l’importer. Un module importé est synchronisé sur ton téléphone et ton PC.</p></section></div>`;}
 XA.lib=()=>{if(route.v==='lib')back();else go('lib');};
 XA.libGo=d=>switchSubject(d.id);
 XA.libDel=(d,b)=>twoStep(b,'Appuie encore pour retirer',()=>{ORG.retirerImport(d.id);const imps=lsGet(IMP_KEY,[]).filter(m=>m.id!==d.id);lsSet(IMP_KEY,imps);try{localStorage.removeItem('mt2e:imp:'+d.id);}catch(e){}
