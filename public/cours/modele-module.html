@@ -38,13 +38,18 @@
       Les mots en <b>gras</b> deviennent les mots clés de la flashcard.
     - Indices et exposants : <sub>…</sub> et <sup>…</sup> dans COURSE, QUESTIONS,
       FORMULAS et EXERCICES ; écriture courte T^(4), λ_(1) dans XESS, XFICHE, XFLASH.
-    - Le code du module (ex. R3.08) dans le sous-titre aide l'app à relier la matière
-      aux cours de ton emploi du temps.
+    - Le TITRE (dans <title> et dans l'en-tête) = le nom du module comme dans ton emploi du temps.
+      Mets aussi le code du module (ex. R3.08) dans le sous-titre.
+    - MOTS CLÉS (balise <meta name="mots-cles"> juste en dessous) : les autres noms sous lesquels
+      la matière apparaît dans ton agenda, séparés par des virgules. Grâce au titre et à ces mots,
+      une révision « Préparer le TD de demain · … » ou « DS … · 2/3 Appliquer » ouvre directement
+      cette matière, au bon TD (onglet TD) ou à la bonne séance de DS (séance 1, 2 ou 3).
 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mots-cles" content="conduction, thermique du bâtiment, R3.99">
 <title>Conduction thermique — Réviser le DS</title>
 <style>
 /* ---- Couleurs de la matière (l'app les reprend). Garde les mêmes noms. ---- */
@@ -180,7 +185,9 @@ const QUESTIONS = [
   { id: "q4", m: "bases", q: "Deux couches traversées l’une après l’autre :", c: ["résistances en parallèle", "résistances en série (on additionne)", "on multiplie les λ", "on garde la plus grande"], a: 1, e: "Le flux traverse les deux : c’est un montage en série." },
   { id: "q5", m: "parois", q: "Résistance de convection d’une surface S :", c: ["h·S", "1/(h·S)", "h/S", "S/h"], a: 1, e: "Φ = h·S·ΔT donc R = 1/(h·S)." },
   { id: "q6", m: "parois", q: "Une paroi a U = 0,36 W/(m²·K). Pour 10 m² et ΔT = 20 K :", c: ["7,2 W", "36 W", "72 W", "720 W"], a: 2, e: "Φ = U·S·ΔT = 0,36 × 10 × 20 = 72 W." },
-  { id: "q7", m: "parois", q: "Dans un mur béton + isolant, la plus grande résistance vient :", c: ["du béton", "de l’isolant", "de l’air intérieur", "elles sont égales"], a: 1, e: "e/λ = 0,10/0,04 = 2,5 contre 0,20/1,75 = 0,11 pour le béton." }
+  { id: "q7", m: "parois", q: "Dans un mur béton + isolant, la plus grande résistance vient :", c: ["du béton", "de l’isolant", "de l’air intérieur", "elles sont égales"], a: 1, e: "e/λ = 0,10/0,04 = 2,5 contre 0,20/1,75 = 0,11 pour le béton." },
+  { id: "q8", m: "parois", q: "Unité du coefficient de transmission U :", c: ["W/(m·K)", "W/(m²·K)", "K/W", "m²·K/W"], a: 1, e: "U est un flux par m² et par kelvin d’écart : W/(m²·K)." },
+  { id: "q9", m: "bases", q: "La conduction transfère la chaleur :", c: ["par déplacement d’air", "par rayonnement", "dans la matière, sans déplacement de matière", "seulement dans les métaux"], a: 2, e: "C’est la définition de la conduction ; l’air qui bouge, c’est la convection." }
 ];
 
 /* Formules (flashcards et fiche de dernière minute). n = nom, f = formule, d = détail. */
@@ -297,7 +304,7 @@ const XFLASH = [
   COURSE.forEach(function (m) { if (!m.lessons || !m.lessons.length) err.push('Le module « ' + m.id + ' » n’a pas de leçon.'); (m.lessons || []).forEach(function (l) { if (/<div class="(retenir|piege|tip|exemple)">(?:(?!<\/div>)[^])*<div/.test(l.h || '')) err.push('Leçon « ' + l.id + ' » : pas de <div> dans un encadré.'); }); });
   var qid = {};
   QUESTIONS.forEach(function (q) { qid[q.id] = 1; if (!ids[q.m]) err.push('Question ' + q.id + ' : module « ' + q.m + ' » inconnu.'); if (!q.c || q.c.length < 2 || q.a == null || q.a >= q.c.length) err.push('Question ' + q.id + ' : propositions ou bonne réponse (a) incorrectes.'); });
-  ok.push(QUESTIONS.length + ' QCM');
+  if (QUESTIONS.length < 8) err.push('Il faut au moins 8 QCM au total (le mini DS en pose 8) ; vise 6 à 10 par module.'); else ok.push(QUESTIONS.length + ' QCM');
   FORMULAS.forEach(function (f) { if (!ids[f.m]) err.push('Formule ' + f.id + ' : module « ' + f.m + ' » inconnu.'); });
   ok.push(FORMULAS.length + ' formules');
   var eid = {};

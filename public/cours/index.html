@@ -1977,7 +1977,7 @@ XA.cMark=d=>{const s=XDS[route.id-1],b=s.blocks[route.b];const list=seanceCards(
   if(+d.v)X.cok=(X.cok||0)+1;else if(!c.src)xAddReview(c.q,c.a,'S'+s.n);X.ci=(X.ci||0)+1;X.crev=0;render();};
 XA.dsNext=()=>{Prof.stop();const s=XDS[route.id-1];if(route.b<s.blocks.length-1){route.b++;X.ci=0;X.crev=0;X.cok=0;X.pi=0;X.prev=0;X.pok=0;render();window.scrollTo(0,0);}else{XS().ds.done[s.n]=1;saveState();tab('ds');}};
 /* mini DS : 8 QCM + 1 problème, correction seulement à la fin */
-function mockQs(){if(!X.mk||!X.mk.qs){const r=rng(XS().ds.seed[3]||7);const pool=QUESTIONS.filter(q=>!q.tete);const by=SECT.map(s=>shuffle(pool.filter(q=>q.m===s.id),r));const qs=[];let k=0;while(qs.length<8){const a=by[k%by.length];if(a.length)qs.push(a.shift());k++;}
+function mockQs(){if(!X.mk||!X.mk.qs){const r=rng(XS().ds.seed[3]||7);const pool=QUESTIONS.filter(q=>!q.tete);const by=SECT.map(s=>shuffle(pool.filter(q=>q.m===s.id),r));const qs=[];let k=0;while(qs.length<8&&by.some(a=>a.length)){const a=by[k%by.length];if(a.length)qs.push(a.shift());k++;}
   X.mk=Object.assign(X.mk||{ans:{}},{qs:qs.map(q=>({q,perm:shuffle(q.c.map((_,i)=>i),r)}))});}return X.mk.qs;}
 function mockProb(){const s=XDS.find(x=>x.blocks.some(b=>b.k==='mock'));const b=s.blocks.find(x=>x.k==='mock');return b.prob||seanceDs(s.n).exercices[b.ex];}
 function xMock(s,b){const qs=mockQs();const mk=X.mk;const p=mockProb();
@@ -2074,7 +2074,7 @@ document.addEventListener('change',async e=>{if(e.target.id!=='libFile')return;c
   let r;try{r=L0.legacyExtract(txt);}catch(err){toast('Pas un module de révision reconnu : '+(err&&err.message||''));return;}
   try{L0.adaptLegacy(r.data,r.meta);}catch(err){toast('Module incomplet : '+(err&&err.message||''));return;}
   const id='imp-'+L0.hashStr(r.meta.titre+'|'+r.data.COURSE.length).toString(36);
-  const meta=Object.assign({},r.meta,{id,key:'mt2e:'+id+':v1',db:'progress/'+id});
+  const meta=Object.assign({},r.meta,{id,key:'mt2e:'+id+':v1',db:'progress/'+id,mots:(txt.match(/<meta\s+name="mots-cles"\s+content="([^"]*)"/i)||[])[1]||''});
   if(allSubjects().some(m=>!m.imported&&m.titre===meta.titre)){toast('Cette matière est déjà dans l’appli');return;}
   if(!lsSet2('mt2e:imp:'+id,r.data)){toast('Plus assez de place sur cet appareil pour ce module');return;}
   const imps=lsGet(IMP_KEY,[]).filter(m=>m.id!==id);imps.push(meta);lsSet(IMP_KEY,imps);ORG.envoyerImport(meta,r.data);toast('Matière ajoutée : '+meta.titre);setTimeout(()=>switchSubject(id),700);});
@@ -2375,6 +2375,8 @@ const ORG={items:[],
   norm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();},
   sujet(it){if(!it)return null;const t=(it.matiere||'')+' '+(it.titre||'');const all=allSubjects();
     for(const m of all){const re=ORG.motsCles[m.id];if(re&&re.test(t))return m;}
+    const nt=ORG.norm(t);
+    for(const m of all){const mc=String(m.mots||'').split(/[,;]/).map(x=>ORG.norm(x).trim()).filter(x=>x.length>2);if(mc.some(k=>nt.includes(k)))return m;}
     const n=ORG.norm(it.matiere);if(!n)return null;
     return all.find(m=>{const a=ORG.norm(m.titre),c=ORG.norm(m.code);return (c&&n.includes(c))||(a.length>3&&(n.includes(a)||a.includes(n)));})||null;},
   /* ce qu'ouvre chaque révision de l'agenda */
