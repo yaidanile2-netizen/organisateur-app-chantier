@@ -17,8 +17,17 @@
     - Partie 1 · Cours : une notion par leçon, avec le prof audio et une flashcard
       « explique » (tirée des encadrés À retenir, des formules et des mots en gras).
     - Partie 2 · Méthodes : une méthode par chapitre qui a des exercices corrigés.
-    - Partie 3 · Application : les étapes des exercices deviennent des questions
-      (réponse chiffrée si l'étape a un résultat avec un seul nombre).
+    - Partie 3 · Application (aussi dans Réviser → 🧮 Application) : les exos de XAPP, avec de
+      NOUVEAUX CHIFFRES à chaque essai, choisis pour se calculer DE TÊTE, et des questions pour
+      COMPRENDRE (lire le schéma, choisir la formule, « si on double… »). En plus, les étapes des
+      exercices corrigés deviennent des questions.
+    - Schémas pas à pas (XSCHEMA) : un schéma SVG commenté étape par étape (ce qui entre, ce qui
+      sort, où ça va dans les formules), avec des flèches animées. Il s'affiche dans les leçons du
+      cours (lecons), dans les exos d'application (schema) et dans Réviser → Application.
+    - « ⚡ Ta 1re action ? » (XTETE) : questions éclair sur la première chose à faire face à un énoncé
+      (contrôle de tête). L'app en fabrique aussi à partir des exercices corrigés.
+    - Méthodes : « Les variantes possibles » (XVARIANTES) et « Où ça tombe » (calculé tout seul à
+      partir des titres « TD n — … » et « DS 2025 — … » des exercices).
     - Partie 4 · Vrai DS : chaque exercice dont le titre commence par « DS 2025 — »
       (ou « DS 2024-25 — ») forme un vrai sujet ; + un DS blanc tiré au hasard.
     - Réviser → DS corrigés : les exercices dont le titre commence par « DS 2025 — », « DS1 — »,
@@ -31,7 +40,8 @@
 
   Règles à respecter
     - Garde les noms des constantes : APP, COURSE, QUESTIONS, FAMILY_LABEL, FORMULAS,
-      EXERCICES (obligatoires) et XTD, XESS, XFICHE, XFLASH (facultatifs).
+      EXERCICES (obligatoires) et XTD, XESS, XFICHE, XFLASH, XAPP, XSCHEMA, XTETE, XVARIANTES
+      (facultatifs). Ce sont des données simples : pas de fonction ni de variable.
     - Les « id » sont courts, sans espace ni accent, et uniques (ex. : "bases", "q1").
     - Le champ « m » d'une question, d'une formule ou d'un exercice = l'id d'un module
       de COURSE.
@@ -55,6 +65,16 @@
       avancement des TD, l'onglet DS affiche alors « 🎯 Quoi réviser pour le DS » : les notions à revoir
       en priorité (liées à tes exos à revoir ou importants ⭐), les chapitres du DS, et ceux qui ne sont
       pas utiles pour ce DS (pas encore vus en TD).
+    - APPLICATION (XAPP) : Daniel fait la plupart des calculs DE TÊTE. Les valeurs tirées doivent donc
+      être rondes (listes de valeurs faciles) et le résultat simple (utilise « si » pour l'exiger,
+      ex. si: "entier(phi)"). Niveau 1 = comprendre (choix), niveau 2 = calculer de tête, niveau 3 =
+      comme au DS + une question de raisonnement. Le contrôle en bas de page tire des exemples.
+    - SCHÉMAS (XSCHEMA) : dessine en SVG (viewBox d'environ 360 de large), mets data-k="nom" sur
+      chaque élément ou groupe à montrer, puis décris les étapes : { t: "texte", on: ["nom", …],
+      f: "formule (facultatif)" }. Classes prêtes : bx (bloc), ln (trait), anim (flèche animée),
+      trace (courbe qui se dessine, avec pathLength="100"), dsh (pointillés), ax (axe), pt (point),
+      ac / wa / gr (couleur accent / rouge / vert), tb (texte gras), ts (petit texte gris).
+      Pointe de flèche : marker-end="url(#xsfl)". Formules en texte simple (Φ = λ·S·ΔT / e).
 -->
 <html lang="fr">
 <head>
@@ -86,6 +106,7 @@ main{max-width:860px;margin:0 auto;padding:18px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
 .ok{color:var(--green)}.ko{color:var(--red);font-weight:700}
 li{margin:4px 0}
+svg text{font-size:12px;fill:var(--ink)}svg .ts{font-size:10.5px;fill:var(--muted)}svg .tb{font-weight:700}svg .bx{fill:var(--card);stroke:var(--ink);stroke-width:1.6}svg .ln{fill:none;stroke:var(--ink);stroke-width:1.7}svg .wa{stroke:var(--red)}svg text.wa{fill:var(--red);stroke:none}svg .ac{stroke:var(--accent)}svg text.ac{fill:var(--accent);stroke:none}svg .dsh{stroke-dasharray:4 4}
 </style>
 </head>
 <body>
@@ -307,6 +328,79 @@ const XFLASH = [
   { id: "fl1", q: "Quelle couche porte la plus grande résistance dans un mur isolé ?", a: "L’isolant : e/λ = 0,10/0,04 = 2,5 m²·K/W.", type: "Rappel", topic: "Parois composées" },
   { id: "fl2", q: "U = 0,25 W/(m²·K), 20 m², ΔT = 18 K : flux ?", a: "Φ = 0,25 × 20 × 18 = 90 W.", type: "Calcul", topic: "Parois composées" }
 ];
+
+/* SCHÉMAS PAS À PAS. Chaque élément à montrer porte data-k="nom" ; chaque étape allume ses éléments
+   (« on »), le reste s'estompe. lecons = ids des leçons où le schéma s'affiche dans le cours
+   (en général une seule : toutes les leçons d'un module s'affichent sur la même page). */
+const XSCHEMA = [
+  {
+    id: "sch-mur", titre: "Le flux à travers un mur", mod: "bases", lecons: ["fourier"],
+    legende: "Une paroi plane entre deux ambiances : la chaleur la traverse *du chaud vers le froid*.",
+    svg: `<svg viewBox="0 0 360 190" role="img" aria-label="Flux de chaleur à travers une paroi">
+<g data-k="t1"><rect x="6" y="20" width="118" height="120" rx="8" fill="#FDE8DC"/><text x="20" y="44" class="tb wa">T₁ : chaud</text></g>
+<g data-k="t2"><rect x="236" y="20" width="118" height="120" rx="8" fill="#E6EFF5"/><text x="258" y="44" class="tb">T₂ : froid</text></g>
+<g data-k="mur"><rect class="bx" x="140" y="10" width="80" height="140" rx="3"/><text x="180" y="84" text-anchor="middle" class="tb">λ</text><text x="180" y="102" text-anchor="middle" class="ts">surface S</text></g>
+<g data-k="e"><line class="ln" x1="140" y1="166" x2="220" y2="166" marker-start="url(#xsfl)" marker-end="url(#xsfl)"/><text x="176" y="184" class="tb">e</text></g>
+<g data-k="flux"><line class="ln wa anim" x1="40" y1="76" x2="320" y2="76" marker-end="url(#xsfl)"/><line class="ln wa anim" x1="40" y1="110" x2="320" y2="110" marker-end="url(#xsfl)"/><text x="294" y="68" class="tb wa">Φ</text></g>
+<g data-k="res"><polyline class="ln ac" points="150,130 158,122 166,138 174,122 182,138 190,122 198,138 206,130"/><text x="168" y="148" class="ts ac">R</text></g>
+</svg>`,
+    etapes: [
+      { t: "La *paroi* : épaisseur *e* (en mètres !), conductivité *λ* du matériau, surface *S*.", on: ["mur", "e"] },
+      { t: "D'un côté *T₁* (chaud), de l'autre *T₂* (froid) : c'est l'*écart de température* qui fait passer la chaleur.", on: ["t1", "t2"], f: "ΔT = T₁ − T₂" },
+      { t: "Le *flux Φ* traverse la paroi du chaud vers le froid. Plus λ et S sont grands, plus il passe ; plus e est grand, moins il passe.", on: ["flux", "mur"], f: "Φ = λ · S · ΔT / e" },
+      { t: "Même idée qu'en électricité : la paroi est une *résistance R*, ΔT joue la tension et Φ le courant.", on: ["res", "flux", "t1", "t2"], f: "R = e / (λ·S)   et   Φ = ΔT / R" }
+    ]
+  }
+];
+
+/* EXOS D'APPLICATION : nouveaux chiffres à chaque essai, faciles à calculer de tête.
+   tirage : des LISTES de valeurs rondes ; calc : les grandeurs calculées (dans l'ordre) ;
+   si : condition pour garder le tirage (ex. résultat entier) ; dans les textes, {{expression}}
+   est remplacé par sa valeur. Une question est soit à choix (choix + bonne = n° de la bonne,
+   à partir de 0), soit chiffrée (rep = l'expression de la réponse, unite, tol = tolérance, 3 % par défaut).
+   Fonctions : sqrt, exp, ln, log, abs, round(x, n), min, max, entier(x), si(condition, a, b), pi. */
+const XAPP = [
+  {
+    id: "a-mur", titre: "Flux à travers un mur", mod: "bases", schema: "sch-mur",
+    tirage: { e: [0.1, 0.2, 0.25, 0.5], lambda: [0.5, 1, 2], S: [2, 4, 5, 10], dT: [10, 20, 30] },
+    calc: { R: "e/(lambda*S)", phi: "dT/R" },
+    si: "entier(phi)",
+    niveaux: [
+      { enonce: "Un mur de {{e}} m d’épaisseur, λ = {{lambda}} W/(m·K), S = {{S}} m², sépare deux ambiances avec ΔT = {{dT}} K.",
+        parts: [
+          { q: "Quelle formule donne la résistance du mur ?", choix: ["R = e / (λ·S)", "R = λ·S / e", "R = e·λ / S", "R = S / (λ·e)"], bonne: 0, explication: "Plus le mur est épais, plus il résiste : e au numérateur." },
+          { q: "Si on double l’épaisseur, le flux…", choix: ["est divisé par 2", "double", "ne change pas", "est divisé par 4"], bonne: 0, explication: "R double, donc Φ = ΔT / R est divisé par 2." }
+        ] },
+      { enonce: "Mur : e = {{e}} m, λ = {{lambda}} W/(m·K), S = {{S}} m², ΔT = {{dT}} K. Calcule de tête.",
+        parts: [
+          { q: "Résistance thermique R ?", rep: "R", unite: "K/W", aide: "R = e / (λ·S) = {{e}} / ({{lambda}} × {{S}})", explication: "R = {{e}} / ({{lambda}} × {{S}}) = {{R}} K/W." },
+          { q: "Flux Φ ?", rep: "phi", unite: "W", aide: "Φ = ΔT / R", explication: "Φ = {{dT}} / {{R}} = {{phi}} W." }
+        ] },
+      { enonce: "Une paroi de {{S}} m², épaisse de {{e}} m (λ = {{lambda}} W/(m·K)), avec {{dT}} K d’écart.",
+        parts: [
+          { q: "Flux Φ ?", rep: "phi", unite: "W", explication: "R = {{R}} K/W, donc Φ = {{dT}} / {{R}} = {{phi}} W." },
+          { q: "Flux si l’écart de température passe à {{2*dT}} K ?", rep: "2*phi", unite: "W", explication: "Φ est proportionnel à ΔT : {{2*phi}} W." }
+        ] }
+    ]
+  }
+];
+
+/* « TA 1re ACTION ? » : questions éclair (contrôle de tête). mod = id du module. */
+const XTETE = [
+  { mod: "bases", q: "On te donne e, λ, S et les deux températures, on demande le flux. Ta 1re action :", c: ["calculer R = e/(λ·S) (ou appliquer Fourier directement)", "calculer U", "chercher h", "convertir ΔT en °C"], a: 0, e: "Une seule couche : Fourier, ou R puis Φ = ΔT/R." },
+  { mod: "parois", q: "Mur à 3 couches + convection des deux côtés, on demande U. Ta 1re action :", c: ["additionner les résistances pour 1 m² (1/h + Σ e/λ + 1/h)", "faire la moyenne des λ", "calculer le flux de chaque couche", "prendre la couche la plus épaisse"], a: 0, e: "En série, les résistances s'additionnent ; U = 1 / R totale pour 1 m²." }
+];
+
+/* VARIANTES par chapitre (id du module) : « Si … → alors … », affichées dans la méthode. */
+const XVARIANTES = {
+  bases: [
+    { si: "On te donne U au lieu de λ et e", alors: "Φ = U · S · ΔT directement." },
+    { si: "L'épaisseur est en cm", alors: "Convertis en mètres avant tout calcul (12 cm = 0,12 m)." }
+  ],
+  parois: [
+    { si: "On demande la température entre deux couches", alors: "Le flux est le même partout : T = T₁ − Φ · (somme des R déjà traversées)." }
+  ]
+};
 </script>
 
 <!-- Contrôle du module quand tu ouvres ce fichier dans un navigateur (l'app l'ignore). -->
@@ -328,9 +422,51 @@ const XFLASH = [
   ok.push(EXERCICES.length + ' exercices corrigés (dont ' + nds + ' de vrais DS)');
   if (typeof XTD !== 'undefined') { XTD.forEach(function (t) { if (!eid[t.ex]) err.push('TD ' + t.id + ' : exercice « ' + t.ex + ' » introuvable.'); if (!ids[t.mod]) err.push('TD ' + t.id + ' : module « ' + t.mod + ' » inconnu.'); (t.pre || []).forEach(function (p) { if (!qid[p]) err.push('TD ' + t.id + ' : question « ' + p + ' » introuvable.'); }); if (typeof XESS !== 'undefined' && t.ess && !XESS[t.ess]) err.push('TD ' + t.id + ' : « ' + t.ess + ' » absent de XESS.'); (t.mods || []).forEach(function (m) { if (!ids[m]) err.push('TD ' + t.id + ' : chapitre « ' + m + ' » (mods) inconnu.'); }); (t.notions || []).forEach(function (n) { if (!nids[n]) err.push('TD ' + t.id + ' : notion « ' + n + ' » inconnue.'); }); }); if (!XTD.some(function (t) { return /^td\d+$/.test(t.id) || /^TD\s*\d+/i.test(t.title || ''); })) err.push('Aucun TD numéroté (id td1, td2… ou titre « TD 1 — … ») : l’app ne pourra pas dire quoi réviser pour le DS.'); ok.push(XTD.length + ' TD à préparer'); }
   if (!EXERCICES.length) err.push('Sans exercice corrigé, les parties 2 à 4 seront vides.');
+  /* Schémas, application, 1re action, variantes */
+  var sid = {}, apercu = '';
+  if (typeof XSCHEMA !== 'undefined') { XSCHEMA.forEach(function (sc) { sid[sc.id] = 1; if (!sc.svg || !/<svg[\s>]/.test(sc.svg)) err.push('Schéma ' + sc.id + ' : pas de <svg>.'); var ks = {}; String(sc.svg).replace(/data-k="([^"]+)"/g, function (m, k) { k.split(/\s+/).forEach(function (x) { ks[x] = 1; }); return m; });
+      (sc.etapes || []).forEach(function (e, i) { (e.on || []).forEach(function (k) { if (!ks[k]) err.push('Schéma ' + sc.id + ', étape ' + (i + 1) + ' : aucun élément data-k="' + k + '" dans le SVG.'); }); });
+      (sc.lecons || []).forEach(function (l) { if (!nids[l]) err.push('Schéma ' + sc.id + ' : leçon « ' + l + ' » inconnue.'); });
+      apercu += '<h3>🗺️ ' + sc.titre + '</h3><div style="max-width:420px">' + String(sc.svg).replace(/<svg([^>]*)>/, '<svg$1><defs><marker id="xsfl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>') + '</div><ol>' + (sc.etapes || []).map(function (e) { return '<li>' + String(e.t).replace(/\*([^*]+)\*/g, '<b>$1</b>') + (e.f ? ' <b>[' + e.f + ']</b>' : '') + '</li>'; }).join('') + '</ol>'; });
+    ok.push(XSCHEMA.length + ' schéma(s) pas à pas'); }
+  if (typeof XAPP !== 'undefined') {
+    var FN = { sqrt: Math.sqrt, racine: Math.sqrt, exp: Math.exp, ln: Math.log, log: Math.log10, abs: Math.abs, sin: Math.sin, cos: Math.cos, tan: Math.tan, floor: Math.floor, ceil: Math.ceil, min: Math.min, max: Math.max, pow: Math.pow,
+      round: function (x, n) { var k = Math.pow(10, n || 0); return Math.round(x * k) / k; }, entier: function (x) { return Math.abs(x - Math.round(x)) < 1e-9 ? 1 : 0; }, si: function (c, a, b) { return c ? a : b; } };
+    FN.arrondi = FN.round;
+    var calc = function (src, V) { var s = String(src), i = 0; function sp() { while (i < s.length && /\s/.test(s[i])) i++; } function eat(t) { sp(); if (s.substr(i, t.length) === t) { i += t.length; return true; } return false; }
+      function prim() { sp(); var c = s[i]; if (c === '(') { i++; var v = or(); if (!eat(')')) throw 'parenthèse'; return v; } if (c === '-' || c === '−') { i++; return -pw(); }
+        if (c === '"' || c === "'") { var j = s.indexOf(c, i + 1); var t = s.slice(i + 1, j); i = j + 1; return t; }
+        var m = s.slice(i).match(/^(\d+(?:\.\d+)?(?:e[+-]?\d+)?)/i); if (m) { i += m[1].length; return parseFloat(m[1]); }
+        var n = s.slice(i).match(/^[A-Za-zÀ-ÖØ-öø-ÿα-ωΑ-Ω_][\wÀ-ÖØ-öø-ÿα-ωΑ-Ω]*/); if (n) { i += n[0].length; if (eat('(')) { var a = []; sp(); if (s[i] !== ')') { do { a.push(or()); } while (eat(',')); } if (!eat(')')) throw 'parenthèse'; if (!FN[n[0]]) throw 'fonction inconnue ' + n[0]; return FN[n[0]].apply(null, a); }
+          if (n[0] === 'pi') return Math.PI; if (n[0] in V) return V[n[0]]; throw 'valeur inconnue « ' + n[0] + ' »'; } throw 'je ne lis pas « ' + s.slice(i) + ' »'; }
+      function pw() { var b = prim(); return eat('^') ? Math.pow(b, pw()) : b; }
+      function mul() { var v = pw(); for (;;) { if (eat('*') || eat('×') || eat('·')) v *= pw(); else if (eat('/') || eat('÷')) v /= pw(); else return v; } }
+      function add() { var v = mul(); for (;;) { if (eat('+')) v += mul(); else if (eat('-') || eat('−')) v -= mul(); else return v; } }
+      function cmp() { var v = add(), w; for (;;) { if (eat('<=')) { w = add(); v = v <= w ? 1 : 0; } else if (eat('>=')) { w = add(); v = v >= w ? 1 : 0; } else if (eat('==')) { w = add(); v = (v === w || Math.abs(v - w) < 1e-9) ? 1 : 0; } else if (eat('!=')) { w = add(); v = v !== w ? 1 : 0; } else if (eat('<')) { w = add(); v = v < w ? 1 : 0; } else if (eat('>')) { w = add(); v = v > w ? 1 : 0; } else return v; } }
+      function and() { var v = cmp(); while (eat('&&')) { var w = cmp(); v = v && w ? 1 : 0; } return v; } function or() { var v = and(); while (eat('||')) { var w = and(); v = v || w ? 1 : 0; } return v; }
+      var r = or(); sp(); if (i < s.length) throw 'reste « ' + s.slice(i) + ' »'; return r; };
+    var fmt = function (x) { return typeof x === 'string' ? x : (+(+x).toPrecision(4)).toLocaleString('fr-FR'); };
+    var fill = function (t, v) { return String(t || '').replace(/\{\{([^}]+)\}\}/g, function (m, e) { return fmt(calc(e, v)); }); };
+    XAPP.forEach(function (a) { var where = 'Application ' + a.id + ' : ';
+      if (!ids[a.mod]) err.push(where + 'module « ' + a.mod + ' » inconnu.'); if (a.schema && !sid[a.schema]) err.push(where + 'schéma « ' + a.schema + ' » introuvable.');
+      if (!a.niveaux || !a.niveaux.length) { err.push(where + 'aucun niveau.'); return; } if (a.niveaux.length < 3) err.push(where + 'prévois 3 niveaux (comprendre, calculer de tête, comme au DS).');
+      var bons = 0, ex = '';
+      for (var essai = 0; essai < 40; essai++) { var v = {}; try { Object.keys(a.tirage || {}).forEach(function (k) { var d = a.tirage[k]; v[k] = Array.isArray(d) ? d[Math.floor(Math.random() * d.length)] : d; });
+          Object.keys(a.calc || {}).forEach(function (k) { v[k] = calc(a.calc[k], v); }); if (a.si && !calc(a.si, v)) continue; bons++;
+          a.niveaux.forEach(function (nv, l) { fill(nv.enonce, v); (nv.parts || []).forEach(function (p, k) { fill(p.q, v); fill(p.aide, v); fill(p.explication, v);
+            if (Array.isArray(p.choix)) { if ((p.bonne || 0) >= p.choix.length) throw 'niveau ' + (l + 1) + ', question ' + (k + 1) + ' : « bonne » hors des choix'; p.choix.forEach(function (o) { fill(o, v); }); }
+            else { var r = calc(p.rep, v); if (typeof r !== 'number' || !isFinite(r)) throw 'niveau ' + (l + 1) + ', question ' + (k + 1) + ' : réponse non calculable'; } }); });
+          if (!ex) ex = a.niveaux.map(function (nv, l) { return '<li><b>Niveau ' + (l + 1) + '</b> — ' + fill(nv.enonce, v) + '<br>' + (nv.parts || []).map(function (p) { return '• ' + fill(p.q, v) + ' → <b>' + (Array.isArray(p.choix) ? fill(p.choix[p.bonne || 0], v) : fmt(calc(p.rep, v)) + ' ' + (p.unite || '')) + '</b>'; }).join('<br>') + '</li>'; }).join('');
+        } catch (e) { err.push(where + e); break; } }
+      if (!bons) err.push(where + 'la condition « si » n’est jamais vraie avec ces listes de valeurs.');
+      apercu += '<h3>🧮 ' + a.titre + '</h3><ul>' + ex + '</ul>'; });
+    ok.push(XAPP.length + ' exo(s) d’application à chiffres faciles'); }
+  if (typeof XTETE !== 'undefined') { XTETE.forEach(function (q, i) { if (!ids[q.mod]) err.push('1re action n° ' + (i + 1) + ' : module « ' + q.mod + ' » inconnu.'); if (!q.c || q.a == null || q.a >= q.c.length) err.push('1re action n° ' + (i + 1) + ' : choix ou bonne réponse (a) incorrects.'); }); ok.push(XTETE.length + ' question(s) « Ta 1re action ? »'); }
+  if (typeof XVARIANTES !== 'undefined') { Object.keys(XVARIANTES).forEach(function (m) { if (!ids[m]) err.push('Variantes : module « ' + m + ' » inconnu.'); }); }
   document.getElementById('verif').innerHTML = '<div class="card"><h2 style="margin-top:0">Contrôle du module</h2><ul>' +
     ok.map(function (t) { return '<li class="ok">✓ ' + t + '</li>'; }).join('') + err.map(function (t) { return '<li class="ko">✗ ' + t + '</li>'; }).join('') + '</ul>' +
-    (err.length ? '<p class="ko">Corrige les points en rouge avant d’importer.</p>' : '<p class="ok"><b>Tout est bon.</b> Importe ce fichier dans l’app : onglet Cours → ⇄ matières → Importer un module.</p>') + '</div>';
+    (err.length ? '<p class="ko">Corrige les points en rouge avant d’importer.</p>' : '<p class="ok"><b>Tout est bon.</b> Importe ce fichier dans l’app : onglet Cours → ⇄ matières → Importer un module.</p>') + '</div>' +
+    (apercu ? '<div class="card"><h2 style="margin-top:0">Aperçu : schémas et exemples d’exos tirés au hasard</h2>' + apercu + '</div>' : '');
 })();
 </script>
 </body>
