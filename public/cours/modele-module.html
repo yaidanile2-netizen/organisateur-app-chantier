@@ -38,12 +38,20 @@
       Les mots en <b>gras</b> deviennent les mots clés de la flashcard.
     - Indices et exposants : <sub>…</sub> et <sup>…</sup> dans COURSE, QUESTIONS,
       FORMULAS et EXERCICES ; écriture courte T^(4), λ_(1) dans XESS, XFICHE, XFLASH.
-    - Le TITRE (dans <title> et dans l'en-tête) = le nom du module comme dans ton emploi du temps.
-      Mets aussi le code du module (ex. R3.08) dans le sous-titre.
-    - MOTS CLÉS (balise <meta name="mots-cles"> juste en dessous) : les autres noms sous lesquels
-      la matière apparaît dans ton agenda, séparés par des virgules. Grâce au titre et à ces mots,
-      une révision « Préparer le TD de demain · … » ou « DS … · 2/3 Appliquer » ouvre directement
-      cette matière, au bon TD (onglet TD) ou à la bonne séance de DS (séance 1, 2 ou 3).
+    - Le TITRE (dans <title> et dans l'en-tête) = le nom de la matière. Pas besoin du nom exact de
+      l'emploi du temps : l'app reconnaît les noms proches (« Thermo » ↔ « Thermodynamique »,
+      « Régulation » ↔ « Régulation des installations », une faute ou un pluriel près, les mots dans
+      le désordre) et le code du module (ex. R3.08) : mets-le dans le sous-titre.
+    - MOTS CLÉS (balise <meta name="mots-cles"> juste en dessous) : d'autres noms de la matière,
+      séparés par des virgules, surtout s'ils ne ressemblent pas au titre (ex. « clim » pour
+      « Traitement de l'air »). Grâce au titre et à ces mots, une révision « Préparer le TD de demain · … »
+      ou « DS … · 2/3 Appliquer » ouvre directement cette matière, au bon TD (onglet TD) ou à la
+      bonne séance de DS (séance 1, 2 ou 3).
+    - LIEN TD ↔ COURS (pour savoir quoi réviser au DS) : dans XTD, dis quels chapitres (mods) ou quelles
+      notions (notions) chaque TD utilise, et titre les exercices « TD n — Exercice k : … ». Avec ton
+      avancement des TD, l'onglet DS affiche alors « 🎯 Quoi réviser pour le DS » : les notions à revoir
+      en priorité (liées à tes exos à revoir ou importants ⭐), les chapitres du DS, et ceux qui ne sont
+      pas utiles pour ce DS (pas encore vus en TD).
 -->
 <html lang="fr">
 <head>
@@ -248,12 +256,16 @@ const EXERCICES = [
    FACULTATIF — si tu les enlèves, l'app les fabrique toute seule
    --------------------------------------------------------------------------- */
 
-/* Préparation des TD (onglet TD). id "td1", "td2"… = le n° du TD en classe :
-   l'agenda ouvre directement le bon TD. pre = ids de 3 questions de pré-test,
-   ess = clé dans XESS, ex = id de l'exercice corrigé, mod = id du module. */
+/* Préparation des TD (onglet TD) et LIEN TD ↔ COURS.
+   - id "td1", "td2"… et titre « TD 1 — … » = le n° du TD en classe : l'agenda ouvre le bon TD.
+   - mod  = le chapitre principal du TD (id d'un module de COURSE).
+   - mods = (facultatif) TOUS les chapitres utilisés par le TD, s'il y en a plusieurs.
+   - notions = (facultatif, plus précis) les ids des notions utilisées par le TD.
+     → C'est ce lien qui permet à l'app de dire, pour le DS, quels cours revoir et lesquels laisser.
+   - pre = ids de 3 questions de pré-test, ess = clé dans XESS, ex = id de l'exercice corrigé. */
 const XTD = [
-  { id: "td1", title: "TD 1 — Loi de Fourier et résistance", mod: "bases", pre: ["q1", "q2", "q3"], ess: "bases", abq: [], ex: "td1-mur" },
-  { id: "td2", title: "TD 2 — Parois composées", mod: "parois", pre: ["q4", "q5", "q7"], ess: "parois", abq: [], ex: "td2-double" }
+  { id: "td1", title: "TD 1 — Loi de Fourier et résistance", mod: "bases", notions: ["fourier", "resistance"], pre: ["q1", "q2", "q3"], ess: "bases", abq: [], ex: "td1-mur" },
+  { id: "td2", title: "TD 2 — Parois composées", mod: "parois", mods: ["bases", "parois"], pre: ["q4", "q5", "q7"], ess: "parois", abq: [], ex: "td2-double" }
 ];
 
 /* « L'essentiel en 5 lignes » de chaque TD (+ une image pour s'en souvenir). */
@@ -298,7 +310,7 @@ const XFLASH = [
 <script>
 (function () {
   var err = [], ok = [];
-  var ids = {}; COURSE.forEach(function (m) { ids[m.id] = 1; });
+  var ids = {}, nids = {}; COURSE.forEach(function (m) { ids[m.id] = 1; (m.lessons || []).forEach(function (l) { nids[l.id] = 1; }); });
   var nl = COURSE.reduce(function (s, m) { return s + (m.lessons || []).length; }, 0);
   ok.push(COURSE.length + ' modules, ' + nl + ' notions');
   COURSE.forEach(function (m) { if (!m.lessons || !m.lessons.length) err.push('Le module « ' + m.id + ' » n’a pas de leçon.'); (m.lessons || []).forEach(function (l) { if (/<div class="(retenir|piege|tip|exemple)">(?:(?!<\/div>)[^])*<div/.test(l.h || '')) err.push('Leçon « ' + l.id + ' » : pas de <div> dans un encadré.'); }); });
@@ -311,7 +323,7 @@ const XFLASH = [
   EXERCICES.forEach(function (e) { eid[e.id] = 1; if (!ids[e.m]) err.push('Exercice ' + e.id + ' : module « ' + e.m + ' » inconnu.'); if (!e.etapes || !e.etapes.length) err.push('Exercice ' + e.id + ' : aucune étape.'); });
   var nds = EXERCICES.filter(function (e) { return /^DS\s*\d{4}/i.test(e.titre); }).length;
   ok.push(EXERCICES.length + ' exercices corrigés (dont ' + nds + ' de vrais DS)');
-  if (typeof XTD !== 'undefined') { XTD.forEach(function (t) { if (!eid[t.ex]) err.push('TD ' + t.id + ' : exercice « ' + t.ex + ' » introuvable.'); if (!ids[t.mod]) err.push('TD ' + t.id + ' : module « ' + t.mod + ' » inconnu.'); (t.pre || []).forEach(function (p) { if (!qid[p]) err.push('TD ' + t.id + ' : question « ' + p + ' » introuvable.'); }); if (typeof XESS !== 'undefined' && t.ess && !XESS[t.ess]) err.push('TD ' + t.id + ' : « ' + t.ess + ' » absent de XESS.'); }); ok.push(XTD.length + ' TD à préparer'); }
+  if (typeof XTD !== 'undefined') { XTD.forEach(function (t) { if (!eid[t.ex]) err.push('TD ' + t.id + ' : exercice « ' + t.ex + ' » introuvable.'); if (!ids[t.mod]) err.push('TD ' + t.id + ' : module « ' + t.mod + ' » inconnu.'); (t.pre || []).forEach(function (p) { if (!qid[p]) err.push('TD ' + t.id + ' : question « ' + p + ' » introuvable.'); }); if (typeof XESS !== 'undefined' && t.ess && !XESS[t.ess]) err.push('TD ' + t.id + ' : « ' + t.ess + ' » absent de XESS.'); (t.mods || []).forEach(function (m) { if (!ids[m]) err.push('TD ' + t.id + ' : chapitre « ' + m + ' » (mods) inconnu.'); }); (t.notions || []).forEach(function (n) { if (!nids[n]) err.push('TD ' + t.id + ' : notion « ' + n + ' » inconnue.'); }); }); if (!XTD.some(function (t) { return /^td\d+$/.test(t.id) || /^TD\s*\d+/i.test(t.title || ''); })) err.push('Aucun TD numéroté (id td1, td2… ou titre « TD 1 — … ») : l’app ne pourra pas dire quoi réviser pour le DS.'); ok.push(XTD.length + ' TD à préparer'); }
   if (!EXERCICES.length) err.push('Sans exercice corrigé, les parties 2 à 4 seront vides.');
   document.getElementById('verif').innerHTML = '<div class="card"><h2 style="margin-top:0">Contrôle du module</h2><ul>' +
     ok.map(function (t) { return '<li class="ok">✓ ' + t + '</li>'; }).join('') + err.map(function (t) { return '<li class="ko">✗ ' + t + '</li>'; }).join('') + '</ul>' +

@@ -553,6 +553,7 @@ body.xp-open main{padding-bottom:190px}
 .x-leg svg{max-width:100%;height:auto}
 .hd-t .disp.long{white-space:normal;font-size:15.5px;line-height:1.15}
 
+.x-dsmod{margin:8px 0 4px}.x-dsmod>b{display:block;font-size:13.5px;margin-bottom:2px}.x-dsmod .chip,.x-exos .chip{display:inline-block;border:0;text-align:left;line-height:1.35}.x-exos .chip small{font-weight:500;opacity:.85}
 </style>
 </head>
 <body>
@@ -1126,7 +1127,7 @@ function adaptLegacy(D,meta){
   const say=l=>{const p=dot(clean(strip(l)));const s=spoken(p);return s===p?p:'⟦'+p+'¦'+s+'⟧';};
   let td;
   if(Array.isArray(ex.XTD)&&ex.XTD.length){td=ex.XTD.map(t=>{const e=ex.XESS&&ex.XESS[t.ess];const mod=modOk(t.mod);const lines=e?(e.lines||[]).map(xfmt):[];
-      return{id:String(t.id),titre:t.title||t.titre||SB[mod].nom,notions:notions.filter(n=>n.secteur===mod).map(n=>n.id),demo:null,ex:EX[t.ex]?t.ex:(exos.find(x=>x.m===mod)||{}).id,
+      return{id:String(t.id),titre:t.title||t.titre||SB[mod].nom,notions:(Array.isArray(t.notions)&&t.notions.length?t.notions.map(String).filter(id=>notions.some(n=>n.id===id)):notions.filter(n=>(Array.isArray(t.mods)&&t.mods.length?t.mods.map(String):[mod]).includes(n.secteur)).map(n=>n.id)),demo:null,ex:EX[t.ex]?t.ex:(exos.find(x=>x.m===mod)||{}).id,
         pre:(t.pre||[]).filter(id=>questions.some(q=>q.id===id)),ess:lines,essSay:lines.map(say),analogie:e&&e.analogy?xfmt(e.analogy):'',abq:(t.abq||[]).filter(a=>abq[a]),essKey:t.ess};});}
   else td=modsEx.map(s=>{const ls=notions.filter(n=>n.secteur===s.id);const lines=[];
       ls.forEach(n=>info[n.id].ret.forEach(r=>{if(lines.length<3)lines.push(esc(cut(r,200)));}));
@@ -1554,7 +1555,7 @@ function vHome(){
   const r=readiness(),v=verdict(r),sr=successRate(),nx=nextStep(),p=PR();
   const weakest=COURSE.slice().sort((a,b)=>modMastery(a)-modMastery(b)).slice(0,3);
   const hist=ST.exams.slice(-8);const nd=ST.exams.length+p.ds.length;
-  return `<div class="fade">${ORG.html()}
+  return `<div class="fade">${ORG.html()}${ORG.dsHTML(false)}
   <section class="card hero-dark">
     <div class="eyebrow" style="color:var(--gold)">Es-tu prêt pour le DS ?</div>
     <div class="gauge-wrap">${gaugeSVG(r)}
@@ -1931,7 +1932,7 @@ XA.tdDone=()=>{XS().td[route.id]=1;saveState();tab('td');};
 /* ---------- Onglet DS : partie 4 (vrai DS) + 3 séances de 30 min ---------- */
 const XDS=XTRA.seances;
 function vDS(){const ds=XS().ds,nr=XS().review.length,un=unlocked(4),hist=PR().ds.slice(-6).reverse();
-  return `<div class="fade"><div class="eyebrow">DS · ${esc(PK.court||SUBJ.titre)}</div><h2 class="disp">Le vrai DS</h2>
+  return `<div class="fade">${ORG.dsHTML(true)}<div class="eyebrow">DS · ${esc(PK.court||SUBJ.titre)}</div><h2 class="disp">Le vrai DS</h2>
   <p class="lead">Sur papier, chronomètre lancé, ${PK.dsRegle||'sans document ni calculatrice'}. Ensuite tu compares avec le corrigé, question par question, et l’appli te dit quoi réparer.</p><div class="sp"></div>
   <div class="eyebrow" style="margin-bottom:8px">Partie 4 du parcours${un?'':' · 🔒 termine la partie 3 ou active l’accès libre'}</div>
   ${PK.ds.map((d,i)=>`<section class="card x-sess"><div class="x-snum" style="${un?'':'background:#D9D2C4'}">${un?(d.gen?'🎲':'📄'):'🔒'}</div><div class="x-stx"><h3>${esc(d.titre)}</h3><p class="small mut">${esc(d.sous||'')}</p></div><button class="btn primary sm" data-x="${un?'dsStart':'locked'}" data-d="${d.id}">Commencer</button></section>`).join('')}
@@ -2377,8 +2378,19 @@ const ORG={items:[],
     for(const m of all){const re=ORG.motsCles[m.id];if(re&&re.test(t))return m;}
     const nt=ORG.norm(t);
     for(const m of all){const mc=String(m.mots||'').split(/[,;]/).map(x=>ORG.norm(x).trim()).filter(x=>x.length>2);if(mc.some(k=>nt.includes(k)))return m;}
-    const n=ORG.norm(it.matiere);if(!n)return null;
-    return all.find(m=>{const a=ORG.norm(m.titre),c=ORG.norm(m.code);return (c&&n.includes(c))||(a.length>3&&(n.includes(a)||a.includes(n)));})||null;},
+    /* noms proches : abréviation, faute, pluriel, mots dans le désordre, même code de module */
+    let best=null,bs=0.66;for(const m of all){const noms=[m.titre,m.court,m.sous,m.code].concat(String(m.mots||'').split(/[,;]/)).filter(Boolean);
+      for(const x of noms){const sc=ORG.sim(it.matiere,x);if(sc>=bs){bs=sc+1e-9;best=m;}}}
+    return best;},
+  /* même algorithme que similarite() de l'organisateur (src/suiviTD.ts) */
+  vides:new Set(['de','des','du','la','le','les','et','en','aux','au','un','une','pour','sur','dans','avec','cours','td','tp','ds','cm','semestre','module']),
+  codes(t){return [...String(t||'').matchAll(/\b([rs]\d)\s*[.,]?\s*(\d{2})\b/gi)].map(m=>(m[1]+m[2]).toLowerCase());},
+  mots(t){return ORG.norm(String(t||'').replace(/\b[rs]\d\s*[.,]?\s*\d{2}\b/gi,' ')).replace(/[^a-z0-9]+/g,'-').split('-').filter(w=>w.length>=3&&!ORG.vides.has(w)&&!/^\d+$/.test(w));},
+  dist(a,b){const d=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return d[b.length];},
+  proches(a,b){if(a===b)return true;let p=0;while(p<a.length&&p<b.length&&a[p]===b[p])p++;if(p>=4&&p>=Math.min(a.length,b.length)-1)return true;
+    const l=Math.min(a.length,b.length);return l>=5&&ORG.dist(a,b)<=(l>=8?2:1);},
+  sim(x,y){const cx=ORG.codes(x);if(cx.length&&ORG.codes(y).some(c=>cx.includes(c)))return 1;const a=ORG.mots(x),b=ORG.mots(y);if(!a.length||!b.length)return 0;
+    const [pe,gr]=a.length<=b.length?[a,b]:[b,a];return pe.filter(w=>gr.some(v=>ORG.proches(w,v))).length/pe.length;},
   /* ce qu'ouvre chaque révision de l'agenda */
   action(it){const e=ORG.norm(it.etape),t=it.type;
     if(t==='td'||t==='tp'||/prepar/.test(e))return{k:'td',td:+it.td||0,l:'Préparer le '+(t==='tp'?'TP':'TD')+(it.td?' '+it.td:'')};
@@ -2412,9 +2424,59 @@ const ORG={items:[],
   envoyerImport(meta,raw){const data={meta,raw};if(JSON.stringify(data).length<380000)DBS.post({action:'ecrire',cle:'pack:'+meta.id,data}).catch(()=>{});},
   retirerImport(id){DBS.post({action:'supprimer',cle:'pack:'+id}).catch(()=>{});}
 };
+/* ---------- Préparer le DS d'après les TD : quels cours revoir, lesquels laisser ----------
+   Lien TD ↔ cours : les TD numérotés (id « td3 » ou titre « TD 3 »), les exercices et les méthodes
+   dont le titre cite « TD n (ex. k) ». L'avancement noté dans l'Organisateur (td.avancement, même
+   origine) dit jusqu'où la classe est arrivée et quels exos sont à revoir ou importants ; la prévision
+   jusqu'au DS arrive par td.previsions. */
+ORG.refs=function(txt){const out=[];String(txt||'').replace(/\bTD\s*(?:n°\s*)?(\d+)(?:[^\d<]{0,16}?\bex(?:ercice|o|\.)?\s*(\d+))?/gi,(m,a,b)=>{out.push([+a,b?+b:0]);return m;});return out;};
+ORG.carteTD=function(){if(ORG._carte)return ORG._carte;const C={};
+  const add=(td,k,ids)=>{const c=C[td]||(C[td]={all:new Set(),exo:{}});ids.forEach(id=>{if(!NBY[id])return;c.all.add(id);if(k)(c.exo[k]||(c.exo[k]=new Set())).add(id);});};
+  XTD.forEach(t=>{const r=/^td(\d+)$/i.exec(String(t.id));const n=r?+r[1]:(ORG.refs(t.titre)[0]||[])[0];if(n)add(n,0,t.notions||[]);});
+  EXERCICES.forEach(e=>{const ids=NOT.filter(x=>x.secteur===e.m).map(x=>x.id);ORG.refs(e.titre).forEach(([n,k])=>add(n,k,ids));});
+  METH.forEach(m=>{ORG.refs((m.sous||'')+' '+(m.titre||'')).forEach(([n,k])=>add(n,k,m.notions||[]));});
+  return ORG._carte=C;};
+ORG.monSuivi=function(){const a=lsGet('td.avancement',null);if(!a||!a.matieres)return null;
+  for(const [cle,m] of Object.entries(a.matieres)){const sj=ORG.sujet({matiere:m.nom});if(sj&&sj.id===SUBJ.id)return{cle,m};}return null;};
+ORG.planDS=function(){const su=ORG.monSuivi();if(!su)return null;const s=su.m;const C=ORG.carteTD();const nums=Object.keys(C).map(Number).sort((a,b)=>a-b);
+  const der=(s.seances||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).pop();
+  const prev=(lsGet('td.previsions',{})||{})[su.cle]||null;
+  const T=Math.max(der?der.td:0,prev&&new Date(prev.date)>new Date()?prev.td:0);
+  const base={cle:su.cle,nom:s.nom,T,prev:prev&&new Date(prev.date)>new Date()?prev:null,der};
+  if(!nums.length||!T)return Object.assign(base,{vide:!nums.length});
+  const need=new Set(),prio=new Map();
+  nums.filter(n=>n<=T).forEach(n=>C[n].all.forEach(id=>need.add(id)));
+  Object.entries(s.tds||{}).forEach(([n,info])=>{const c=C[+n];if(!c)return;
+    const mark=(k,why)=>{const ids=c.exo[k]&&c.exo[k].size?c.exo[k]:c.all;ids.forEach(id=>{need.add(id);const r=prio.get(id)||[];if(!r.includes(why))r.push(why);prio.set(id,r);});};
+    Object.entries(info.exos||{}).forEach(([k,et])=>{if(et==='revoir')mark(+k,'🔁 TD '+n+' ex. '+k);});
+    Object.keys(info.importants||{}).forEach(k=>mark(+k,'⭐ TD '+n+' ex. '+k));});
+  const inTD=new Set();nums.forEach(n=>C[n].all.forEach(id=>inTD.add(id)));
+  const later=NOT.filter(x=>!need.has(x.id)&&nums.some(n=>n>T&&C[n].all.has(x.id))).map(x=>x.id);
+  const seul=NOT.filter(x=>!inTD.has(x.id)).map(x=>x.id);
+  return Object.assign(base,{prio:NOT.filter(x=>prio.has(x.id)).map(x=>({id:x.id,why:prio.get(x.id)})),voir:NOT.filter(x=>need.has(x.id)&&!prio.has(x.id)).map(x=>x.id),laisser:later,seul,tdsApres:nums.filter(n=>n>T)});};
+ORG.parModule=function(ids){const by={};ids.forEach(id=>{const n=NBY[id];(by[n.secteur]=by[n.secteur]||[]).push(n);});
+  return SECT.filter(sc=>by[sc.id]).map(sc=>`<div class="x-dsmod"><b>${esc(sc.nom)}</b><div class="x-exos">${by[sc.id].map(n=>`<button class="chip" data-x="openN" data-n="${esc(n.id)}">${n.num}. ${esc(n.titre)}</button>`).join('')}</div></div>`).join('');};
+ORG.dsHTML=function(dansDS){const P=ORG.planDS();
+  if(!P){return dansDS?`<section class="card tight"><div class="eyebrow">🎯 Quoi réviser pour le DS</div><p class="small mut" style="margin-top:4px">Note ton avancement après chaque TD (Agenda → « jusqu’où es-tu arrivé ? ») : je te dirai ici quels cours revoir pour le DS, et lesquels laisser de côté.</p></section><div class="sp"></div>`:'';}
+  if(P.vide||!P.T)return dansDS?`<section class="card tight"><div class="eyebrow">🎯 Quoi réviser pour le DS</div><p class="small mut" style="margin-top:4px">${P.vide?'Ce module ne relie pas encore ses TD au cours (TD numérotés « td1 », « td2 »… avec leurs chapitres). Demande à Claude de l’ajouter avec le modèle de module.':'Note d’abord jusqu’où tu es arrivé dans un TD.'}</p></section><div class="sp"></div>`:'';
+  ORG.cacheDS(P);
+  const jusqua=P.prev?`TD ${P.prev.td}${P.prev.exo?' ex. '+P.prev.exo:''} (prévu au DS du ${new Date(P.prev.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})})`:`TD ${P.T} (là où tu en es)`;
+  const nb=P.prio.length+P.voir.length;
+  return `<section class="card" style="border-left:4px solid var(--accent)"><div class="eyebrow">🎯 Quoi réviser pour le DS</div>
+   <p class="small mut" style="margin-top:4px">D’après tes TD : programme jusqu’au ${esc(jusqua)}. ${nb} notion${nb>1?'s':''} à revoir${P.laisser.length?', '+P.laisser.length+' à laisser de côté':''}. Touche une notion pour l’ouvrir.</p>
+   ${P.prio.length?`<h3 class="mt12">En priorité</h3><p class="small mut">Liées à tes exos à revoir ou importants.</p><div class="x-exos">${P.prio.map(x=>{const n=NBY[x.id];return `<button class="chip warn" data-x="openN" data-n="${esc(n.id)}">${n.num}. ${esc(n.titre)} <small>· ${esc(x.why.join(', '))}</small></button>`;}).join('')}</div>`:''}
+   ${P.voir.length?`<h3 class="mt12">À revoir</h3><p class="small mut">Le cours des TD faits (ou prévus d’ici le DS).</p>${ORG.parModule(P.voir)}`:''}
+   ${P.laisser.length?`<h3 class="mt12">Pas besoin pour ce DS</h3><p class="small mut">Pas encore traité en TD (TD ${P.tdsApres.join(', ')}). À laisser de côté, sauf si le prof l’annonce au programme.</p>${ORG.parModule(P.laisser)}`:''}
+   ${P.seul.length?`<details class="mt12"><summary class="small">Cours sans TD (${P.seul.length}) : à survoler</summary><p class="small mut">Aucun TD n’y renvoie : il peut tomber en question de cours.</p>${ORG.parModule(P.seul)}</details>`:''}
+  </section><div class="sp"></div>`;};
+/* résumé pour les révisions planifiées de l'Organisateur (consignes des blocs DS) */
+ORG.cacheDS=function(P){try{const c=lsGet('cours.ds',{})||{};const noms=ids=>[...new Set(ids.map(id=>SBY[NBY[id].secteur].nom))];
+  c[P.cle]={sujet:SUBJ.titre,T:P.T,prio:P.prio.map(x=>NBY[x.id].titre).slice(0,8),voir:noms(P.voir.concat(P.prio.map(x=>x.id))),laisser:noms(P.laisser).filter(x=>!noms(P.voir.concat(P.prio.map(y=>y.id))).includes(x)),at:Date.now()};lsSet('cours.ds',c);}catch(e){}};
+window.addEventListener('storage',e=>{if(['td.avancement','td.previsions'].includes(e.key)&&['home','ds'].includes(route.v))render();});
 XA.orgGo=d=>ORG.ouvrir(ORG.items[+d.i]);
 window.Cours={
   jour(items){ORG.items=Array.isArray(items)?items:[];if(['home','lib'].includes(route.v))render();},
+  actualiser(){if(['home','ds','lib'].includes(route.v))render();},
   ouvrir(it){ORG.ouvrir(it);},
   contexte(){const h=document.querySelector('#view h2');const v=document.getElementById('view');
     return{vue:route.v,matiere:SUBJ.titre,titre:h?h.textContent.trim():route.v,texte:(v&&v.innerText||'').replace(/\n{3,}/g,'\n\n').slice(0,2500)};}
