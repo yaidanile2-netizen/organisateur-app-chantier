@@ -42,6 +42,8 @@ export default defineConfig({
                   },
                   injectManifest: {
                             globPatterns: ['**/*.{js,css,html,png,svg,ico,json}'],
+                            // L'app de révision (onglet Cours) pèse environ 1,3 Mo : on la garde hors ligne.
+                            maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                   },
           }),
         ],
