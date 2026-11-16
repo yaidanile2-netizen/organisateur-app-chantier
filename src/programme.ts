@@ -105,7 +105,17 @@ export type SeanceBase = {
 }
 
 /** Une séance à un niveau donné (ce que l'app affiche). */
-export type SeanceProgramme = SeanceBase & NiveauSeance & { niveau: number; nbNiveaux: number }
+export type SeanceProgramme = SeanceBase & NiveauSeance & { niveau: number; nbNiveaux: number; parcours: Parcours }
+
+/** Le chemin suivi pour A, B et D : le programme basique (machines, haltères, barre) ou la callisthénie. */
+export type Parcours = 'basique' | 'calis'
+export const PARCOURS: Record<Parcours, { emoji: string; nom: string; court: string }> = {
+    basique: { emoji: '🏋️', nom: 'Basique', court: 'Machines, haltères, barre' },
+    calis: { emoji: '🤸', nom: 'Callisthénie', court: 'Poids du corps, figures' },
+}
+export type ParcoursChoisis = Partial<Record<CodeSeance, Parcours>>
+/** Le cardio C est le même dans les deux chemins. */
+export const aDeuxChemins = (code: CodeSeance) => code !== 'C'
 
 export const SALLE = {
     nom: 'Basic-Fit Saint-Herblain Atlantis',
@@ -1035,6 +1045,194 @@ export const PROGRAMME: SeanceBase[] = [
     },
 ]
 
+// ---------- Programme « basique » (machines → haltères → barre, octobre 2026) ----------
+// Demande de Daniel (16/11/2026) : pas encore prêt pour la callisthénie. Pour A, B et D, il choisit
+// son chemin, comme les niveaux : « Basique » (le programme d'avant) ou « Callisthénie ». Chaque chemin
+// garde ses propres niveaux et ses propres défis (clés defi-a1 pour le basique, defi-a1k en callisthénie).
+export const PROGRAMME_BASIQUE: SeanceBase[] = [
+    {
+        code: 'A',
+        lieu: 'salle',
+        emoji: '💪',
+        degrade: ['#0b2a6b', '#1e5bd8'],
+        titre: 'Haut du corps',
+        court: 'Haut du corps (pecs, dos, épaules, bras)',
+        couleur: '#4d9fff',
+        focus: 'Musculation : pectoraux, dos, épaules, biceps et triceps.',
+        niveaux: [
+            {
+                nom: 'Machines guidées',
+                resume: 'Les grands mouvements sur machines, pour apprendre la technique sans risque.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules, puis 1 série légère de 15 reps au chest press'],
+                blocs: [
+                    bloc('Pousser + tirer', 3, 75, [A.chestPress, A.latPulldown]),
+                    bloc('Épaules + dos', 3, 75, [A.shoulderPress, A.seatedRow]),
+                    bloc('Pecs + arrière d’épaules', 3, 60, [A.pecDeck, A.oiseauMachine]),
+                    bloc('Bras', 3, 45, [A.curlPoulie, A.tricepsCorde]),
+                ],
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Toutes les séries réussies en haut de la fourchette ? +2,5 kg la prochaine fois.',
+                monter: 'Niveau 2 quand tout te semble facile 2 séances de suite (souvent après 4 à 6 semaines).',
+                defi: { titre: 'Chest press et tirage vertical : 3 × 12 propres', detail: 'Avec ta charge actuelle, les 3 séries de 12 sans tricher (dos collé, descente lente) sur les deux machines.', apres: 8 },
+            },
+            {
+                nom: 'Haltères',
+                resume: 'Les haltères obligent chaque bras à se stabiliser seul : plus de muscles travaillent.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', '1 série de 12 au développé couché avec des haltères légers'],
+                blocs: [
+                    bloc('Développé couché', 4, 90, [A.dcHalteres]),
+                    bloc('Dos + épaules', 3, 75, [A.tirageSerre, A.militaireHalteres]),
+                    bloc('Rowing', 3, 60, [A.rowingHaltere]),
+                    bloc('Épaules 3D', 3, 45, [A.elevLatHalteres, A.facePull]),
+                    bloc('Bras', 3, 45, [A.curlIncline, A.tricepsNuque]),
+                ],
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Haltères : passe à la paire suivante quand tu fais le haut de la fourchette sur toutes les séries.',
+                monter: 'Niveau 3 quand tu es à l’aise techniquement avec les haltères et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Développé couché haltères : 4 × 10 avec 2 × 14 kg', detail: 'Environ 40 % de ton poids au total. Omoplates serrées, descente jusqu’à la poitrine.', apres: 10 },
+            },
+            {
+                nom: 'Barre et force',
+                resume: 'Barre, tractions et dips : moins de répétitions, plus lourd, pour gagner en force.',
+                echauffement: ['5 min de rameur (effort 4/10)', 'Rotations d’épaules et 10 pompes', 'Montée au développé couché : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
+                blocs: [
+                    bloc('Développé couché', 4, 120, [A.dcBarre]),
+                    bloc('Tractions', 4, 90, [A.tractionsAssistees]),
+                    bloc('Incliné + rowing', 3, 90, [A.inclineHalteres, A.rowingBarre]),
+                    bloc('Épaules + dips', 3, 60, [A.elevLatPoulie, A.dips]),
+                    bloc('Bras + posture', 3, 45, [A.curlEz, A.facePull]),
+                ],
+                retourAuCalme: ['2 min d’étirements pectoraux, dos et épaules'],
+                progression: 'Barre : +2,5 kg dès que les 4 séries sont faites en haut de la fourchette. Tractions : −2,5 kg d’assistance.',
+                monter: 'Dernier niveau : continue d’ajouter du poids. Quand les tractions se font sans assistance, on pourra ajouter un niveau 4.',
+                defi: { titre: '🏅 1 traction stricte, sans assistance', detail: 'Bras tendus en bas, menton au-dessus de la barre, sans élan. Le défi ultime du haut du corps.', apres: 12 },
+            },
+        ],
+    },
+    {
+        code: 'B',
+        lieu: 'salle',
+        emoji: '🦵',
+        degrade: ['#063b26', '#0f9a5c'],
+        titre: 'Bas du corps + abdos',
+        court: 'Bas du corps et abdos',
+        couleur: '#00c46a',
+        focus: 'Musculation : cuisses, fessiers, ischios, mollets et gainage. Des jambes fortes = plus d’explosivité et moins de blessures.',
+        niveaux: [
+            {
+                nom: 'Machines + squat',
+                resume: 'Les machines pour charger les jambes, et le squat goblet pour apprendre le mouvement roi.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide et 10 fentes alternées'],
+                blocs: [
+                    bloc('Squat goblet', 3, 75, [B.gobletSquat]),
+                    bloc('Presse + ischios', 3, 75, [B.legPress, B.legCurl]),
+                    bloc('Cuisses + mollets', 3, 60, [B.legExtension, B.mollets]),
+                    bloc('Fessiers', 2, 45, [B.abducteurs]),
+                    bloc('Gainage', 3, 45, [B.crunch, B.planche]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Machines : +2,5 kg (presse : +5 kg) quand toutes les séries sont réussies et faciles.',
+                monter: 'Niveau 2 quand le squat goblet est propre avec un haltère lourd et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Squat goblet : 3 × 10 avec un haltère de 20 kg', detail: 'Cuisses au moins parallèles au sol, talons au sol, dos droit.', apres: 8 },
+            },
+            {
+                nom: 'Poids libres',
+                resume: 'Squat guidé, soulevé de terre roumain et fentes : les jambes travaillent avec l’équilibre.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', '1 série légère de 10 à la Smith machine'],
+                blocs: [
+                    bloc('Squat', 4, 90, [B.squatSmith]),
+                    bloc('Ischios', 3, 75, [B.sdtHalteres, avec(B.legCurl, 3, '10–12')]),
+                    bloc('Fentes', 3, 75, [B.fentesMarchees]),
+                    bloc('Fessiers + mollets', 3, 60, [B.hipThrust, B.molletsDebout]),
+                    bloc('Abdos', 3, 45, [B.releveGenoux, B.pallof]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Squat et hip thrust : +2,5 à 5 kg quand toutes les séries sont réussies. Haltères : paire suivante.',
+                monter: 'Niveau 3 quand le squat guidé est solide (environ ton poids sur la barre) et que tout est facile 2 séances de suite.',
+                defi: { titre: 'Squat à la Smith : 4 × 8 avec ton poids du corps', detail: 'Environ 67 kg sur la barre, cuisses parallèles à chaque répétition.', apres: 10 },
+            },
+            {
+                nom: 'Barre et force',
+                resume: 'Squat barre libre, soulevé de terre roumain et fentes bulgares : le vrai programme force.',
+                echauffement: ['5 min de vélo (effort 4/10)', '10 squats à vide, 10 fentes, 10 ponts fessiers', 'Montée au squat : 10 reps barre seule, puis 5 reps à 60 % de ta charge'],
+                blocs: [
+                    bloc('Squat barre', 4, 120, [B.squatBarre]),
+                    bloc('Soulevé de terre roumain', 3, 90, [B.sdtBarre]),
+                    bloc('Fentes bulgares', 3, 75, [B.fentesBulgares]),
+                    bloc('Fessiers + ischios', 3, 60, [avec(B.hipThrust, 3, '8–10'), avec(B.legCurl, 3, '10')]),
+                    bloc('Abdos', 3, 45, [B.releveJambes, B.crunchPoulie]),
+                ],
+                retourAuCalme: ['2 min d’étirements cuisses, fessiers et mollets'],
+                progression: 'Squat et soulevé : +2,5 kg dès que les séries sont faites en haut de la fourchette.',
+                monter: 'Dernier niveau : continue d’ajouter du poids, les séances restent efficaces très longtemps.',
+                defi: { titre: '🏅 Squat barre : 5 répétitions avec ton poids du corps', detail: 'Barre libre, cuisses parallèles, barres de sécurité du rack bien réglées.', apres: 12 },
+            },
+        ],
+    },
+    {
+        code: 'D',
+        lieu: 'maison',
+        emoji: '🏠',
+        degrade: ['#2b0a45', '#8b2fd6'],
+        titre: 'Maison : épaules, posture, fessiers',
+        court: 'À la maison (élastiques) : épaules, posture, fessiers, gainage',
+        couleur: '#cc44ff',
+        focus: 'Ce que la salle ne travaille pas assez : épaules (côté et arrière), trapèzes, moyen fessier, mollets, lombaires, obliques et avant-bras.',
+        niveaux: [
+            {
+                nom: 'Élastiques',
+                resume: 'Épaules, posture et fessiers avec les élastiques.',
+                duree: 35,
+                echauffement: ['Rotations des bras et des épaules (1 min)', '20 jumping jacks et 10 squats à vide'],
+                blocs: [
+                    bloc('Épaules et posture', 3, 45, [D.elevLat, D.facePull]),
+                    bloc('Trapèzes et pectoraux', 3, 45, [D.haussements, D.pompes]),
+                    bloc('Fessiers', 3, 45, [D.pontFessier, D.pasLateraux]),
+                    bloc('Gainage et avant-bras', 2, 30, [D.superman, D.gainageLateral, D.fingerGrip]),
+                ],
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: 'Quand c’est facile : élastique plus dur, ou +1 pompe par séance.',
+                monter: 'Niveau 2 quand tu fais 15 pompes propres et que les élastiques sont faciles.',
+                defi: { titre: '15 pompes propres d’affilée', detail: 'Corps gainé, poitrine près du sol à chaque répétition.', apres: 6 },
+            },
+            {
+                nom: 'Poids du corps +',
+                resume: 'Rowing, pompes piquées, fentes bulgares et mollets : plus de muscles, et des jambes plus réactives.',
+                duree: 35,
+                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
+                blocs: [
+                    bloc('Pousser + tirer', 4, 45, [avec(D.pompes, 4, 'max − 2'), D.rowingElastique]),
+                    bloc('Épaules', 3, 45, [D.pike, D.elevLat]),
+                    bloc('Jambes', 3, 45, [D.bulgare, D.mollets]),
+                    bloc('Fessiers + posture', 3, 30, [D.pontUneJambe, D.facePull]),
+                    bloc('Gainage', 2, 30, [D.deadBug, avec(D.gainageLateral, 2, '40 s par côté'), D.fingerGrip]),
+                ],
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: '+1 ou 2 reps par série à chaque séance, puis élastique plus dur.',
+                monter: 'Niveau 3 quand tu fais 10 pompes piquées et 12 fentes bulgares par jambe.',
+                defi: { titre: '10 pompes piquées + 12 fentes bulgares par jambe', detail: 'Dans la même séance, technique propre.', apres: 8 },
+            },
+            {
+                nom: 'Athlétique',
+                resume: 'Pompes surélevées, sauts, Y-T-W et hollow : fort et explosif, comme sur un terrain.',
+                duree: 35,
+                echauffement: ['Rotations des bras et des épaules (1 min)', '30 jumping jacks, 10 squats, 5 pompes'],
+                blocs: [
+                    bloc('Pousser + tirer', 4, 60, [D.pompesSurelevees, avec(D.rowingElastique, 4, '10–12 (élastique fort)')]),
+                    bloc('Explosivité', 3, 60, [D.squatSaute, D.molletsUneJambe]),
+                    bloc('Épaules', 3, 45, [avec(D.pike, 3, '8–10, pieds sur une chaise'), D.ytw]),
+                    bloc('Fessiers', 3, 45, [avec(D.pontUneJambe, 3, '12, épaules sur le canapé'), D.pasLateraux]),
+                    bloc('Gainage', 3, 30, [D.hollow, avec(D.gainageLateral, 3, '45 s par côté')]),
+                ],
+                retourAuCalme: ['2 min d’étirements épaules, fessiers et dos'],
+                progression: 'Charge un sac à dos (livres, bouteilles) pour les mollets, et un élastique plus fort.',
+                monter: 'Dernier niveau : ajoute du poids dans le sac à dos petit à petit.',
+                defi: { titre: '🏅 25 pompes d’affilée', detail: 'Le défi final de la séance maison.', apres: 10 },
+            },
+        ],
+    },
+]
+
 // ---------- Accès ----------
 
 export const SEANCES_SALLE = PROGRAMME.filter((s) => s.lieu === 'salle')
@@ -1049,31 +1247,61 @@ export const TOUS_LES_EXERCICES: Exercice[] = (() => {
     return [...vus.values()]
 })()
 
-const CLE_NIVEAUX = 'muscu.niveaux'
+const CLE_NIVEAUX: Record<Parcours, string> = { calis: 'muscu.niveaux', basique: 'muscu.niveauxBase' }
 export type NiveauxChoisis = Partial<Record<CodeSeance, { n: number; depuis?: string }>>
 
-export function lireNiveaux(): NiveauxChoisis {
+/** Les niveaux d'un chemin (le cardio C est rangé avec la callisthénie, son chemin unique). */
+export function lireNiveaux(p: Parcours = 'calis'): NiveauxChoisis {
     try {
-        const brut = localStorage.getItem(CLE_NIVEAUX)
+        const brut = localStorage.getItem(CLE_NIVEAUX[p])
         return brut ? (JSON.parse(brut) as NiveauxChoisis) : {}
     } catch {
         return {}
     }
 }
-export function ecrireNiveaux(n: NiveauxChoisis): void {
+export function ecrireNiveaux(n: NiveauxChoisis, p: Parcours = 'calis'): void {
     try {
-        localStorage.setItem(CLE_NIVEAUX, JSON.stringify(n))
+        localStorage.setItem(CLE_NIVEAUX[p], JSON.stringify(n))
     } catch {
         // stockage indisponible
     }
 }
 
-/** La séance au niveau demandé (par défaut : le niveau choisi par Daniel, gardé sur l'appareil). */
-export function seanceParCode(code: string, niveau?: number): SeanceProgramme {
-    const base = PROGRAMME.find((s) => s.code === code) ?? PROGRAMME[0]
-    const voulu = niveau ?? lireNiveaux()[base.code]?.n ?? 1
+const CLE_PARCOURS = 'muscu.parcours'
+export function lireParcours(): ParcoursChoisis {
+    try {
+        const brut = localStorage.getItem(CLE_PARCOURS)
+        return brut ? (JSON.parse(brut) as ParcoursChoisis) : {}
+    } catch {
+        return {}
+    }
+}
+export function ecrireParcours(p: ParcoursChoisis): void {
+    try {
+        localStorage.setItem(CLE_PARCOURS, JSON.stringify(p))
+    } catch {
+        // stockage indisponible
+    }
+}
+/** Chemin d'une séance : basique par défaut (choix de Daniel), le cardio C n'en a qu'un. */
+export function parcoursDe(code: CodeSeance, choix: ParcoursChoisis = lireParcours()): Parcours {
+    return aDeuxChemins(code) ? (choix[code] ?? 'basique') : 'calis'
+}
+
+/** La séance de base d'un chemin. */
+export function baseDe(code: string, p: Parcours): SeanceBase {
+    const liste = p === 'basique' ? PROGRAMME_BASIQUE : PROGRAMME
+    return liste.find((s) => s.code === code) ?? PROGRAMME.find((s) => s.code === code) ?? PROGRAMME[0]
+}
+
+/** La séance au niveau demandé, dans le chemin choisi (par défaut : ceux gardés sur l'appareil). */
+export function seanceParCode(code: string, niveau?: number, parcours?: Parcours): SeanceProgramme {
+    const c = (PROGRAMME.some((s) => s.code === code) ? code : 'A') as CodeSeance
+    const p = parcours ?? parcoursDe(c)
+    const base = baseDe(c, aDeuxChemins(c) ? p : 'calis')
+    const voulu = niveau ?? lireNiveaux(aDeuxChemins(c) ? p : 'calis')[base.code]?.n ?? 1
     const n = Math.min(base.niveaux.length, Math.max(1, Math.round(voulu) || 1))
-    return { ...base, ...base.niveaux[n - 1], niveau: n, nbNiveaux: base.niveaux.length }
+    return { ...base, ...base.niveaux[n - 1], niveau: n, nbNiveaux: base.niveaux.length, parcours: aDeuxChemins(c) ? p : 'calis' }
 }
 
 /** Durée de la séance en minutes (les courses ont leur propre durée selon l'étape). */

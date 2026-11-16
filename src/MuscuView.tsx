@@ -21,6 +21,8 @@ import {
     seancesAuNiveau,
     type DefisReussis,
     niveauxDepuis,
+    parcoursDepuis,
+    cleParcours,
     conseilPour,
     ecrireCache,
     fmtKg,
@@ -51,6 +53,13 @@ import {
     ecrireNiveaux,
     lireNiveaux,
     seanceParCode,
+    PARCOURS,
+    aDeuxChemins,
+    ecrireParcours,
+    lireParcours,
+    parcoursDe,
+    type Parcours,
+    type ParcoursChoisis,
     type NiveauxChoisis,
     type Bloc,
     type CodeSeance,
@@ -183,7 +192,18 @@ export default function MuscuView() {
     const [zoom, setZoom] = useState<string | null>(null)
     const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
     const [message, setMessage] = useState<string | null>(null)
-    const [niveaux, setNiveaux] = useState<NiveauxChoisis>(() => lireNiveaux())
+    // Niveaux de chaque chemin (callisthénie + cardio, basique), et chemin choisi pour A, B et D.
+    const [niveauxCalis, setNiveauxCalis] = useState<NiveauxChoisis>(() => lireNiveaux('calis'))
+    const [niveauxBase, setNiveauxBase] = useState<NiveauxChoisis>(() => lireNiveaux('basique'))
+    const [parcours, setParcours] = useState<ParcoursChoisis>(() => lireParcours())
+    /** Les niveaux en cours : ceux du chemin choisi pour chaque séance. */
+    const niveaux = useMemo<NiveauxChoisis>(() => {
+        const res: NiveauxChoisis = { C: niveauxCalis.C }
+        for (const c of ['A', 'B', 'D'] as CodeSeance[]) res[c] = (parcoursDe(c, parcours) === 'basique' ? niveauxBase : niveauxCalis)[c]
+        return res
+    }, [niveauxCalis, niveauxBase, parcours])
+    /** Une séance dans son chemin choisi (au niveau en cours, ou au niveau demandé). */
+    const seanceDe = (c: CodeSeance, n?: number) => seanceParCode(c, n ?? niveaux[c]?.n, parcoursDe(c, parcours))
     const [defis, setDefis] = useState<DefisReussis>(() => lireDefis())
     const [extras, setExtras] = useState<Partial<Record<CodeSeance, Exercice[]>>>(() => lire('muscu.extras', {}))
     const [ajout, setAjout] = useState<Ajout | null>(null)
@@ -237,8 +257,14 @@ export default function MuscuView() {
                     ecrireCache(etat)
                     for (const [id, kg] of Object.entries(envoi)) envoyerMuscu({ action: 'charge', id, kg }).catch(() => mettreEnAttente({ charges: { [id]: kg } }))
                 }
-                ecrireNiveaux(n)
-                setNiveaux(n)
+                ecrireNiveaux(n, 'calis')
+                setNiveauxCalis(n)
+                const nb = niveauxDepuis(etat.charges, lireNiveaux('basique'), 'basique')
+                ecrireNiveaux(nb, 'basique')
+                setNiveauxBase(nb)
+                const pc = parcoursDepuis(etat.charges, lireParcours())
+                ecrireParcours(pc)
+                setParcours(pc)
                 const d = defisDepuis(etat.charges, lireDefis())
                 ecrireDefis(d)
                 setDefis(d)
@@ -267,7 +293,7 @@ export default function MuscuView() {
         return () => window.clearTimeout(id)
     }, [repos])
 
-    const seance = seanceParCode(code, niveaux[code]?.n)
+    const seance = seanceDe(code)
     const prevus = seance.blocs.flatMap((b) => b.exercices)
     const extrasSeance = (extras[code] ?? []).filter((e) => !prevus.some((p) => p.id === e.id))
     const exercices = [...prevus, ...extrasSeance]
@@ -317,25 +343,44 @@ export default function MuscuView() {
     }
 
     function changerNiveau(n: number, c: CodeSeance = code) {
-        const actuel = seanceParCode(c, niveaux[c]?.n).niveau
+        const actuel = seanceDe(c).niveau
         if (n === actuel) return
-        setNiveaux((prec) => {
+        const p = parcoursDe(c, parcours)
+        const changer = p === 'basique' ? setNiveauxBase : setNiveauxCalis
+        changer((prec) => {
             const nouveaux = { ...prec, [c]: { n, depuis: new Date().toISOString() } }
-            ecrireNiveaux(nouveaux)
+            ecrireNiveaux(nouveaux, p)
             return nouveaux
         })
         if (c === code) {
             setConseils(null)
             setZoom(null)
         }
-        majCharges({ [cleNiveau(c)]: n })
+        majCharges({ [cleNiveau(c, p)]: n })
+    }
+
+    /** Change de chemin (basique ↔ callisthénie) : chaque chemin garde son niveau. */
+    function changerParcours(p: Parcours, c: CodeSeance = code) {
+        if (!aDeuxChemins(c) || parcoursDe(c, parcours) === p) return
+        setParcours((prec) => {
+            const nouveaux = { ...prec, [c]: p }
+            ecrireParcours(nouveaux)
+            return nouveaux
+        })
+        if (c === code) {
+            setConseils(null)
+            setZoom(null)
+        }
+        majCharges({ [cleParcours(c)]: p === 'calis' ? 2 : 1 })
+        const s = seanceParCode(c, (p === 'basique' ? niveauxBase : niveauxCalis)[c]?.n, p)
+        setMessage(`${PARCOURS[p].emoji} Séance ${c} en ${PARCOURS[p].nom.toLowerCase()} · niveau ${s.niveau} (${s.nom}).`)
     }
 
     /** Défi d'un niveau réussi : par le défi lui-même, ou par l'étape de figure qui lui correspond. */
     function defiFait(c: CodeSeance, niveau: number): string | undefined {
-        const s = seanceParCode(c, niveau)
+        const s = seanceDe(c, niveau)
         const f = s.defi?.figure
-        return defis[cleDefi(c, niveau)] ?? (f ? defis[cleFigure(f.id, f.etape)] : undefined)
+        return defis[cleDefi(c, niveau, s.parcours)] ?? (f ? defis[cleFigure(f.id, f.etape)] : undefined)
     }
 
     function etapeFaite(id: FigureId, etape: number): boolean {
@@ -355,12 +400,12 @@ export default function MuscuView() {
     }
 
     function reussirDefi(c: CodeSeance = code) {
-        const s = seanceParCode(c, niveaux[c]?.n)
+        const s = seanceDe(c)
         const d = s.defi
         if (!d) return
         const dernier = s.niveau >= s.nbNiveaux
         if (!window.confirm(`Tu as réussi le défi « ${d.titre.replace('🏅 ', '')} » ?${dernier ? '' : ` Tu passes au niveau ${s.niveau + 1} de la séance ${c}.`}`)) return
-        noterReussite([cleDefi(c, s.niveau), ...(d.figure ? [cleFigure(d.figure.id, d.figure.etape)] : [])])
+        noterReussite([cleDefi(c, s.niveau, s.parcours), ...(d.figure ? [cleFigure(d.figure.id, d.figure.etape)] : [])])
         if (!dernier) changerNiveau(s.niveau + 1, c)
         setMessage(dernier ? `🏅 Objectif réussi : ${d.titre.replace('🏅 ', '')}. Énorme, bravo !` : `🎉 Défi réussi ! Bienvenue au niveau ${s.niveau + 1} de la séance ${c}.`)
     }
@@ -370,7 +415,7 @@ export default function MuscuView() {
         if (!f) return
         // Si l'étape est le défi du niveau actuel d'une séance, on passe aussi au niveau suivant.
         const lien = lienFigure(id, etape)
-        if (lien && seanceParCode(lien.code, niveaux[lien.code]?.n).niveau === lien.niveau) return reussirDefi(lien.code)
+        if (lien && parcoursDe(lien.code, parcours) === 'calis' && seanceDe(lien.code).niveau === lien.niveau) return reussirDefi(lien.code)
         const e = f.etapes[etape - 1]
         if (!window.confirm(`Tu as réussi « ${e.titre} » ?`)) return
         noterReussite([cleFigure(id, etape)])
@@ -893,8 +938,8 @@ export default function MuscuView() {
                 )}
             </section>
 
-            {/* Objectifs muscu : les figures de callisthénie, étape par étape */}
-            {(() => {
+            {/* Objectifs muscu : les figures de callisthénie, étape par étape (si une séance suit ce chemin) */}
+            {(['A', 'B', 'D'] as CodeSeance[]).some((c) => parcoursDe(c, parcours) === 'calis') && (() => {
                 const toutes = FIGURES.reduce((n, f) => n + f.etapes.length, 0)
                 const reussies = FIGURES.reduce((n, f) => n + f.etapes.filter((_, i) => etapeFaite(f.id, i + 1)).length, 0)
                 return (
@@ -911,7 +956,8 @@ export default function MuscuView() {
                                 const n = faites.filter(Boolean).length
                                 const prochaine = faites.findIndex((x) => !x)
                                 const ouverte = figureOuverte === f.id
-                                const s = seanceParCode(f.seance, niveaux[f.seance]?.n)
+                                const s = seanceParCode(f.seance, niveauxCalis[f.seance]?.n, 'calis')
+                                const enCalis = parcoursDe(f.seance, parcours) === 'calis'
                                 return (
                                     <li key={f.id} className={`mu-figure${ouverte ? ' ouverte' : ''}${prochaine === -1 ? ' finie' : ''}`}>
                                         <button className="mu-figure-tete" aria-expanded={ouverte} onClick={() => setFigureOuverte(ouverte ? null : f.id)}>
@@ -946,7 +992,7 @@ export default function MuscuView() {
                                                         </button>
                                                     )}
                                                     <button className="mu-btn-sec" onClick={() => ouvrirSeance(f.seance)}>
-                                                        {s.emoji} Séance {f.seance} · niv. {s.niveau}
+                                                        {s.emoji} Séance {f.seance} · {enCalis ? `niv. ${s.niveau}` : 'en basique'}
                                                     </button>
                                                 </div>
                                                 <p className="mu-gris">Se travaille en {f.ou}.</p>
@@ -1014,7 +1060,7 @@ export default function MuscuView() {
             {/* Choix de la séance */}
             <div className="mu-cartes-seances">
                 {PROGRAMME.map((base) => {
-                    const s = seanceParCode(base.code, niveaux[base.code]?.n)
+                    const s = seanceDe(base.code)
                     return (
                         <button
                             key={s.code}
@@ -1032,6 +1078,11 @@ export default function MuscuView() {
                             <span className="mu-cs-meta">
                                 {dureeDe(s, lireReglages().duree)} MIN · NIV. {s.niveau}/{s.nbNiveaux}
                             </span>
+                            {aDeuxChemins(s.code) && (
+                                <span className="mu-cs-chemin">
+                                    {PARCOURS[s.parcours].emoji} {PARCOURS[s.parcours].nom}
+                                </span>
+                            )}
                         </button>
                     )
                 })}
@@ -1044,7 +1095,7 @@ export default function MuscuView() {
             >
                 <div className="mu-detail-hero">
                     <div className="mu-detail-texte">
-                        <span className="mu-detail-lieu">{seance.lieu === 'maison' ? '🏠 MAISON OU 🏋️ SALLE' : '🏋️ EN SALLE'}</span>
+                        <span className="mu-detail-lieu">{seance.lieu === 'maison' ? (seance.parcours === 'calis' ? '🏠 MAISON OU 🏋️ SALLE' : '🏠 À LA MAISON') : '🏋️ EN SALLE'}</span>
                         <h2 className="mu-detail-titre">
                             <BoutonRepli ouvert={detailOuvert} onClick={() => basculerDetail()}>
                                 {seance.emoji} SÉANCE {seance.code}
@@ -1052,7 +1103,7 @@ export default function MuscuView() {
                         </h2>
                         <p className="mu-detail-sous">{seance.titre.replace(/^Maison : /, '')}</p>
                         <p className="mu-detail-niveau">
-                            NIVEAU {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
+                            {aDeuxChemins(seance.code) ? `${PARCOURS[seance.parcours].nom.toUpperCase()} · ` : ''}NIVEAU {seance.niveau}/{seance.nbNiveaux} · {seance.nom.toUpperCase()}
                         </p>
                         <div className="mu-anneau" style={{ '--p': `${pourcent}%` } as React.CSSProperties}>
                             <span>
@@ -1066,6 +1117,30 @@ export default function MuscuView() {
                 {detailOuvert && (
                     <>
                 <div className="mu-niveaux">
+                    {aDeuxChemins(seance.code) && (
+                        <div className="mu-chemins" role="radiogroup" aria-label="Programme de la séance">
+                            {(['basique', 'calis'] as Parcours[]).map((p) => {
+                                const s = seanceParCode(seance.code, (p === 'basique' ? niveauxBase : niveauxCalis)[seance.code]?.n, p)
+                                return (
+                                    <button
+                                        key={p}
+                                        role="radio"
+                                        aria-checked={seance.parcours === p}
+                                        className={seance.parcours === p ? 'actif' : ''}
+                                        onClick={() => changerParcours(p)}
+                                    >
+                                        <b>
+                                            {PARCOURS[p].emoji} {PARCOURS[p].nom}
+                                        </b>
+                                        <span>{PARCOURS[p].court}</span>
+                                        <small>
+                                            niv. {s.niveau}/{s.nbNiveaux} · {s.nom}
+                                        </small>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
                     <div className="mu-niveaux-choix" role="radiogroup" aria-label="Niveau de la séance">
                         {seance.niveaux.map((nv, i) => (
                             <button
@@ -1125,7 +1200,7 @@ export default function MuscuView() {
                             <button onClick={() => changerNiveau(seance.niveau - 1)}>Niveau {seance.niveau - 1}</button>
                         </p>
                     ) : (
-                        <p className="mu-niveaux-aide">Tu peux aussi changer de niveau à la main : tes charges sont gardées.</p>
+                        <p className="mu-niveaux-aide">Tu peux aussi changer de niveau ou de programme à la main : tes charges et ton niveau dans chaque programme sont gardés.</p>
                     )}
                 </div>
                 <div className="mu-muscles">

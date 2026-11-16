@@ -1,6 +1,6 @@
 // Suivi muscu : cache sur l'appareil, file d'attente hors ligne, et conseils de progression.
 import { envoyerMuscu, type EtatMuscu, type ExoFait, type Ressenti, type SeanceFaite } from './api'
-import { TOUS_LES_EXERCICES, type CodeSeance, type Exercice, type NiveauxChoisis } from './programme'
+import { TOUS_LES_EXERCICES, type CodeSeance, type Exercice, type NiveauxChoisis, type Parcours, type ParcoursChoisis } from './programme'
 
 export const RESSENTIS: Record<Ressenti, { emoji: string; libelle: string }> = {
     dur: { emoji: '🥵', libelle: 'Dur' },
@@ -193,14 +193,34 @@ export const fmtKg = (kg: number) => String(kg).replace('.', ',')
 
 // --- Niveaux des séances (choisis par Daniel, synchronisés via les « charges » niveau-a, niveau-b…) ---
 
-export const cleNiveau = (code: CodeSeance) => `niveau-${code.toLowerCase()}`
+// Chemin basique : « niveau-a-base »… ; callisthénie et cardio : « niveau-a »…
+export const cleNiveau = (code: CodeSeance, p: Parcours = 'calis') => `niveau-${code.toLowerCase()}${p === 'basique' && code !== 'C' ? '-base' : ''}`
 
-/** Reprend les niveaux enregistrés en ligne (s'ils existent) dans les niveaux de l'appareil. */
-export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxChoisis): NiveauxChoisis {
+/** Reprend les niveaux enregistrés en ligne (s'ils existent) dans les niveaux de l'appareil, pour un chemin. */
+export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxChoisis, p: Parcours = 'calis'): NiveauxChoisis {
     const res: NiveauxChoisis = { ...locaux }
-    for (const code of ['A', 'B', 'C', 'D'] as CodeSeance[]) {
-        const n = charges[cleNiveau(code)]
+    const codes: CodeSeance[] = p === 'basique' ? ['A', 'B', 'D'] : ['A', 'B', 'C', 'D']
+    for (const code of codes) {
+        const n = charges[cleNiveau(code, p)]
         if (n && n !== locaux[code]?.n) res[code] = { n: Math.round(n), depuis: locaux[code]?.depuis }
+        else if (!n && !locaux[code] && p === 'basique') {
+            // Premier retour au basique : on repart après les défis déjà réussis avec l'ancien programme.
+            let k = 1
+            while ((charges[cleDefi(code, k, 'basique')] ?? 0) > 0) k++
+            if (k > 1) res[code] = { n: k }
+        }
+    }
+    return res
+}
+
+/** Chemins choisis, synchronisés comme des « charges » parcours-a = 1 (basique) ou 2 (callisthénie). */
+export const cleParcours = (code: CodeSeance) => `parcours-${code.toLowerCase()}`
+export function parcoursDepuis(charges: Record<string, number>, locaux: ParcoursChoisis): ParcoursChoisis {
+    const res: ParcoursChoisis = { ...locaux }
+    for (const code of ['A', 'B', 'D'] as CodeSeance[]) {
+        const v = charges[cleParcours(code)]
+        if (v === 1) res[code] = 'basique'
+        else if (v === 2) res[code] = 'calis'
     }
     return res
 }
@@ -247,7 +267,9 @@ export function seancesAuNiveau(code: CodeSeance, depuis: string | undefined, id
 
 export type DefisReussis = Record<string, string> // clé → date ISO (ou '' si la date est inconnue)
 // Depuis le passage à la callisthénie (nov. 2026), les défis de A, B et D ont changé : nouvelles clés « defi-a1k ».
-export const cleDefi = (code: CodeSeance, niveau: number) => `defi-${code.toLowerCase()}${niveau}${code === 'C' ? '' : 'k'}`
+// Le chemin basique reprend les anciennes clés « defi-a1 » (mêmes défis qu'avant).
+export const cleDefi = (code: CodeSeance, niveau: number, p: Parcours = 'calis') =>
+    `defi-${code.toLowerCase()}${niveau}${code === 'C' || p === 'basique' ? '' : 'k'}`
 
 export function lireDefis(): DefisReussis {
     return lire<DefisReussis>('muscu.defis', {})

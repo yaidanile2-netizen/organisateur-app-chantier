@@ -247,9 +247,11 @@ export function descriptionSeance(c: Creneau): string {
     const exos = s.blocs.flatMap((b) => b.exercices.map((e) => `• ${e.nom} — ${e.series} × ${e.reps}`))
     const entete =
         s.lieu === 'maison'
-            ? `Séance skills ${hm(c.debut)}–${hm(c.fin)} (à la maison ou à la salle : une barre de traction suffit)`
+            ? s.parcours === 'calis'
+                ? `Séance skills ${hm(c.debut)}–${hm(c.fin)} (à la maison ou à la salle : une barre de traction suffit)`
+                : `Séance maison ${hm(c.debut)}–${hm(c.fin)} (élastiques et poids du corps)`
             : `Départ ${hm(c.depart)} · séance ${hm(c.debut)}–${hm(c.fin)} au Basic-Fit Atlantis · retour vers ${hm(c.retour)}`
-    return [entete, `Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
+    return [entete, `${s.code === 'C' ? '' : s.parcours === 'calis' ? 'Callisthénie · ' : 'Basique · '}Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
 }
 
 // Retrouve la séance (A/B/C/D) d'une tâche créée automatiquement.

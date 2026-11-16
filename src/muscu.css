@@ -1805,3 +1805,51 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Choix du programme (basique ↔ callisthénie) pour A, B et D */
+.mu-chemins {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mu-chemins button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--mu-ink) 14%, transparent);
+  background: var(--mu-surface);
+  color: var(--mu-txt2);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.mu-chemins button b {
+  font-size: 14px;
+  color: var(--mu-txt);
+}
+.mu-chemins button span {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.mu-chemins button small {
+  font-size: 10.5px;
+  opacity: 0.85;
+}
+.mu-chemins button.actif {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 16%, var(--mu-surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent);
+}
+.mu-chemins button.actif b {
+  color: var(--c);
+}
+.mu-cs-chemin {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--mu-txt2);
+}
