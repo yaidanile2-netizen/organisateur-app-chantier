@@ -6,7 +6,6 @@ import {
     ETATS_EXO,
     basculerImportant,
     changerTotal,
-    cleMatiere,
     definirExo,
     exosARevoir,
     exosImportants,
@@ -15,6 +14,7 @@ import {
     lireAvancement,
     positionDe,
     prevoirDS,
+    prochainDS,
     questionsEnAttente,
     repondre,
     suggestion,
@@ -24,7 +24,6 @@ import {
     type Question,
     type SuiviMatiere,
 } from './suiviTD'
-import { cleDuType, nomModule } from './coursType'
 import { ecouter, emettre } from './evenements'
 import Repliable from './Repliable'
 import './avancement.css'
@@ -226,19 +225,6 @@ export function QuestionsTD({ bandeau = false }: { bandeau?: boolean }) {
 }
 
 // ---------- Le suivi par matière (onglet Agenda) ----------
-
-function prochainDS(cours: Cours[], s: SuiviMatiere): Date | null {
-    const k = cleMatiere(s.nom)
-    const ds = cours
-        .filter((c) => cleDuType(c.type) === 'ds' && new Date(c.date_debut) > new Date())
-        .filter((c) => {
-            const m = cleMatiere(nomModule(c.titre))
-            return m === k || m.includes(k) || k.includes(m)
-        })
-        .map((c) => new Date(c.date_debut))
-        .sort((x, y) => x.getTime() - y.getTime())
-    return ds[0] ?? null
-}
 
 function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours[] | null }) {
     const p = positionDe(s)

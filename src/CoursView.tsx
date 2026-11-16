@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { getTachesEntre } from './api'
+import { getCoursEntre, getTachesEntre } from './api'
 import { ecouter, type ItemRevision } from './evenements'
 import { fournirContexte } from './ia'
 import { programmeRevision } from './revision'
 import { QuestionsTD } from './AvancementTD'
-import { resumeAvancement } from './suiviTD'
+import { previsionsDS, resumeAvancement, synchroniserAvancement } from './suiviTD'
 
 // L'app de révision vit dans public/cours/ (fichiers statiques, même origine) : on la charge
 // dans un cadre et on lui parle directement via window.Cours (programme du jour, ouverture
 // d'une matière, contexte pour l'assistant).
 type ApiCours = {
     jour: (items: ItemRevision[]) => void
+    actualiser?: () => void
     ouvrir: (it: ItemRevision) => void
     contexte: () => { vue: string; matiere: string | null; titre: string; texte: string }
 }
@@ -51,6 +52,24 @@ export default function CoursView({ actif }: { actif: boolean }) {
     useEffect(() => {
         if (pret) api()?.jour(items)
     }, [pret, items])
+
+    // « Quoi réviser pour le DS » : jusqu'où la classe sera arrivée au prochain DS de chaque matière.
+    // L'app de révision lit td.avancement et td.previsions (même origine).
+    useEffect(() => {
+        if (!monte) return
+        const debut = new Date()
+        const fin = new Date(debut.getTime() + 90 * 24 * 3600 * 1000)
+        Promise.all([getCoursEntre(debut, fin), synchroniserAvancement()])
+            .then(([cours]) => {
+                try {
+                    localStorage.setItem('td.previsions', JSON.stringify(previsionsDS(cours)))
+                } catch {
+                    // stockage indisponible
+                }
+                api()?.actualiser?.()
+            })
+            .catch(() => {})
+    }, [monte, version, pret])
 
     useEffect(() => ecouter('organisateur:actualiser', () => setVersion((v) => v + 1)), [])
 

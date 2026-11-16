@@ -172,11 +172,85 @@ export function exosImportants(s: SuiviMatiere | undefined): [number, number][] 
 
 export const texteExos = regrouper
 
+// ---------- Noms de matières « proches » ----------
+// Les noms n'ont pas besoin d'être exactement ceux de l'emploi du temps : « Régulation » ↔ « Régulation
+// des installations », « Thermo » ↔ « Thermodynamique », « Réseaux hydro » ↔ « Réseaux hydro. & aéro. »,
+// une faute ou un pluriel près, ou le même code de module (R3.08).
+
+const MOTS_VIDES = new Set(['de', 'des', 'du', 'la', 'le', 'les', 'et', 'en', 'aux', 'au', 'un', 'une', 'pour', 'sur', 'dans', 'avec', 'cours', 'td', 'tp', 'ds', 'cm', 'semestre', 'module'])
+
+const codesDe = (t: string) => [...t.matchAll(/\b([rs]\d)\s*[.,]?\s*(\d{2})\b/gi)].map((m) => (m[1] + m[2]).toLowerCase())
+const motsDe = (t: string) => cleMatiere(t.replace(/\b[rs]\d\s*[.,]?\s*\d{2}\b/gi, ' ')).split('-').filter((w) => w.length >= 3 && !MOTS_VIDES.has(w) && !/^\d+$/.test(w))
+
+function distance(a: string, b: string): number {
+    const d = Array.from({ length: b.length + 1 }, (_, i) => i)
+    for (let i = 1; i <= a.length; i++) {
+        let prec = d[0]
+        d[0] = i
+        for (let j = 1; j <= b.length; j++) {
+            const t = d[j]
+            d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prec + (a[i - 1] === b[j - 1] ? 0 : 1))
+            prec = t
+        }
+    }
+    return d[b.length]
+}
+
+function motsProches(a: string, b: string): boolean {
+    if (a === b) return true
+    let p = 0
+    while (p < a.length && p < b.length && a[p] === b[p]) p++
+    if (p >= 4 && p >= Math.min(a.length, b.length) - 1) return true // abréviation : « thermo », « clim », « maths »
+    return Math.min(a.length, b.length) >= 5 && distance(a, b) <= (Math.min(a.length, b.length) >= 8 ? 2 : 1) // faute, pluriel
+}
+
+/** Ressemblance entre deux noms de matière, de 0 à 1 (1 = même code de module ou tous les mots retrouvés). */
+export function similarite(x: string, y: string): number {
+    const cx = codesDe(x)
+    if (cx.length && codesDe(y).some((c) => cx.includes(c))) return 1
+    const a = motsDe(x)
+    const b = motsDe(y)
+    if (!a.length || !b.length) return 0
+    const [petit, grand] = a.length <= b.length ? [a, b] : [b, a]
+    return petit.filter((w) => grand.some((v) => motsProches(w, v))).length / petit.length
+}
+
+/** Même matière ? (au moins les deux tiers des mots du nom le plus court retrouvés) */
+export const memeMatiere = (x: string, y: string) => similarite(x, y) >= 0.66
+
 export function trouverMatiere(a: Avancement, matiere: string): SuiviMatiere | undefined {
     const k = cleMatiere(matiere)
     if (a.matieres[k]) return a.matieres[k]
-    // DS « Régulation des installations » ↔ TD « Régulation » : on accepte une inclusion.
-    return Object.entries(a.matieres).find(([cle]) => cle.length > 3 && (k.includes(cle) || cle.includes(k)))?.[1]
+    let meilleur: SuiviMatiere | undefined
+    let score = 0.66
+    for (const m of Object.values(a.matieres)) {
+        const sc = similarite(matiere, m.nom)
+        if (sc >= score) {
+            score = sc + 1e-9
+            meilleur = m
+        }
+    }
+    return meilleur
+}
+
+/** Prochain DS de la matière dans l'emploi du temps. */
+export function prochainDS(cours: Cours[], s: SuiviMatiere, maintenant = new Date()): Date | null {
+    const ds = cours
+        .filter((c) => cleDuType(c.type) === 'ds' && new Date(c.date_debut) > maintenant && memeMatiere(nomModule(c.titre), s.nom))
+        .map((c) => new Date(c.date_debut))
+        .sort((x, y) => x.getTime() - y.getTime())
+    return ds[0] ?? null
+}
+
+/** Pour l'onglet Cours : où la classe devrait en être au prochain DS de chaque matière. */
+export function previsionsDS(cours: Cours[], maintenant = new Date()): Record<string, { td: number; exo: number; date: string }> {
+    const res: Record<string, { td: number; exo: number; date: string }> = {}
+    for (const [cle, s] of Object.entries(lireAvancement().matieres)) {
+        const ds = prochainDS(cours, s, maintenant)
+        const p = ds ? prevoirDS(s, ds, cours, maintenant) : null
+        if (ds && p) res[cle] = { td: p.td, exo: p.exo, date: ds.toISOString() }
+    }
+    return res
 }
 
 // ---------- Rythme et prévision pour le DS ----------
@@ -224,12 +298,10 @@ export function prevoirDS(s: SuiviMatiere | undefined, dateDS: Date, cours: Cour
     const r = rythme(s)
     const p = positionDe(s)
     if (!s || !r || !p) return null
-    const k = cleMatiere(s.nom)
     const seances = cours.filter((c) => {
         if (cleDuType(c.type) !== 'td') return false
         const d = new Date(c.date_debut)
-        const m = cleMatiere(nomModule(c.titre))
-        return d > maintenant && d < dateDS && (m === k || m.includes(k) || k.includes(m))
+        return d > maintenant && d < dateDS && memeMatiere(nomModule(c.titre), s.nom)
     }).length
     const fin = depuisIndice(s, indice(s, p.td, p.jusqua) + r * seances)
     return { ...fin, seances, rythme: Math.round(r * 10) / 10 }
@@ -359,9 +431,28 @@ export function consignesDS(matiere: string, etape: number, prevision: Prevision
     }
     const importants = exosImportants(s)
     if (etape === 0 && importants.length) res.push(`Exos importants ⭐ signalés en TD : ${regrouper(importants.slice(0, 8))}`)
+    // Cours à revoir et à laisser : calculés par l'onglet Cours d'après les TD (si la matière y a été ouverte).
+    const cle = Object.entries(lireAvancement().matieres).find(([, m]) => m === s)?.[0]
+    const plan = cle ? lireJSON<Record<string, PlanCours>>('cours.ds', {})[cle] : undefined
+    if (plan && etape <= 1) {
+        if (plan.prio.length) res.push(`Cours à revoir en priorité : ${plan.prio.slice(0, 5).join(', ')}`)
+        if (etape === 0 && plan.voir.length) res.push(`Chapitres du DS : ${plan.voir.join(', ')}`)
+        if (etape === 0 && plan.laisser.length) res.push(`Pas besoin pour ce DS (pas encore vu en TD) : ${plan.laisser.join(', ')}`)
+    } else if (etape === 0) res.push('Onglet Cours → DS : la liste des cours à revoir et de ceux à laisser, d’après tes TD')
     if (etape === 1 && revoir.length) res.push(`Commence par tes exos « à revoir » : ${regrouper(revoir.slice(0, 8))}`)
     if (etape === 1 && importants.length) res.push(`Puis refais les exos importants ⭐ : ${regrouper(importants.slice(0, 8))}`)
     return res
+}
+
+type PlanCours = { sujet: string; T: number; prio: string[]; voir: string[]; laisser: string[]; at: number }
+
+function lireJSON<T>(cle: string, defaut: T): T {
+    try {
+        const brut = localStorage.getItem(cle)
+        return brut ? (JSON.parse(brut) as T) : defaut
+    } catch {
+        return defaut
+    }
 }
 
 /** Résumé pour l'assistant IA. */
