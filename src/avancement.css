@@ -285,3 +285,158 @@
     color: #111;
   }
 }
+
+/* ---------- États des exos : fait / compris / à revoir + important ---------- */
+.av-exos-seance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.av-exo-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.av-exo-ligne > b {
+  width: 42px;
+  flex-shrink: 0;
+  font-size: 13.5px;
+}
+.av-etats {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.av-etat {
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  background: none;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.av-etat.fait.actif {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+.av-etat.compris.actif {
+  background: rgba(74, 222, 128, 0.16);
+  border-color: #22c55e;
+  color: #15803d;
+}
+.av-etat.revoir.actif {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #f59e0b;
+  color: #b45309;
+}
+.av-etat.afaire.actif {
+  background: rgba(107, 114, 128, 0.12);
+  border-color: #9ca3af;
+}
+.av-star {
+  flex-shrink: 0;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  background: none;
+  color: #9ca3af;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.av-star.actif {
+  border-color: #eab308;
+  background: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+}
+.av-actions .av-star {
+  font-size: 12.5px;
+  height: auto;
+  padding: 6px 9px;
+}
+
+.av-td-bloc + .av-td-bloc {
+  margin-top: 2px;
+}
+.av-exo {
+  position: relative;
+}
+.av-exo.fait {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+.av-exo.compris {
+  background: #4ade80;
+  border-color: #4ade80;
+  color: #053b1a;
+}
+.av-exo.choisi {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+}
+.av-exo-n {
+  position: absolute;
+  bottom: -2px;
+  right: 1px;
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.85;
+}
+.av-exo-star {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  font-size: 11px;
+  line-height: 1;
+}
+.av-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 4px 48px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(79, 70, 229, 0.06);
+  animation: av-entree 0.2s ease-out;
+}
+.av-actions > b {
+  font-size: 12.5px;
+  margin-right: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .av-etat,
+  .av-star {
+    border-color: #3a3a3e;
+  }
+  .av-etat.fait.actif {
+    color: #93c5fd;
+  }
+  .av-etat.compris.actif {
+    color: #86efac;
+  }
+  .av-etat.revoir.actif {
+    color: #fcd34d;
+  }
+  .av-star.actif {
+    color: #fde047;
+  }
+  .av-exo.fait {
+    color: #fff;
+  }
+  .av-actions {
+    background: rgba(129, 140, 248, 0.1);
+  }
+}

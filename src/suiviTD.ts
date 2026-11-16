@@ -5,8 +5,16 @@
 import type { Cours } from './api'
 import { cleDuType, nomModule } from './coursType'
 
-export type EtatExo = 'fait' | 'revoir'
-export type InfoTD = { total?: number; exos: Record<string, EtatExo> }
+/** fait = fait en classe (ou à la maison) · compris = fait et bien compris · revoir = pas bien compris */
+export type EtatExo = 'fait' | 'compris' | 'revoir'
+/** importants : exos que Daniel signale comme importants (à refaire en priorité avant le DS). */
+export type InfoTD = { total?: number; exos: Record<string, EtatExo>; importants?: Record<string, true> }
+
+export const ETATS_EXO: Record<EtatExo, { icone: string; libelle: string }> = {
+    fait: { icone: '✏️', libelle: 'fait' },
+    compris: { icone: '💡', libelle: 'compris' },
+    revoir: { icone: '🔁', libelle: 'à revoir' },
+}
 export type SeanceTD = { cle: string; date: string; td: number; jusqua: number }
 export type SuiviMatiere = { nom: string; tds: Record<string, InfoTD>; seances: SeanceTD[] }
 export type Avancement = { v: 1; updatedAt: number; matieres: Record<string, SuiviMatiere>; ignores: string[] }
@@ -154,6 +162,14 @@ export function exosARevoir(s: SuiviMatiere | undefined): [number, number][] {
     return res.sort((a, b) => a[0] - b[0] || a[1] - b[1])
 }
 
+/** Exos signalés importants (⭐), dans l'ordre. */
+export function exosImportants(s: SuiviMatiere | undefined): [number, number][] {
+    if (!s) return []
+    const res: [number, number][] = []
+    for (const [td, info] of Object.entries(s.tds)) for (const e of Object.keys(info.importants ?? {})) res.push([Number(td), Number(e)])
+    return res.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+}
+
 export const texteExos = regrouper
 
 export function trouverMatiere(a: Avancement, matiere: string): SuiviMatiere | undefined {
@@ -251,17 +267,23 @@ export function questionsEnAttente(cours: Cours[], a: Avancement, maintenant = n
     return [...plusRecente.values()].sort((x, y) => y.fin.getTime() - x.fin.getTime())
 }
 
-export type Reponse = { td: number; jusqua: number; total?: number; aRevoir: number[]; depuis: number }
+/** etats / importants : pour les exos faits pendant la séance (après `depuis`). */
+export type Reponse = { td: number; jusqua: number; total?: number; depuis: number; etats: Record<number, EtatExo>; importants: number[] }
 
 export function repondre(q: Question, r: Reponse): void {
     modifierAvancement((a) => {
         const m: SuiviMatiere = a.matieres[q.cleMat] ?? { nom: q.matiere, tds: {}, seances: [] }
         const info: InfoTD = m.tds[r.td] ?? { exos: {} }
         if (r.total) info.total = r.total
+        const importants = { ...info.importants }
         for (let e = 1; e <= r.jusqua; e++) {
-            if (r.aRevoir.includes(e)) info.exos[e] = 'revoir'
-            else if (e > r.depuis || !info.exos[e]) info.exos[e] = 'fait'
+            if (e > r.depuis) {
+                info.exos[e] = r.etats[e] ?? 'fait'
+                if (r.importants.includes(e)) importants[e] = true
+                else delete importants[e]
+            } else if (!info.exos[e]) info.exos[e] = 'fait'
         }
+        info.importants = importants
         m.tds[r.td] = info
         m.seances = [...m.seances.filter((s) => s.cle !== q.cle), { cle: q.cle, date: q.fin.toISOString(), td: r.td, jusqua: r.jusqua }].slice(-60)
         a.matieres[q.cleMat] = m
@@ -273,15 +295,26 @@ export function ignorer(q: Question): void {
     modifierAvancement((a) => ({ ...a, ignores: [...a.ignores, q.cle].slice(-80) }))
 }
 
-/** Exo coché à la maison : pas fait → fait → à revoir → pas fait. */
-export function basculerExo(cleMat: string, td: number, exo: number): void {
+/** État d'un exo changé depuis le suivi (null = pas fait). */
+export function definirExo(cleMat: string, td: number, exo: number, etat: EtatExo | null): void {
     modifierAvancement((a) => {
         const info = a.matieres[cleMat]?.tds[td]
         if (!info) return a
-        const etat = info.exos[exo]
-        if (!etat) info.exos[exo] = 'fait'
-        else if (etat === 'fait') info.exos[exo] = 'revoir'
+        if (etat) info.exos[exo] = etat
         else delete info.exos[exo]
+        return a
+    })
+}
+
+/** Exo important (⭐) ou non. */
+export function basculerImportant(cleMat: string, td: number, exo: number): void {
+    modifierAvancement((a) => {
+        const info = a.matieres[cleMat]?.tds[td]
+        if (!info) return a
+        const imp = { ...info.importants }
+        if (imp[exo]) delete imp[exo]
+        else imp[exo] = true
+        info.importants = imp
         return a
     })
 }
@@ -307,6 +340,8 @@ export function consignesTD(matiere: string): string[] {
     const res: string[] = []
     if (restants.length) res.push(`Finis les exos pas terminés en TD : ${regrouper(restants.slice(0, 6))}`)
     if (revoir.length) res.push(`Refais un exo « à revoir » : ${nomExo(...revoir[0])}`)
+    const importants = exosImportants(s).filter(([td, e]) => !revoir.some(([t2, e2]) => t2 === td && e2 === e))
+    if (importants.length) res.push(`Relis un exo important ⭐ : ${nomExo(...importants[importants.length - 1])}`)
     if (p) res.push(`Tu en étais à : ${nomExo(p.td, p.jusqua)}${p.total ? ` (sur ${p.total})` : ''}`)
     return res
 }
@@ -322,7 +357,10 @@ export function consignesDS(matiere: string, etape: number, prevision: Prevision
         const jusqua = prevision ? `TD ${prevision.td} ex. ${prevision.exo} (prévu)` : `TD ${p!.td} ex. ${p!.jusqua}`
         res.push(`Programme probable du DS : du TD 1 jusqu’au ${jusqua}`)
     }
+    const importants = exosImportants(s)
+    if (etape === 0 && importants.length) res.push(`Exos importants ⭐ signalés en TD : ${regrouper(importants.slice(0, 8))}`)
     if (etape === 1 && revoir.length) res.push(`Commence par tes exos « à revoir » : ${regrouper(revoir.slice(0, 8))}`)
+    if (etape === 1 && importants.length) res.push(`Puis refais les exos importants ⭐ : ${regrouper(importants.slice(0, 8))}`)
     return res
 }
 
@@ -333,7 +371,8 @@ export function resumeAvancement(): string {
         const p = positionDe(m)
         const restants = exosRestants(m)
         const revoir = exosARevoir(m)
-        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'rien noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}`
+        const importants = exosImportants(m)
+        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'rien noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}${importants.length ? ` · importants : ${regrouper(importants)}` : ''}`
     })
     return lignes.length ? `Avancement des TD :\n${lignes.join('\n')}` : ''
 }

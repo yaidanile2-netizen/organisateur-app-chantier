@@ -3,10 +3,13 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getCoursEntre, type Cours } from './api'
 import {
     abonnerAvancement,
-    basculerExo,
+    ETATS_EXO,
+    basculerImportant,
     changerTotal,
     cleMatiere,
+    definirExo,
     exosARevoir,
+    exosImportants,
     exosRestants,
     ignorer,
     lireAvancement,
@@ -17,6 +20,7 @@ import {
     suggestion,
     synchroniserAvancement,
     texteExos,
+    type EtatExo,
     type Question,
     type SuiviMatiere,
 } from './suiviTD'
@@ -75,14 +79,16 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
     const depuis = memeTd(td)
     const [jusqua, setJusqua] = useState(depuis)
     const [total, setTotal] = useState<number | undefined>(s?.tds[sug.td]?.total)
-    const [aRevoir, setARevoir] = useState<number[]>([])
+    const [etats, setEtats] = useState<Record<number, EtatExo>>({})
+    const [importants, setImportants] = useState<number[]>([])
 
     function changerTd(n: number | undefined) {
         const v = Math.max(1, n ?? 1)
         setTd(v)
         setJusqua(memeTd(v))
         setTotal(s?.tds[v]?.total)
-        setARevoir([])
+        setEtats({})
+        setImportants([])
     }
 
     const faitsIci = Array.from({ length: Math.max(0, jusqua - depuis) }, (_, i) => depuis + i + 1)
@@ -104,7 +110,7 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
                     max={total ?? 30}
                     onChange={(v) => {
                         setJusqua(v ?? 0)
-                        setARevoir((r) => r.filter((x) => x <= (v ?? 0)))
+                        setImportants((r) => r.filter((x) => x <= (v ?? 0)))
                     }}
                 />
             </div>
@@ -117,20 +123,39 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
             </div>
             {faitsIci.length > 0 && (
                 <div className="av-compris">
-                    <span>Touche les exos que tu n’as pas bien compris :</span>
-                    <div className="av-chips">
+                    <span>Pour chaque exo : fait, compris ou à revoir ? Et ⭐ si c’est un exo important (pour le DS).</span>
+                    <div className="av-exos-seance">
                         {faitsIci.map((e) => {
-                            const revoir = aRevoir.includes(e)
+                            const etat = etats[e] ?? 'fait'
+                            const imp = importants.includes(e)
                             return (
-                                <button
-                                    key={e}
-                                    type="button"
-                                    className={`av-chip ${revoir ? 'revoir' : 'fait'}`}
-                                    aria-pressed={revoir}
-                                    onClick={() => setARevoir((r) => (revoir ? r.filter((x) => x !== e) : [...r, e]))}
-                                >
-                                    Ex. {e} {revoir ? '🔁 à revoir' : '✓ compris'}
-                                </button>
+                                <div key={e} className="av-exo-ligne">
+                                    <b>Ex. {e}</b>
+                                    <div className="av-etats" role="radiogroup" aria-label={`État de l’exo ${e}`}>
+                                        {(Object.keys(ETATS_EXO) as EtatExo[]).map((k) => (
+                                            <button
+                                                key={k}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={etat === k}
+                                                className={`av-etat ${k}${etat === k ? ' actif' : ''}`}
+                                                onClick={() => setEtats((x) => ({ ...x, [e]: k }))}
+                                            >
+                                                {ETATS_EXO[k].icone} {ETATS_EXO[k].libelle}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={`av-star${imp ? ' actif' : ''}`}
+                                        aria-pressed={imp}
+                                        aria-label={`Exo ${e} important`}
+                                        title="Exo important"
+                                        onClick={() => setImportants((x) => (imp ? x.filter((y) => y !== e) : [...x, e]))}
+                                    >
+                                        {imp ? '⭐' : '☆'}
+                                    </button>
+                                </div>
                             )
                         })}
                     </div>
@@ -145,7 +170,7 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
                     className="btn-primary"
                     type="button"
                     onClick={() => {
-                        repondre(q, { td, jusqua, total, aRevoir, depuis })
+                        repondre(q, { td, jusqua, total, depuis, etats, importants })
                         emettre('organisateur:actualiser', { domaine: 'agenda' })
                         onFini()
                     }}
@@ -219,6 +244,8 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
     const p = positionDe(s)
     const restants = exosRestants(s)
     const revoir = exosARevoir(s)
+    const importants = exosImportants(s)
+    const [sel, setSel] = useState<{ td: number; e: number } | null>(null)
     const ds = cours ? prochainDS(cours, s) : null
     const prev = ds && cours ? prevoirDS(s, ds, cours) : null
     const tds = Object.keys(s.tds)
@@ -238,35 +265,60 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
             {tds.map((td) => {
                 const info = s.tds[td]
                 const n = Math.max(info.total ?? 0, ...Object.keys(info.exos).map(Number), p?.td === td ? p.jusqua : 0)
+                const choisi = sel?.td === td ? sel.e : null
+                const etatChoisi = choisi ? info.exos[choisi] : undefined
                 return (
-                    <div key={td} className="av-td">
-                        <span className="av-td-nom">TD {td}</span>
-                        <div className="av-chips">
-                            {Array.from({ length: n }, (_, i) => i + 1).map((e) => {
-                                const etat = info.exos[e]
-                                return (
-                                    <button
-                                        key={e}
-                                        type="button"
-                                        className={`av-exo ${etat ?? 'afaire'}`}
-                                        title={etat === 'fait' ? 'Fait' : etat === 'revoir' ? 'À revoir' : 'Pas fait'}
-                                        onClick={() => basculerExo(cle, td, e)}
-                                    >
-                                        {e}
-                                    </button>
-                                )
-                            })}
+                    <div key={td} className="av-td-bloc">
+                        <div className="av-td">
+                            <span className="av-td-nom">TD {td}</span>
+                            <div className="av-chips">
+                                {Array.from({ length: n }, (_, i) => i + 1).map((e) => {
+                                    const etat = info.exos[e]
+                                    const imp = !!info.importants?.[e]
+                                    return (
+                                        <button
+                                            key={e}
+                                            type="button"
+                                            className={`av-exo ${etat ?? 'afaire'}${choisi === e ? ' choisi' : ''}`}
+                                            title={`Exo ${e} : ${etat ? ETATS_EXO[etat].libelle : 'pas fait'}${imp ? ', important' : ''}`}
+                                            aria-expanded={choisi === e}
+                                            onClick={() => setSel(choisi === e ? null : { td, e })}
+                                        >
+                                            {etat ? ETATS_EXO[etat].icone : e}
+                                            {etat && <small className="av-exo-n">{e}</small>}
+                                            {imp && <span className="av-exo-star">⭐</span>}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <span className="av-total">
+                                <small>sur</small>
+                                <Compteur valeur={info.total} min={1} max={30} vide="?" onChange={(v) => changerTotal(cle, td, v)} />
+                            </span>
                         </div>
-                        <span className="av-total">
-                            <small>sur</small>
-                            <Compteur valeur={info.total} min={1} max={30} vide="?" onChange={(v) => changerTotal(cle, td, v)} />
-                        </span>
+                        {choisi && (
+                            <div className="av-actions" role="group" aria-label={`Exo ${choisi} du TD ${td}`}>
+                                <b>Ex. {choisi}</b>
+                                <button type="button" className={`av-etat afaire${!etatChoisi ? ' actif' : ''}`} onClick={() => definirExo(cle, td, choisi, null)}>
+                                    pas fait
+                                </button>
+                                {(Object.keys(ETATS_EXO) as EtatExo[]).map((k) => (
+                                    <button key={k} type="button" className={`av-etat ${k}${etatChoisi === k ? ' actif' : ''}`} onClick={() => definirExo(cle, td, choisi, k)}>
+                                        {ETATS_EXO[k].icone} {ETATS_EXO[k].libelle}
+                                    </button>
+                                ))}
+                                <button type="button" className={`av-star${info.importants?.[choisi] ? ' actif' : ''}`} aria-pressed={!!info.importants?.[choisi]} onClick={() => basculerImportant(cle, td, choisi)}>
+                                    {info.importants?.[choisi] ? '⭐' : '☆'} important
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )
             })}
             <ul className="av-infos">
                 {restants.length > 0 && <li>📌 À finir avant le prochain TD : {texteExos(restants)}</li>}
                 {revoir.length > 0 && <li>🔁 À revoir avant le DS : {texteExos(revoir)}</li>}
+                {importants.length > 0 && <li>⭐ Exos importants : {texteExos(importants)}</li>}
                 {ds && (
                     <li>
                         📝 DS le {dateCourte.format(ds)} :{' '}
@@ -300,8 +352,8 @@ export function SuiviTD() {
             ) : (
                 <>
                     <p className="muted av-legende">
-                        Touche un exo pour changer son état : <span className="av-exo afaire">1</span> pas fait → <span className="av-exo fait">1</span> fait →{' '}
-                        <span className="av-exo revoir">1</span> à revoir.
+                        <span className="av-exo afaire">1</span> pas fait · <span className="av-exo fait">✏️</span> fait · <span className="av-exo compris">💡</span> compris ·{' '}
+                        <span className="av-exo revoir">🔁</span> à revoir · ⭐ important. Touche un exo pour le changer.
                     </p>
                     {matieres.map(([cle, s]) => (
                         <Matiere key={cle} cle={cle} s={s} cours={cours} />
