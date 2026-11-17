@@ -69,6 +69,8 @@
       être rondes (listes de valeurs faciles) et le résultat simple (utilise « si » pour l'exiger,
       ex. si: "entier(phi)"). Niveau 1 = comprendre (choix), niveau 2 = calculer de tête, niveau 3 =
       comme au DS + une question de raisonnement. Le contrôle en bas de page tire des exemples.
+    - ILLUSTRER CE QUI SE VOIT : dès qu'une notion parle d'un axe gradué, d'une boîte à moustaches, d'une
+      courbe, d'un schéma, d'un diagramme… fais un schéma XSCHEMA qui le montre et nomme chaque élément.
     - SCHÉMAS (XSCHEMA) : dessine en SVG (viewBox d'environ 360 de large), mets data-k="nom" sur
       chaque élément ou groupe à montrer, puis décris les étapes : { t: "texte", on: ["nom", …],
       f: "formule (facultatif)" }. Classes prêtes : bx (bloc), ln (trait), anim (flèche animée),
@@ -329,12 +331,16 @@ const XFLASH = [
   { id: "fl2", q: "U = 0,25 W/(m²·K), 20 m², ΔT = 18 K : flux ?", a: "Φ = 0,25 × 20 × 18 = 90 W.", type: "Calcul", topic: "Parois composées" }
 ];
 
-/* SCHÉMAS PAS À PAS. Chaque élément à montrer porte data-k="nom" ; chaque étape allume ses éléments
+/* SCHÉMAS PAS À PAS. RÈGLE : toute notion qui se DESSINE (axe gradué, intervalle, boîte à moustaches,
+   courbe, schéma bloc ou électrique, diagramme, coupe de paroi…) a son schéma, qui montre à quoi ça
+   ressemble et NOMME chaque élément, une étape par élément, avec des valeurs d'exemple du TD.
+   td = ids des TD où le schéma s'affiche sous « L'essentiel » (sinon : les TD dont les notions contiennent la leçon).
+   Chaque élément à montrer porte data-k="nom" ; chaque étape allume ses éléments
    (« on »), le reste s'estompe. lecons = ids des leçons où le schéma s'affiche dans le cours
    (en général une seule : toutes les leçons d'un module s'affichent sur la même page). */
 const XSCHEMA = [
   {
-    id: "sch-mur", titre: "Le flux à travers un mur", mod: "bases", lecons: ["fourier"],
+    id: "sch-mur", titre: "Le flux à travers un mur", mod: "bases", lecons: ["fourier"], td: ["td1"],
     legende: "Une paroi plane entre deux ambiances : la chaleur la traverse *du chaud vers le froid*.",
     svg: `<svg viewBox="0 0 360 190" role="img" aria-label="Flux de chaleur à travers une paroi">
 <g data-k="t1"><rect x="6" y="20" width="118" height="120" rx="8" fill="#FDE8DC"/><text x="20" y="44" class="tb wa">T₁ : chaud</text></g>
@@ -428,6 +434,7 @@ const XVARIANTES = {
   if (typeof XSCHEMA !== 'undefined') { XSCHEMA.forEach(function (sc) { sid[sc.id] = 1; if (!sc.svg || !/<svg[\s>]/.test(sc.svg)) err.push('Schéma ' + sc.id + ' : pas de <svg>.'); var ks = {}; String(sc.svg).replace(/data-k="([^"]+)"/g, function (m, k) { k.split(/\s+/).forEach(function (x) { ks[x] = 1; }); return m; });
       (sc.etapes || []).forEach(function (e, i) { (e.on || []).forEach(function (k) { if (!ks[k]) err.push('Schéma ' + sc.id + ', étape ' + (i + 1) + ' : aucun élément data-k="' + k + '" dans le SVG.'); }); });
       (sc.lecons || []).forEach(function (l) { if (!nids[l]) err.push('Schéma ' + sc.id + ' : leçon « ' + l + ' » inconnue.'); });
+      (sc.td || []).forEach(function (t) { if (typeof XTD === 'undefined' || !XTD.some(function (x) { return x.id === t; })) err.push('Schéma ' + sc.id + ' : TD « ' + t + ' » inconnu.'); });
       apercu += '<h3>🗺️ ' + sc.titre + '</h3><div style="max-width:420px">' + String(sc.svg).replace(/<svg([^>]*)>/, '<svg$1><defs><marker id="xsfl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>') + '</div><ol>' + (sc.etapes || []).map(function (e) { return '<li>' + String(e.t).replace(/\*([^*]+)\*/g, '<b>$1</b>') + (e.f ? ' <b>[' + e.f + ']</b>' : '') + '</li>'; }).join('') + '</ol>'; });
     ok.push(XSCHEMA.length + ' schéma(s) pas à pas'); }
   if (typeof XAPP !== 'undefined') {
