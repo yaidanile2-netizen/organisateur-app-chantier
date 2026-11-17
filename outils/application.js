@@ -519,3 +519,24 @@ XP.derApp=function(c,ex,checked){if(!c||!ex)return '';const parts=ex.parts||[];
       relance:'que font un FT et un FIC sur une conduite ?'}
   };
 })(XP.BUILTIN.regulation);
+
+
+/* =============================================================================
+   Grand écran (PC, 17/11/2026) : la page prend toute la largeur ; dans les leçons, les exos et la
+   préparation des TD, le texte est à gauche et les illustrations / schémas à droite (collés en haut
+   pendant qu'on lit). Sur téléphone, rien ne change.
+   ============================================================================= */
+XP.LARGE=window.matchMedia?window.matchMedia('(min-width:1100px)'):{matches:false,addEventListener(){}};
+XP.FIG='.x-ab,.xs,details.xs-det';
+XP.deuxCol=function(box){if(box.dataset.xp2)return;const kids=[...box.children];const figs=kids.filter(k=>k.matches(XP.FIG));if(!figs.length)return;
+  box.dataset.xp2='1';const w=document.createElement('div');w.className='xp2';const t=document.createElement('div');t.className='xp2-t';const i=document.createElement('div');i.className='xp2-i';
+  kids.forEach(k=>(figs.includes(k)?i:t).appendChild(k));w.appendChild(t);w.appendChild(i);box.appendChild(w);};
+XP.mise=function(){if(!XP.LARGE.matches)return;const v=document.getElementById('view');if(!v)return;
+  v.querySelectorAll('.lbody').forEach(XP.deuxCol);
+  v.querySelectorAll('.fade').forEach(f=>{if(!f.closest('.lbody'))XP.deuxCol(f);});
+  v.querySelectorAll('.x-tdstep,.x-tdb').forEach(XP.deuxCol);};
+(function(){let raf=0;const go=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(XP.mise);};
+  const start=()=>{const v=document.getElementById('view');if(!v)return setTimeout(start,50);new MutationObserver(go).observe(v,{childList:true,subtree:true});go();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  const chg=()=>{document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);try{if(typeof render==='function')render();}catch(e){}};
+  try{XP.LARGE.addEventListener('change',chg);}catch(e){}document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);})();

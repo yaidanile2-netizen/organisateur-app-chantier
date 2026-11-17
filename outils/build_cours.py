@@ -343,5 +343,29 @@ html = remplacer(html, "</style>\n</head>", """/* « Je n'ai pas compris » (Org
 </style>
 </head>""")
 
+# ---------- 6. Grand écran (PC) : toute la largeur, texte à gauche, illustrations à droite ----------
+html = remplacer(html, "</style>\n</head>", """/* Grand écran (Organisateur) */
+@media (min-width:1100px){
+  .hd-in,main,nav.bottom .in{max-width:min(1640px,96vw)}
+  main{padding:26px 32px 56px}
+  body{font-size:17px}
+  .x-tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .grid:not(.cols2):not(.cols3){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .xp2{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:32px;align-items:start}
+  .xp2-t{min-width:0}.xp2-i{min-width:0;position:sticky;top:96px;max-height:calc(100vh - 120px);overflow-y:auto;padding-bottom:8px}
+  .xp2-i{overflow-x:hidden}.xp2-i .xs,.xp2-i .x-ab{margin-top:0;margin-left:0;margin-right:0;padding:12px}.xp2-i .ill{margin-left:0;margin-right:0}
+  .xp2-i .x-legend{font-size:14px}
+  .xp2-i svg{max-height:62vh}
+  .lbody{padding:6px 26px 24px}
+  .ill-scroll>svg,.x-leg svg,.xs-svg svg{max-height:66vh;width:100%}
+  .x-leg{max-width:1180px}
+  .flash{max-width:620px}
+  .exo-step,.exo-enonce,.x-pq{font-size:17px}
+  #xplayer{max-width:820px}
+}
+@media (min-width:1700px){.grid:not(.cols2):not(.cols3){grid-template-columns:repeat(3,minmax(0,1fr))}.xp2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+</style>
+</head>""")
+
 dest.write_text(html, encoding='utf-8')
 print(f'{dest} : {len(html.encode())} octets')
