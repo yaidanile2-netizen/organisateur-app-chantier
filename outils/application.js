@@ -48,18 +48,19 @@ const XP={libre:false,schemas:[],byId:{},lien:{},
       try{Object.keys(C).forEach(k=>{v[k]=XP.calc(C[k],v);});if(!a.si||XP.calc(a.si,v))return v;}catch(e){}}
     return v;},
   exo(c,level,rnd){const a=c.tpl;const ns=a.niveaux||[];const nv=ns[Math.min(level,ns.length)-1]||ns[0]||{parts:[]};const v=XP.tirer(a,rnd);
-    const parts=(nv.parts||[]).map(p=>{const q=XP.fill(p.q,v),aide=level<3?XP.fill(p.aide||'',v):'',explication=XP.fill(p.explication||'',v);
+    const parts=(nv.parts||[]).map(p=>{const q=XP.fill(p.q,v),aide=level<3?XP.fill(p.aide||'',v):'',explication=XP.fill(p.explication||'',v),detail=(p.detail||[]).map(x=>XP.fill(x,v)),indice=XP.fill(p.aide||'',v);
       if(Array.isArray(p.choix)){const bonne=p.bonne||0;const raw=p.choix.map(o=>XP.fill(o,v));const opts=[],idx=[];raw.forEach((o,k)=>{if(!opts.includes(o)){opts.push(o);idx.push(k);}});
         const good=opts.indexOf(raw[bonne]);const order=shuffle(opts.map((_,k)=>k),rnd);
-        return{type:'choix',q,options:order.map(k=>opts[k]),answer:order.indexOf(good),aide,explication};}
+        return{type:'choix',q,options:order.map(k=>opts[k]),answer:order.indexOf(good),aide,explication,detail,indice};}
       let ans=NaN;try{ans=XP.calc(p.rep,v);}catch(e){}
-      return{type:'num',q,answer:ans,affiche:XP.fmt(ans)+(p.unite?' '+p.unite:''),unite:p.unite||'',tol:p.tol!=null?p.tol:0.03,aide,explication};});
+      return{type:'num',q,answer:ans,affiche:XP.fmt(ans)+(p.unite?' '+p.unite:''),unite:p.unite||'',tol:p.tol!=null?p.tol:0.03,aide,explication,detail,indice};});
     const corr=XP.fill(nv.correction||a.correction||'',v)||parts.filter(p=>p.explication).map((p,k)=>'<b>'+(k+1)+'.</b> '+p.explication).join('<br>');
     return{enonce:XP.fill(nv.enonce||a.enonce||'',v),parts,correction:corr,schema:a.schema};},
 
   /* ---------- Chargement : modules (XAPP, XSCHEMA, XTETE, XVARIANTES) et matières de base ---------- */
   charger(raw,meta){XP.schemas=[];XP.byId={};XP.lien={};
     const ex=(raw&&raw.extra)||{};const B=XP.BUILTIN[meta&&meta.id]||{};
+    XP.EXPL=Object.assign({},B.explique||{},ex.XEXPLIQUE&&typeof ex.XEXPLIQUE==='object'?ex.XEXPLIQUE:{});
     const schemas=(Array.isArray(ex.XSCHEMA)?ex.XSCHEMA:[]).concat(B.schemas||[]);
     schemas.forEach(s=>{if(s&&s.id&&s.svg&&!XP.byId[s.id]){XP.byId[s.id]=s;XP.schemas.push(s);}});
     Object.assign(XP.lien,B.lien||{});
@@ -397,4 +398,124 @@ XP.FN.mod=(a,b)=>((a%b)+b)%b;
       {q:'Le LIC doit donc être réglé en sens…',choix:['{{si(f<2,"inverse","direct")}}','{{si(f<2,"direct","inverse")}}'],bonne:0,explication:'Procédé {{si(f<2,"direct","inverse")}} ⇒ régulateur {{si(f<2,"inverse","direct")}}.'},
       {q:'Quel appareil faut-il pour piloter une vanne pneumatique depuis le régulateur ?',choix:['un convertisseur I/P (LY)','un deuxième transmetteur','un indicateur LI','un régulateur de débit FIC'],bonne:0,explication:'Le régulateur sort du courant (4-20 mA), la vanne veut de l’air : LY convertit.'}]}]};
   R.apps.splice(1,0,reduc);R.apps.splice(3,0,prec);R.apps.push(ti);
+})(XP.BUILTIN.regulation);
+
+/* =============================================================================
+   « Je n'ai pas compris » : une explication qui se déroule en 3 niveaux (16/11/2026).
+   Inspirée de la méthode de tuteur que Daniel trouve claire :
+     🟢 En bref      : la réponse directe, 3 à 5 lignes, un mini exemple ;
+     🟡 Pas à pas    : des étapes titrées (une action), une seule transformation par ligne,
+                       d'où viennent les données, la traduction en langage humain, une vérification ;
+     🔴 Tout en détail : à quoi ça sert, le décodage de chaque symbole (ce que c'est, à quoi ça sert,
+                       comment l'utiliser), un exemple de A à Z, les pièges, une question de relance.
+   Le contenu vient de XEXPLIQUE (module) quand il existe, sinon l'app le fabrique avec ce qu'elle a.
+   ============================================================================= */
+XP.EXPL={};
+XP.expl=function(cles,auto){const a=Object.assign({},auto||{});(cles||[]).filter(Boolean).forEach(k=>{const m=XP.EXPL[k];if(m&&typeof m==='object')Object.keys(m).forEach(f=>{const v=m[f];if(v!=null&&!(Array.isArray(v)&&!v.length)&&v!=='')a[f]=v;});});return a;};
+XP.lignes=h=>String(h||'').split(/<br\s*\/?>|\n/).map(x=>x.trim()).filter(Boolean);
+XP.derouleHTML=function(e,o){o=o||{};if(!e)return '';
+  const arr=x=>Array.isArray(x)?x:x?[x]:[];
+  const court=arr(e.court),etapes=arr(e.etapes),dec=arr(e.decodage),ex=arr(e.exemple),pie=arr(e.pieges);
+  const N1=court.length>0,N2=etapes.length>0||!!e.verif,N3=!!e.sert||dec.length>0||ex.length>0||pie.length>0||!!e.relance;
+  if(!N1&&!N2&&!N3)return '';
+  const niv=[N1&&1,N2&&2,N3&&3].filter(Boolean);const suiv=n=>niv[niv.indexOf(n)+1];
+  const lab={2:'🟡 Toujours flou ? Pas à pas',3:'🔴 Encore ? Tout en détail'};
+  const nxt=n=>{const s=suiv(n);return s?`<button class="xd-more" data-xdgo="${s}">${lab[s]} ↓</button>`:'';};
+  let L=0;const ligne=(x,cls,brut)=>`<div class="xd-l ${cls||''}" data-li="${L++}"${L>2?' hidden':''}>${brut?x:md(x)}</div>`;
+  const h1=N1?`<div class="xd-n" data-n="1" hidden><div class="xd-h">🟢 En bref</div>${court.map(c=>`<p>${md(c)}</p>`).join('')}${nxt(1)}</div>`:'';
+  L=0;
+  const h2=N2?`<div class="xd-n" data-n="2" hidden><div class="xd-h">🟡 Pas à pas</div>
+    ${etapes.map((s,k)=>{s=typeof s==='string'?{t:s}:s;return `<div class="xd-s">${ligne(`<span class="stepnum">${k+1}</span><b>${md(s.t||'Étape '+(k+1))}</b>`,'xd-st',1)}
+      ${s.src?ligne('📌 '+s.src,'xd-src'):''}${arr(s.l).map(x=>ligne(x,'xd-f')).join('')}${s.en?ligne('🗣️ En clair : '+s.en,'xd-en'):''}</div>`;}).join('')}
+    ${L>2?`<div class="xd-ctl"><button class="xd-b" data-xdl="1">Ligne suivante ↓</button><button class="xd-b gh" data-xdl="all">Tout afficher</button></div>`:''}
+    ${e.verif?`<div class="xd-ok">✅ <b>Vérifie en 10 secondes :</b> ${md(e.verif)}</div>`:''}${nxt(2)}</div>`:'';
+  const h3=N3?`<div class="xd-n" data-n="3" hidden><div class="xd-h">🔴 Tout en détail</div>
+    ${e.sert?`<p><b>À quoi ça sert :</b> ${md(e.sert)}</p>`:''}
+    ${dec.length?`<div class="xd-sub">Décoder chaque symbole</div><div class="tablewrap"><table class="tbl xd-tbl"><thead><tr><th>Symbole</th><th>Ce que c’est</th><th>À quoi ça sert</th><th>Comment l’utiliser</th></tr></thead><tbody>${dec.map(d=>{d=Array.isArray(d)?{s:d[0],quoi:d[1],role:d[2],usage:d[3]}:d;return `<tr><td><b>${md(d.s||'')}</b></td><td>${md(d.quoi||'')}</td><td>${md(d.role||'')}</td><td>${md(d.usage||'')}</td></tr>`;}).join('')}</tbody></table></div>`:''}
+    ${ex.length?`<div class="xd-sub">Un exemple de A à Z</div>${ex.map(x=>`<div class="xd-l xd-f">${md(x)}</div>`).join('')}`:''}
+    ${pie.length?`<div class="piege"><b>Les pièges.</b><ul>${pie.map(x=>'<li>'+md(x)+'</li>').join('')}</ul></div>`:''}
+    ${e.relance?`<div class="xd-rel">❓ <b>Et maintenant :</b> ${md(e.relance)}</div>`:''}</div>`:'';
+  return `<div class="xd" data-xd><button class="xd-go" data-xdgo="${niv[0]}">${o.titre||'🧩 Je n’ai pas compris'}</button>${h1}${h2}${h3}</div>`;};
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-xdgo],[data-xdl]');if(!b)return;const box=b.closest('.xd');if(!box)return;ev.preventDefault();
+  if(b.dataset.xdgo){const n=box.querySelector(`.xd-n[data-n="${b.dataset.xdgo}"]`);if(n){n.hidden=false;b.hidden=true;setTimeout(()=>n.scrollIntoView({behavior:'smooth',block:'nearest'}),30);}return;}
+  const lv=b.closest('.xd-n');const cach=[...lv.querySelectorAll('.xd-l[hidden]')];
+  if(b.dataset.xdl==='all')cach.forEach(x=>x.hidden=false);else if(cach[0]){const n=cach[0].classList.contains('xd-st')?2:1;cach.slice(0,n).forEach(x=>{x.hidden=false;x.classList.add('xd-new');});}
+  if(!lv.querySelector('.xd-l[hidden]')){const c=lv.querySelector('.xd-ctl');if(c)c.remove();}});
+
+/* ---------- Ce que l'app fabrique toute seule ---------- */
+XP.derNotion=function(n){if(!n)return '';const a={};
+  if(n.html!=null){const I=(typeof L0!=='undefined'&&L0.lessonInfo)?L0.lessonInfo(n.html):(typeof lessonInfo==='function'?lessonInfo(n.html):null);
+    if(I){a.court=(I.ret.length?I.ret:I.ss||[]).slice(0,2);a.etapes=I.forms.map(f=>({t:'La formule à connaître',l:[f]})).concat(I.ret.slice(2).map(r=>({t:r})));a.pieges=I.pie;}}
+  else{a.court=(n.essentiel||[]).slice(0,1).concat(n.exemple?['Exemple : '+n.exemple]:[]);
+    a.etapes=(n.formules||[]).map(f=>({t:'Lire la formule : '+(f.nom||'la formule'),l:[f.html?`<span class="xmb">${f.html}</span>`:''],en:f.lit||'',src:f.quand?'Quand : '+f.quand:''}));
+    a.decodage=[].concat(...(n.formules||[]).map(f=>(f.lettres||[]).map(l=>({s:l[4]?`<span class="xmi">${l[4]}</span>`:l[0],quoi:l[1]+(l[2]?' ('+l[2]+')':''),role:'',usage:''}))));
+    a.pieges=[n.piege].concat((n.formules||[]).map(f=>f.piege)).filter(Boolean);a.sert=(n.essentiel||[])[0]||'';}
+  return XP.derouleHTML(XP.expl([n.id],a));};
+XP.derExo=function(e){if(!e||!e.meth)return '';const m=e.meth,ex=m.exemple||{};const st=ex.etapes||[];
+  const a={court:['La démarche : '+st.map(s=>md(s.titre||'')).join(' → ')+(ex.resultat?'. Résultat : '+ex.resultat:'')],
+    etapes:st.map(s=>({t:s.titre||'',l:XP.lignes(s.calc),en:s.pourquoi||s.faire||''})),
+    verif:'regarde l’unité du résultat et son ordre de grandeur : est-ce qu’il a du sens physiquement ?',
+    pieges:m.pieges||[],relance:'refais cet exo sans regarder la correction, puis entraîne-toi dans Réviser → 🧮 Application.'};
+  return XP.derouleHTML(XP.expl([e.id,e.methId,m.id],a),{titre:'🧩 Je n’ai pas compris ce corrigé'});};
+XP.derMeth=function(me){if(!me)return '';const ex=me.exemple||{};const id=String(me.id||'');
+  const a={court:[(me.recette||[]).slice(0,2).join(' Puis : ')].filter(Boolean),
+    etapes:(ex.etapes||[]).map(s=>({t:s.titre||'',l:XP.lignes(s.calc),en:s.pourquoi||s.faire||''})),
+    pieges:me.pieges||[],relance:(me.variantes||[]).length?'et si « '+me.variantes[0].si+' » ? Ouvre « La méthode en action » pour les variantes.':''};
+  return XP.derouleHTML(XP.expl([id,id.replace(/^M-/,'')],a),{titre:'🧩 Je n’ai pas compris cette compétence'});};
+XP.derApp=function(c,ex,checked){if(!c||!ex)return '';const parts=ex.parts||[];
+  const ind=parts.map((p,k)=>p.indice||p.aide?`${k+1}. ${p.indice||p.aide}`:'').filter(Boolean);
+  if(!checked)return ind.length?XP.derouleHTML({court:ind},{titre:'🧩 Je bloque : un indice'}):'';
+  const me=MBY&&MBY[c.methode];
+  const a={court:ind.length?ind:['Relis la méthode : '+((me&&me.recette)||[]).slice(0,2).join(' Puis : ')],
+    etapes:parts.map((p,k)=>({t:'Question '+(k+1)+' : '+String(p.q||'').replace(/<[^>]+>/g,''),l:(p.detail||[]).length?p.detail:[],en:p.explication||''})),
+    pieges:(me&&me.pieges)||[],relance:'clique sur « ↻ Autres chiffres » et refais-le seul.'};
+  if(!a.etapes.some(s=>s.l.length||s.en)&&ex.correction)a.etapes=[{t:'La correction',l:XP.lignes(ex.correction)}];
+  const id=c.tpl?c.tpl.id:c.id;
+  return XP.derouleHTML(XP.expl([c.tpl&&c.tpl.mod,id,c.id],a),{titre:'🧩 Je n’ai pas compris la correction'});};
+
+/* ---------- Régulation : explications « Je n'ai pas compris » et calculs ligne par ligne ---------- */
+(function(R){
+  const A=id=>R.apps.find(a=>a.id===id);
+  const P=(id,n,k,d)=>{const a=A(id);if(a&&a.niveaux[n]&&a.niveaux[n].parts[k])a.niveaux[n].parts[k].detail=d;};
+  P('reg-lire',1,0,['K = C(0) × H(0)','K = {{kp}} × {{K}}','**K = {{KBO}}**']);
+  P('reg-lire',1,1,['BF(0) = K / (1 + K)','BF(0) = {{KBO}} / (1 + {{KBO}})','BF(0) = {{KBO}} / {{1+KBO}}','**BF(0) = {{Gbf}}**']);
+  P('reg-lire',1,2,['εs = A / (1 + K)   (échelon de 100 %)','εs = 100 / (1 + {{KBO}})','εs = 100 / {{1+KBO}}','**εs = {{eps}} %**']);
+  P('reg-lire',2,1,['θBF = θ / (1 + K)','θBF = {{theta}} / (1 + {{KBO}})','θBF = {{theta}} / {{1+KBO}}','**θBF = {{tbf}} s**']);
+  P('reg-o1',1,0,['Gs = s(∞) / A','Gs = {{sinf}} / {{A}}','**Gs = {{Gs}}**']);
+  P('reg-o1',1,2,['t5% = 3 × θ','t5% = 3 × {{theta}}','**t5% = {{t5}} s**']);
+  P('reg-o1',2,0,['s(∞) = Gs × A','s(∞) = {{Gs}} × {{A}}','**s(∞) = {{sinf}}**']);
+  P('reg-prec',1,0,['εs = A / (1 + K)','εs = {{A}} / (1 + {{K}})','εs = {{A}} / {{1+K}}','**εs = {{es}} %**']);
+  P('reg-prec',1,1,['mesure finale = consigne − εs','mesure finale = {{A}} − {{es}}','**mesure finale = {{mes}} %**']);
+  P('reg-reduc',1,2,['BF = A / (1 + A)   (retour unitaire)','BF = {{A}} / (1 + {{A}})','BF = {{A}} / {{1+A}}','**BF = {{bf}}**']);
+  const BOUCLE=[
+    {s:'W',quoi:'la consigne (même unité que la mesure)',role:'la valeur que tu veux obtenir',usage:'c’est l’entrée de la BF ; en échelon : W(p) = A/p'},
+    {s:'ε',quoi:'l’écart (ou erreur)',role:'dit au correcteur de combien on est loin',usage:'ε = W − X ; en régime permanent : εs'},
+    {s:'C(p)',quoi:'le correcteur (le régulateur)',role:'transforme l’écart en commande',usage:'P seul : C = Gr ; avec I : il y a un 1/p'},
+    {s:'Y',quoi:'la commande (souvent en %)',role:'ce qu’on envoie à l’actionneur',usage:'Y = C(p)·ε'},
+    {s:'H(p)',quoi:'le procédé (avec l’actionneur)',role:'ce qu’on veut piloter',usage:'son gain statique H(0) s’obtient en faisant p = 0'},
+    {s:'Z',quoi:'la perturbation',role:'ce qui dérange le procédé',usage:'on la traite à part (superposition, W = 0)'},
+    {s:'S',quoi:'la sortie, la grandeur à maîtriser',role:'le résultat',usage:'BF = S/W'},
+    {s:'B(p)',quoi:'le capteur-transmetteur (retour)',role:'mesure S et la renvoie',usage:'B = 1 : retour unitaire'},
+    {s:'X',quoi:'la mesure',role:'ce que le régulateur « voit »',usage:'X = B·S, arrive au comparateur avec un −'}];
+  R.explique={
+    'reg-lire':{sert:'savoir lire n’importe quel schéma de régulation du DS : repérer l’entrée, la sortie, et savoir dans quelle formule chaque bloc va.',
+      decodage:BOUCLE,
+      exemple:['C = 4 et H = 1 / (1 + 10p), retour unitaire','Gain statique de la BO : K = 4 × 1 = 4','Gain statique de la BF : 4 / (1 + 4) = 0,8','Écart statique : 100 / (1 + 4) = 20 %','Constante de temps en BF : 10 / 5 = 2 s'],
+      pieges:['Mélanger BO (tout le tour, sans le 1 +) et BF (A / (1 + A·B)).','Oublier de faire p = 0 pour un gain statique.','Croire qu’un P seul annule l’écart : il faut une action I.'],
+      relance:'sur le schéma, montre du doigt ce qui va au numérateur de la BF, puis ce qui va au dénominateur.'},
+    'reg-o1':{sert:'reconnaître un 1er ordre sur une courbe de TD ou de DS et en tirer son modèle H(p) = Gs / (1 + θp).',
+      decodage:[{s:'A',quoi:'l’amplitude de l’échelon d’entrée',role:'ce qu’on a changé',usage:'lu dans l’énoncé (Δe)'},{s:'s(∞)',quoi:'la valeur finale de la sortie',role:'là où la courbe se stabilise',usage:'lue sur l’asymptote horizontale'},{s:'Gs',quoi:'le gain statique (sans unité ou unité sortie/entrée)',role:'dit « combien ça sort pour 1 qui entre »',usage:'Gs = s(∞) / A'},{s:'θ',quoi:'la constante de temps, en s',role:'dit la vitesse',usage:'lue à 63 % de s(∞), ou avec la tangente à l’origine'},{s:'t5%',quoi:'le temps de réponse à 5 %',role:'la rapidité',usage:'t5% = 3θ'}],
+      pieges:['Lire θ à 50 % au lieu de 63 %.','Diviser A par s(∞) au lieu de l’inverse.','Oublier qu’un 1er ordre ne dépasse jamais.'],
+      relance:'si la courbe dépassait sa valeur finale, ce serait quel ordre, et quel λ ?'},
+    'reg-prec':{sert:'prévoir l’erreur qui reste et choisir entre un P et un PI.',
+      decodage:[{s:'εs',quoi:'l’écart statique (même unité que la consigne)',role:'ce qui manque en régime permanent',usage:'εs = A / (1 + K) en classe 0'},{s:'A',quoi:'l’amplitude de l’échelon de consigne',role:'la taille du changement demandé',usage:'lue dans l’énoncé'},{s:'K',quoi:'le gain statique de la boucle ouverte',role:'plus il est grand, plus c’est précis',usage:'K = C(0) × H(0) × B(0)'}],
+      pieges:['Prendre le gain de la BF au lieu de celui de la BO.','Oublier le « 1 + ».','Penser que la dérivée D améliore la précision.'],
+      relance:'avec un K deux fois plus grand, l’écart est-il divisé par 2 exactement ? (regarde le 1 + K)'},
+    'reg-reduc':{sert:'ramener n’importe quel schéma bloc à un seul bloc pour trouver la BF.',
+      pieges:['Additionner des blocs en série.','Réduire la boucle extérieure avant l’intérieure.'],relance:'dessine une boucle dans une boucle et réduis-la de l’intérieur vers l’extérieur.'},
+    'reg-sens':{sert:'régler le sens du régulateur (question de cours qui tombe au DS).',
+      pieges:['Partir de la mesure au lieu de la commande.','Confondre FMA (s’ouvre avec plus de signal) et OMA.'],relance:'vanne OMA sur la vidange : quel sens pour le régulateur ?'},
+    'reg-ti':{sert:'traduire un schéma TI en schéma bloc.',decodage:[{s:'1re lettre',quoi:'la grandeur',role:'L niveau, F débit, T température, P pression',usage:'lue en premier dans le cercle'},{s:'lettres suivantes',quoi:'la fonction',role:'T transmetteur, I indicateur, C régulateur, V vanne, Y convertisseur',usage:'lues après'}],
+      relance:'que font un FT et un FIC sur une conduite ?'}
+  };
 })(XP.BUILTIN.regulation);

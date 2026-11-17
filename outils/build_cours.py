@@ -264,7 +264,7 @@ xp_js = (Path(__file__).parent / 'application.js').read_text(encoding='utf-8')
 html = remplacer(html, "let SUBJ=null,PK=null,XTRA=null,LEG=null;", xp_js + "\nlet SUBJ=null,PK=null,XTRA=null,LEG=null;")
 html = remplacer(html, "else{const a=L0.adaptLegacy(raw,meta);PK=a.PK;XTRA=a.XTRA;LEG=a.LEG;}SUBJ=meta;};",
                  "else{const a=L0.adaptLegacy(raw,meta);PK=a.PK;XTRA=a.XTRA;LEG=a.LEG;}SUBJ=meta;try{XP.charger(raw,meta);}catch(e){try{console.warn('ajouts du module illisibles',e);}catch(_){}}};")
-html = remplacer(html, "['XFLASH','XD','XESS','XFICHE','XTD','ABQ_IN']", "['XFLASH','XD','XESS','XFICHE','XTD','ABQ_IN','XAPP','XSCHEMA','XTETE','XVARIANTES']")
+html = remplacer(html, "['XFLASH','XD','XESS','XFICHE','XTD','ABQ_IN']", "['XFLASH','XD','XESS','XFICHE','XTD','ABQ_IN','XAPP','XSCHEMA','XTETE','XVARIANTES','XEXPLIQUE']")
 html = remplacer(html, "function genExo(cid,level,seed){const c=APPL.find(x=>x.id===cid);",
                  "function genExo(cid,level,seed){const c=APPL.find(x=>x.id===cid);if(c&&c.gen==='tpl')return Object.assign({cid,level,seed},XP.exo(c,level,rng(seed)));")
 # Partie 3 : accessible librement depuis Réviser, avec les schémas et la 1re action en tête.
@@ -313,6 +313,33 @@ html = remplacer(html, "</style>\n</head>", """/* Schémas pas à pas (Organisat
 .xs-b.pl{flex:1;background:var(--accent);border-color:var(--accent);color:#fff}
 .xs-dots{display:flex;gap:5px;justify-content:center;margin-top:8px}.xs-dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}.xs-dots i.on{background:var(--accent)}
 .xs-det{margin:8px 0}.xs-det>summary{cursor:pointer;font-weight:700;padding:8px 2px;color:var(--accent)}.xs-det .xs{margin-top:6px}
+</style>
+</head>""")
+
+# ---------- 5. « Je n'ai pas compris » : explication qui se déroule (bref → pas à pas → tout en détail) ----------
+html = remplacer(html, "${xMediaHTML('n:'+n.id)}", "${XP.derNotion(n)}${xMediaHTML('n:'+n.id)}", 2)
+html = remplacer(html, '<div class="btnrow"><button class="btn ghost" style="flex:1" data-x="openM" data-m="${e.methId||m.id}">',
+                 '${XP.derExo(e)}<div class="btnrow"><button class="btn ghost" style="flex:1" data-x="openM" data-m="${e.methId||m.id}">')
+html = remplacer(html, '<div class="btnrow mt8"><button class="btn sm ghost" data-x="openM" data-m="${k.id}">▶ La méthode en action</button></div>',
+                 '${XP.derMeth(me)}<div class="btnrow mt8"><button class="btn sm ghost" data-x="openM" data-m="${k.id}">▶ La méthode en action</button></div>')
+html = remplacer(html, "<section class=\"card\">${ex.parts.map((pt,k)=>partHtml(pt,k,ss)).join('')}</section><div class=\"sp\"></div>",
+                 "<section class=\"card\">${ex.parts.map((pt,k)=>partHtml(pt,k,ss)).join('')}</section>${ss.checked?'':XP.derApp(c,ex,false)}<div class=\"sp\"></div>")
+html = remplacer(html, "${ex.correction?`<div class=\"x-corr\">${rich(ex.correction)}</div>`:''}\n    <div class=\"btnrow\"><button class=\"btn primary\" style=\"flex:1\" data-x=\"aNew\">",
+                 "${ex.correction?`<div class=\"x-corr\">${rich(ex.correction)}</div>`:''}${XP.derApp(c,ex,true)}\n    <div class=\"btnrow\"><button class=\"btn primary\" style=\"flex:1\" data-x=\"aNew\">")
+html = remplacer(html, "</style>\n</head>", """/* « Je n'ai pas compris » (Organisateur) */
+.xd{margin:12px 0}.xd-go,.xd-more{display:block;width:100%;text-align:left;padding:11px 14px;border-radius:12px;border:1.5px dashed var(--accent);color:var(--accent);font-weight:700;background:var(--accent-bg)}
+.xd-more{margin-top:12px;border-style:solid;background:var(--card)}
+.xd-n{margin-top:10px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);animation:xdin .3s ease-out}
+@keyframes xdin{from{opacity:0;transform:translateY(-4px)}}
+.xd-h{font-weight:800;font-size:15px;margin-bottom:8px}.xd-n p{margin:6px 0;line-height:1.55}
+.xd-s{margin:12px 0}.xd-l.xd-st{display:flex;gap:8px;align-items:center;margin:10px 0 6px}.xd-l.xd-st[hidden]{display:none}.xd-l.xd-src{font-size:13px;color:var(--muted);margin:2px 0 6px}.xd-l.xd-en{font-size:14px;margin-top:6px;padding:6px 10px;border-left:3px solid var(--green);background:var(--green-bg);border-radius:6px}
+.xd-src{font-size:13px;color:var(--muted);margin:2px 0 6px}.xd-en{font-size:14px;margin-top:6px;padding:6px 10px;border-left:3px solid var(--green);background:var(--green-bg);border-radius:6px}
+.xd-l.xd-f{margin:6px 0;padding:8px 12px;border-radius:10px;background:var(--paper);text-align:center;font-weight:600;overflow-x:auto}
+.xd-l.xd-new{animation:xdin .35s ease-out}
+.xd-ctl{display:flex;gap:8px;margin-top:10px}.xd-b{flex:1;padding:9px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700}.xd-b.gh{flex:0 0 auto;background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.xd-ok{margin-top:10px;padding:8px 12px;border-radius:10px;background:var(--green-bg);font-size:14px}
+.xd-sub{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
+.xd-tbl td,.xd-tbl th{font-size:13px;vertical-align:top}.xd-rel{margin-top:12px;padding:8px 12px;border-radius:10px;background:var(--accent-bg);font-size:14px}
 </style>
 </head>""")
 
