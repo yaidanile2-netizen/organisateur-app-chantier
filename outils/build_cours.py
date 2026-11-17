@@ -288,6 +288,9 @@ html = remplacer(html, "reglages:vReglages,lib:vLib,", "reglages:vReglages,lib:v
 html = remplacer(html, '<div class="x-leg">${n.html}</div>', '<div class="x-leg">${n.html}</div>${XP.pourNotion(n.id)}')
 html = remplacer(html, '    ${ill}\n', '    ${ill}${XP.pourNotion(n.id)}\n')
 html = remplacer(html, "${(m.pieges||[]).length?", "${XP.tombeHTML(m)}${(m.pieges||[]).length?")
+# Préparer un TD : le schéma illustré juste sous « L'essentiel » (axe gradué, boîte à moustaches, boucle…).
+html = remplacer(html, "<p class=\"small mut\">Lis-le une fois, puis cache l’écran et redis les 5 lignes de mémoire.</p>`;}",
+                 "<p class=\"small mut\">Lis-le une fois, puis cache l’écran et redis les 5 lignes de mémoire.</p>${XP.pourTD(t)}`;}")
 html = remplacer(html, "</style>\n</head>", """/* Schémas pas à pas (Organisateur) */
 .xs{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
 .xs-t{font-weight:700;font-size:14.5px;margin-bottom:8px}

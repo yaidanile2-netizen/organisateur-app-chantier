@@ -103,6 +103,10 @@ const XP={libre:false,schemas:[],byId:{},lien:{},
     let i=+fig.dataset.i;if(i>=n)i=0;XP.voir(fig,i+1);fig._t=setInterval(()=>{const j=+fig.dataset.i+1;if(j>n||!document.body.contains(fig)){clearInterval(fig._t);fig._t=null;XP.voir(fig,+fig.dataset.i);return;}XP.voir(fig,j);},3600);
     if(pl)pl.textContent='⏸ Pause';},
   pourNotion(nid){const l=XP.schemas.filter(s=>(s.lecons||s.notions||[]).map(String).includes(String(nid)));return l.map(s=>XP.schemaHTML(s)).join('');},
+  /* Préparer un TD : les schémas de ce TD (td:[ids]) ou de ses notions, juste sous « L'essentiel » */
+  pourTD(t){if(!t)return '';const ns=(t.notions||[]).map(String);
+    const l=XP.schemas.filter(s=>(s.td||[]).map(String).includes(String(t.id))).concat(XP.schemas.filter(s=>!(s.td||[]).length&&(s.lecons||s.notions||[]).map(String).some(n=>ns.includes(n)))).slice(0,2);
+    return l.map(s=>XP.schemaHTML(s)).join('');},
   schemaPour(c,l){const id=c.schema||XP.lien[c.id];const s=id&&XP.byId[id];if(!s)return '';
     return l>=3?`<details class="xs-det"><summary>🗺️ Revoir le schéma : ${esc(s.titre||'')}</summary>${XP.schemaHTML(s)}</details>`:XP.schemaHTML(s);},
   schemasHTML(){if(!XP.schemas.length)return '';
