@@ -610,6 +610,7 @@ body.xp-open main{padding-bottom:190px}
   #xplayer{max-width:820px}
 }
 @media (min-width:1700px){.grid:not(.cols2):not(.cols3){grid-template-columns:repeat(3,minmax(0,1fr))}.xp2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.x-demo{margin:12px 0;padding:12px;border:1.5px solid var(--line);border-radius:14px;background:var(--paper)}.x-demo .exo-enonce{margin-top:8px}.x-demo .exo-step{margin-top:10px}.x-demo .xs{margin-top:10px}
 </style>
 </head>
 <body>
@@ -1811,12 +1812,39 @@ XP.deuxCol=function(box){if(box.dataset.xp2)return;const kids=[...box.children];
 XP.mise=function(){if(!XP.LARGE.matches)return;const v=document.getElementById('view');if(!v)return;
   v.querySelectorAll('.lbody').forEach(XP.deuxCol);
   v.querySelectorAll('.fade').forEach(f=>{if(!f.closest('.lbody'))XP.deuxCol(f);});
-  v.querySelectorAll('.x-tdstep,.x-tdb').forEach(XP.deuxCol);};
+  v.querySelectorAll('.x-tdstep,.x-tdb').forEach(XP.deuxCol);
+  v.querySelectorAll('.x-demo').forEach(XP.deuxCol);};
 (function(){let raf=0;const go=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(XP.mise);};
   const start=()=>{const v=document.getElementById('view');if(!v)return setTimeout(start,50);new MutationObserver(go).observe(v,{childList:true,subtree:true});go();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   const chg=()=>{document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);try{if(typeof render==='function')render();}catch(e){}};
   try{XP.LARGE.addEventListener('change',chg);}catch(e){}document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);})();
+
+
+/* =============================================================================
+   Compétences : la démonstration directement dans la carte (17/11/2026), comme « Les méthodes en
+   action » : l'énoncé, puis les étapes une par une (ce qu'on fait, le calcul, le pourquoi), le résultat,
+   les variantes, et le schéma de la compétence à côté quand il y en a un.
+   ============================================================================= */
+XP.schemaMeth=function(me){if(!me)return null;const L=(PK.application||[]).filter(x=>x.methode===me.id);const a=L.find(x=>XP.lien[x.id])||L.find(x=>x.schema);const id=a&&(a.schema||XP.lien[a.id]);return id&&XP.byId[id]?XP.byId[id]:null;};
+XP.demoComp=function(me){if(!me)return '';const ex=me.exemple||{};const st=ex.etapes||[];if(!st.length)return '';const n=st.length;const sc=XP.schemaMeth(me);
+  const etape=(s,k)=>`<div class="x-dstep" data-k="${k}"${k?' hidden':''}><div class="exo-step"><div class="exo-head"><span class="stepnum">${k+1}</span><h3>${md(s.titre||'Étape '+(k+1))}</h3></div>
+    ${s.faire?`<p class="exo-method">${md(s.faire)}</p>`:''}${s.calc?`<div class="exo-calc">${md(s.calc)}</div>`:''}${s.pourquoi?`<p class="x-why"><b>Pourquoi :</b> ${md(s.pourquoi)}</p>`:''}</div></div>`;
+  return `<div class="x-demo" data-n="${n}"><div class="x-demo-t"><div class="eyebrow">▶ La démonstration${ex.source?' · '+esc(ex.source):''}</div>
+      <div class="exo-enonce"><div class="eyebrow mut">Énoncé</div><div style="margin-top:6px">${md(ex.enonce||'')}</div></div>
+      ${st.map(etape).join('')}
+      ${ex.resultat?`<div class="exo-result x-dres"${n>1?' hidden':''}>✅ ${md(ex.resultat)}</div>`:''}
+      ${n<2?'':`<div class="btnrow x-dctl"><button class="btn primary" style="flex:2" data-demo="1">Étape suivante (1/${n}) ↓</button><button class="btn ghost" style="flex:1" data-demo="all">Tout afficher</button></div>`}
+      ${(me.variantes||[]).length?`<div class="x-dvar"${n>1?' hidden':''}><div class="eyebrow" style="margin-top:12px">Les variantes possibles</div>${me.variantes.map(v=>`<div class="x-var"><b>${md(v.si)}</b>${md(v.alors)}</div>`).join('')}</div>`:''}</div>
+    ${sc?XP.schemaHTML(sc):''}</div>`;};
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-demo]');if(!b)return;const d=b.closest('.x-demo');if(!d)return;ev.preventDefault();
+  const cach=[...d.querySelectorAll('.x-dstep[hidden]')];const n=+d.dataset.n;
+  if(b.dataset.demo==='all')cach.forEach(x=>x.hidden=false);else if(cach[0]){cach[0].hidden=false;cach[0].classList.add('xd-new');setTimeout(()=>cach[0].scrollIntoView({behavior:'smooth',block:'nearest'}),30);}
+  const vus=n-d.querySelectorAll('.x-dstep[hidden]').length;
+  /* le schéma suit la démonstration : une étape du schéma par étape de l'exemple, tant qu'il y en a */
+  const fig=d.querySelector('.xs');if(fig){const s=XP.byId[fig.dataset.xs];const m=(s&&s.etapes||[]).length;if(m)XP.voir(fig,Math.min(m,Math.round(vus*m/n)));}
+  if(vus>=n){d.querySelectorAll('.x-dres,.x-dvar').forEach(x=>x.hidden=false);const c=d.querySelector('.x-dctl');if(c)c.remove();}
+  else{const nb=d.querySelector('[data-demo="1"]');if(nb)nb.textContent=`Étape suivante (${vus}/${n}) ↓`;}});
 
 let SUBJ=null,PK=null,XTRA=null,LEG=null;
 function applyIdentity(m){const r=document.documentElement;Object.keys(m.theme||{}).forEach(k=>{try{r.style.setProperty('--'+k,m.theme[k]);}catch(e){}});
@@ -2471,7 +2499,7 @@ function vComp(){const C=XS().comp;const ok=SKILLS.filter(k=>C[k.id]===2).length
    return `<section class="card x-comp ${st===2?'dn':''}"><button class="x-comph" data-x="coOpen" data-id="${k.id}"><span class="x-cst">${st===2?'✅':st===1?'🔁':'⬜'}</span><span>${esc(k.t)}</span><span class="car">${o?'⌄':'›'}</span></button>
     ${o?`<div class="x-compb">${(me.declencheurs||[]).length?`<p class="small"><b>Quand ?</b> Quand l’énoncé dit :</p><div class="x-decl">${me.declencheurs.map(x=>'<span>'+md(x)+'</span>').join('')}</div>`:(me.sous?`<p class="small mut">${esc(me.sous)}</p>`:'')}
      <div class="eyebrow" style="margin-top:8px">Marche à suivre</div><ol class="x-ess">${(me.recette||[]).map(e=>`<li>${md(e)}</li>`).join('')}</ol>
-     ${(me.pieges||[]).length?`<div class="piege" style="margin-top:8px"><b>Pièges.</b> ${me.pieges.map(md).join(' ')}</div>`:''}
+     ${XP.demoComp(me)}${(me.pieges||[]).length?`<div class="piege" style="margin-top:8px"><b>Pièges.</b> ${me.pieges.map(md).join(' ')}</div>`:''}
      ${k.test?`<div class="x-exbox"><div class="eyebrow">Teste-toi</div><p style="margin:4px 0 8px">${md(k.test.q)}</p>${X['cot_'+k.id]?`<div class="x-ans"><b>${md(k.test.a)}</b><br>${md(k.test.e)}</div>`:`<button class="btn sm ghost" data-x="coTest" data-id="${k.id}">Voir la réponse</button>`}</div>`:''}
      ${XP.derMeth(me)}<div class="btnrow mt8"><button class="btn sm ghost" data-x="openM" data-m="${k.id}">▶ La méthode en action</button></div>
      <div class="x-opts two" style="margin-top:10px"><button class="x-opt ${st===1?'sel':''}" data-x="coRate" data-id="${k.id}" data-v="1">🔁 À retravailler</button><button class="x-opt ${st===2?'sel':''}" data-x="coRate" data-id="${k.id}" data-v="2">✅ Je sais faire</button></div></div>`:''}</section>`;}).join('')).join('')}</div>`;}
