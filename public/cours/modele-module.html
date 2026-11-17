@@ -40,7 +40,7 @@
 
   Règles à respecter
     - Garde les noms des constantes : APP, COURSE, QUESTIONS, FAMILY_LABEL, FORMULAS,
-      EXERCICES (obligatoires) et XTD, XESS, XFICHE, XFLASH, XAPP, XSCHEMA, XTETE, XVARIANTES
+      EXERCICES (obligatoires) et XTD, XESS, XFICHE, XFLASH, XAPP, XSCHEMA, XTETE, XVARIANTES, XEXPLIQUE
       (facultatifs). Ce sont des données simples : pas de fonction ni de variable.
     - Les « id » sont courts, sans espace ni accent, et uniques (ex. : "bases", "q1").
     - Le champ « m » d'une question, d'une formule ou d'un exercice = l'id d'un module
@@ -65,6 +65,11 @@
       avancement des TD, l'onglet DS affiche alors « 🎯 Quoi réviser pour le DS » : les notions à revoir
       en priorité (liées à tes exos à revoir ou importants ⭐), les chapitres du DS, et ceux qui ne sont
       pas utiles pour ce DS (pas encore vus en TD).
+    - EXPLIQUER (XEXPLIQUE, méthode « tuteur ») : sous chaque leçon, corrigé, compétence et exo, un bouton
+      « 🧩 Je n'ai pas compris » déroule 🟢 En bref → 🟡 Pas à pas → 🔴 Tout en détail. Règles : un bloc =
+      une idée ; une seule transformation par ligne ; dire d'où vient chaque donnée ; traduire en langage
+      humain ; décoder chaque symbole (ce que c'est + unité / à quoi ça sert / comment l'utiliser) ; finir
+      par un test de cohérence et UNE question de relance. Pas de blabla d'introduction.
     - APPLICATION (XAPP) : Daniel fait la plupart des calculs DE TÊTE. Les valeurs tirées doivent donc
       être rondes (listes de valeurs faciles) et le résultat simple (utilise « si » pour l'exiger,
       ex. si: "entier(phi)"). Niveau 1 = comprendre (choix), niveau 2 = calculer de tête, niveau 3 =
@@ -361,7 +366,7 @@ const XSCHEMA = [
 
 /* EXOS D'APPLICATION : nouveaux chiffres à chaque essai, faciles à calculer de tête.
    tirage : des LISTES de valeurs rondes ; calc : les grandeurs calculées (dans l'ordre) ;
-   si : condition pour garder le tirage (ex. résultat entier) ; dans les textes, {{expression}}
+   si : condition pour garder le tirage (ex. résultat entier : choisis-la pour que TOUT se calcule de tête) ; dans les textes, {{expression}}
    est remplacé par sa valeur. Une question est soit à choix (choix + bonne = n° de la bonne,
    à partir de 0), soit chiffrée (rep = l'expression de la réponse, unite, tol = tolérance, 3 % par défaut).
    Fonctions : sqrt, exp, ln, log, abs, round(x, n), min, max, entier(x), si(condition, a, b),
@@ -371,7 +376,7 @@ const XAPP = [
     id: "a-mur", titre: "Flux à travers un mur", mod: "bases", schema: "sch-mur",
     tirage: { e: [0.1, 0.2, 0.25, 0.5], lambda: [0.5, 1, 2], S: [2, 4, 5, 10], dT: [10, 20, 30] },
     calc: { R: "e/(lambda*S)", phi: "dT/R" },
-    si: "entier(phi)",
+    si: "entier(phi) && entier(10*R)",
     niveaux: [
       { enonce: "Un mur de {{e}} m d’épaisseur, λ = {{lambda}} W/(m·K), S = {{S}} m², sépare deux ambiances avec ΔT = {{dT}} K.",
         parts: [
@@ -380,8 +385,10 @@ const XAPP = [
         ] },
       { enonce: "Mur : e = {{e}} m, λ = {{lambda}} W/(m·K), S = {{S}} m², ΔT = {{dT}} K. Calcule de tête.",
         parts: [
-          { q: "Résistance thermique R ?", rep: "R", unite: "K/W", aide: "R = e / (λ·S) = {{e}} / ({{lambda}} × {{S}})", explication: "R = {{e}} / ({{lambda}} × {{S}}) = {{R}} K/W." },
-          { q: "Flux Φ ?", rep: "phi", unite: "W", aide: "Φ = ΔT / R", explication: "Φ = {{dT}} / {{R}} = {{phi}} W." }
+          { q: "Résistance thermique R ?", rep: "R", unite: "K/W", aide: "R = e / (λ·S) = {{e}} / ({{lambda}} × {{S}})", explication: "R = {{e}} / ({{lambda}} × {{S}}) = {{R}} K/W.",
+            detail: ["R = e / (λ·S)", "R = {{e}} / ({{lambda}} × {{S}})", "R = {{e}} / {{lambda*S}}", "**R = {{R}} K/W**"] },
+          { q: "Flux Φ ?", rep: "phi", unite: "W", aide: "Φ = ΔT / R", explication: "Φ = {{dT}} / {{R}} = {{phi}} W.",
+            detail: ["Φ = ΔT / R", "Φ = {{dT}} / {{R}}", "**Φ = {{phi}} W**"] }
         ] },
       { enonce: "Une paroi de {{S}} m², épaisse de {{e}} m (λ = {{lambda}} W/(m·K)), avec {{dT}} K d’écart.",
         parts: [
@@ -397,6 +404,46 @@ const XTETE = [
   { mod: "bases", q: "On te donne e, λ, S et les deux températures, on demande le flux. Ta 1re action :", c: ["calculer R = e/(λ·S) (ou appliquer Fourier directement)", "calculer U", "chercher h", "convertir ΔT en °C"], a: 0, e: "Une seule couche : Fourier, ou R puis Φ = ΔT/R." },
   { mod: "parois", q: "Mur à 3 couches + convection des deux côtés, on demande U. Ta 1re action :", c: ["additionner les résistances pour 1 m² (1/h + Σ e/λ + 1/h)", "faire la moyenne des λ", "calculer le flux de chaque couche", "prendre la couche la plus épaisse"], a: 0, e: "En série, les résistances s'additionnent ; U = 1 / R totale pour 1 m²." }
 ];
+
+/* « JE N'AI PAS COMPRIS » : une explication qui se déroule en 3 niveaux, sous les leçons, les exercices
+   corrigés, les compétences et les exos d'application. Clé = id d'une leçon, d'un exercice, d'un module
+   (sa compétence) ou d'un exo XAPP. Tout est facultatif : sans XEXPLIQUE, l'app fabrique une version
+   simple avec ce qu'elle a (encadrés, formules, étapes des corrigés, aides des exos).
+     court    : 🟢 En bref — la réponse directe en 1 à 3 phrases, avec un mini exemple chiffré.
+     etapes   : 🟡 Pas à pas — [{ t: "action (on isole R…)", src: "d'où viennent les données", l: ["une seule
+                transformation par ligne", "…"], en: "la même chose en langage humain" }].
+     verif    : un test de cohérence en 10 secondes (cas limite, unité, ordre de grandeur).
+     sert     : 🔴 Tout en détail — à quoi ça sert concrètement.
+     decodage : pour chaque symbole { s, quoi (nom + unité), role (à quoi il sert), usage (où on le trouve,
+                comment on s'en sert) }.
+     exemple  : un exemple de A à Z, une ligne par calcul.  pieges : les erreurs classiques.
+     relance  : UNE question pour passer à l'étape suivante.
+   Pour les exos XAPP, ajoute aussi à chaque question chiffrée detail: ["formule", "valeurs", "résultat"]
+   (une transformation par ligne, avec les {{…}}) : la correction se déroule ligne par ligne. */
+const XEXPLIQUE = {
+  fourier: {
+    court: ["Plus il fait chaud d'un côté et froid de l'autre, plus la chaleur passe ; un mur épais la freine.", "Exemple : 1 m² de béton (λ = 2), 0,2 m d'épaisseur, 10 K d'écart → Φ = 2 × 1 × 10 / 0,2 = 100 W."],
+    sert: "Calculer les pertes de chaleur d'un mur, et donc la puissance de chauffage à prévoir.",
+    decodage: [
+      { s: "Φ", quoi: "le flux de chaleur, en W", role: "ce qui traverse la paroi chaque seconde", usage: "c'est en général ce qu'on cherche" },
+      { s: "λ", quoi: "la conductivité, en W/(m·K)", role: "dit si le matériau laisse passer la chaleur", usage: "donnée dans l'énoncé ou dans un tableau (isolant : ≈ 0,04)" },
+      { s: "S", quoi: "la surface, en m²", role: "plus c'est grand, plus il en passe", usage: "longueur × hauteur du mur" },
+      { s: "e", quoi: "l'épaisseur, en m", role: "freine le flux", usage: "à convertir en mètres (20 cm = 0,20 m)" },
+      { s: "ΔT", quoi: "l'écart de température, en K (ou °C)", role: "ce qui pousse la chaleur", usage: "T₁ − T₂, toujours positif dans le sens chaud → froid" }
+    ],
+    pieges: ["L'épaisseur en cm au lieu de m (résultat 100 fois trop petit).", "Inverser e et λ dans la formule."],
+    relance: "et si le mur a deux couches, qu'est-ce qui change ?"
+  },
+  "td1-mur": {
+    verif: "un mur en béton non isolé perd beaucoup : quelques centaines de watts pour 10 m² et 15 K, c'est cohérent.",
+    relance: "refais le calcul avec 10 cm d'isolant (λ = 0,04) : combien de fois moins de flux ?"
+  },
+  "a-mur": {
+    sert: "Faire de tête le calcul de base de tous les exos de parois.",
+    pieges: ["Oublier de multiplier λ par S avant de diviser.", "Donner R en W au lieu de K/W."],
+    relance: "si on double S, que deviennent R et Φ ?"
+  }
+};
 
 /* VARIANTES par chapitre (id du module) : « Si … → alors … », affichées dans la méthode. */
 const XVARIANTES = {
@@ -471,6 +518,9 @@ const XVARIANTES = {
       apercu += '<h3>🧮 ' + a.titre + '</h3><ul>' + ex + '</ul>'; });
     ok.push(XAPP.length + ' exo(s) d’application à chiffres faciles'); }
   if (typeof XTETE !== 'undefined') { XTETE.forEach(function (q, i) { if (!ids[q.mod]) err.push('1re action n° ' + (i + 1) + ' : module « ' + q.mod + ' » inconnu.'); if (!q.c || q.a == null || q.a >= q.c.length) err.push('1re action n° ' + (i + 1) + ' : choix ou bonne réponse (a) incorrects.'); }); ok.push(XTETE.length + ' question(s) « Ta 1re action ? »'); }
+  if (typeof XEXPLIQUE !== 'undefined') { var cles = {}; Object.keys(nids).forEach(function (k) { cles[k] = 1; }); Object.keys(eid).forEach(function (k) { cles[k] = 1; }); Object.keys(ids).forEach(function (k) { cles[k] = 1; }); if (typeof XAPP !== 'undefined') XAPP.forEach(function (a) { cles[a.id] = 1; });
+    Object.keys(XEXPLIQUE).forEach(function (k) { if (!cles[k]) err.push('XEXPLIQUE : « ' + k + ' » n’est ni une leçon, ni un exercice, ni un module, ni un exo XAPP.'); var x = XEXPLIQUE[k]; (x.etapes || []).forEach(function (e, i) { if (typeof e !== 'string' && !e.t) err.push('XEXPLIQUE « ' + k + ' », étape ' + (i + 1) + ' : il manque le titre t.'); }); });
+    ok.push(Object.keys(XEXPLIQUE).length + ' explication(s) « Je n’ai pas compris »'); }
   if (typeof XVARIANTES !== 'undefined') { Object.keys(XVARIANTES).forEach(function (m) { if (!ids[m]) err.push('Variantes : module « ' + m + ' » inconnu.'); }); }
   document.getElementById('verif').innerHTML = '<div class="card"><h2 style="margin-top:0">Contrôle du module</h2><ul>' +
     ok.map(function (t) { return '<li class="ok">✓ ' + t + '</li>'; }).join('') + err.map(function (t) { return '<li class="ko">✗ ' + t + '</li>'; }).join('') + '</ul>' +
