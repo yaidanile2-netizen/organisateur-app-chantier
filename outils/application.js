@@ -534,36 +534,9 @@ XP.deuxCol=function(box){if(box.dataset.xp2)return;const kids=[...box.children];
 XP.mise=function(){if(!XP.LARGE.matches)return;const v=document.getElementById('view');if(!v)return;
   v.querySelectorAll('.lbody').forEach(XP.deuxCol);
   v.querySelectorAll('.fade').forEach(f=>{if(!f.closest('.lbody'))XP.deuxCol(f);});
-  v.querySelectorAll('.x-tdstep,.x-tdb').forEach(XP.deuxCol);
-  v.querySelectorAll('.x-demo').forEach(XP.deuxCol);};
+  v.querySelectorAll('.x-tdstep,.x-tdb').forEach(XP.deuxCol);};
 (function(){let raf=0;const go=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(XP.mise);};
   const start=()=>{const v=document.getElementById('view');if(!v)return setTimeout(start,50);new MutationObserver(go).observe(v,{childList:true,subtree:true});go();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
   const chg=()=>{document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);try{if(typeof render==='function')render();}catch(e){}};
   try{XP.LARGE.addEventListener('change',chg);}catch(e){}document.documentElement.classList.toggle('xp-large',XP.LARGE.matches);})();
-
-
-/* =============================================================================
-   Compétences : la démonstration directement dans la carte (17/11/2026), comme « Les méthodes en
-   action » : l'énoncé, puis les étapes une par une (ce qu'on fait, le calcul, le pourquoi), le résultat,
-   les variantes, et le schéma de la compétence à côté quand il y en a un.
-   ============================================================================= */
-XP.schemaMeth=function(me){if(!me)return null;const L=(PK.application||[]).filter(x=>x.methode===me.id);const a=L.find(x=>XP.lien[x.id])||L.find(x=>x.schema);const id=a&&(a.schema||XP.lien[a.id]);return id&&XP.byId[id]?XP.byId[id]:null;};
-XP.demoComp=function(me){if(!me)return '';const ex=me.exemple||{};const st=ex.etapes||[];if(!st.length)return '';const n=st.length;const sc=XP.schemaMeth(me);
-  const etape=(s,k)=>`<div class="x-dstep" data-k="${k}"${k?' hidden':''}><div class="exo-step"><div class="exo-head"><span class="stepnum">${k+1}</span><h3>${md(s.titre||'Étape '+(k+1))}</h3></div>
-    ${s.faire?`<p class="exo-method">${md(s.faire)}</p>`:''}${s.calc?`<div class="exo-calc">${md(s.calc)}</div>`:''}${s.pourquoi?`<p class="x-why"><b>Pourquoi :</b> ${md(s.pourquoi)}</p>`:''}</div></div>`;
-  return `<div class="x-demo" data-n="${n}"><div class="x-demo-t"><div class="eyebrow">▶ La démonstration${ex.source?' · '+esc(ex.source):''}</div>
-      <div class="exo-enonce"><div class="eyebrow mut">Énoncé</div><div style="margin-top:6px">${md(ex.enonce||'')}</div></div>
-      ${st.map(etape).join('')}
-      ${ex.resultat?`<div class="exo-result x-dres"${n>1?' hidden':''}>✅ ${md(ex.resultat)}</div>`:''}
-      ${n<2?'':`<div class="btnrow x-dctl"><button class="btn primary" style="flex:2" data-demo="1">Étape suivante (1/${n}) ↓</button><button class="btn ghost" style="flex:1" data-demo="all">Tout afficher</button></div>`}
-      ${(me.variantes||[]).length?`<div class="x-dvar"${n>1?' hidden':''}><div class="eyebrow" style="margin-top:12px">Les variantes possibles</div>${me.variantes.map(v=>`<div class="x-var"><b>${md(v.si)}</b>${md(v.alors)}</div>`).join('')}</div>`:''}</div>
-    ${sc?XP.schemaHTML(sc):''}</div>`;};
-document.addEventListener('click',ev=>{const b=ev.target.closest('[data-demo]');if(!b)return;const d=b.closest('.x-demo');if(!d)return;ev.preventDefault();
-  const cach=[...d.querySelectorAll('.x-dstep[hidden]')];const n=+d.dataset.n;
-  if(b.dataset.demo==='all')cach.forEach(x=>x.hidden=false);else if(cach[0]){cach[0].hidden=false;cach[0].classList.add('xd-new');setTimeout(()=>cach[0].scrollIntoView({behavior:'smooth',block:'nearest'}),30);}
-  const vus=n-d.querySelectorAll('.x-dstep[hidden]').length;
-  /* le schéma suit la démonstration : une étape du schéma par étape de l'exemple, tant qu'il y en a */
-  const fig=d.querySelector('.xs');if(fig){const s=XP.byId[fig.dataset.xs];const m=(s&&s.etapes||[]).length;if(m)XP.voir(fig,Math.min(m,Math.round(vus*m/n)));}
-  if(vus>=n){d.querySelectorAll('.x-dres,.x-dvar').forEach(x=>x.hidden=false);const c=d.querySelector('.x-dctl');if(c)c.remove();}
-  else{const nb=d.querySelector('[data-demo="1"]');if(nb)nb.textContent=`Étape suivante (${vus}/${n}) ↓`;}});

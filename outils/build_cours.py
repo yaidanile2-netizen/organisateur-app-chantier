@@ -367,12 +367,5 @@ html = remplacer(html, "</style>\n</head>", """/* Grand écran (Organisateur) */
 </style>
 </head>""")
 
-# ---------- 7. Compétences : la démonstration pas à pas dans la carte (avec le schéma) ----------
-html = remplacer(html, '${(me.pieges||[]).length?`<div class="piege" style="margin-top:8px"><b>Pièges.</b>',
-                 '${XP.demoComp(me)}${(me.pieges||[]).length?`<div class="piege" style="margin-top:8px"><b>Pièges.</b>')
-html = remplacer(html, "</style>\n</head>", """.x-demo{margin:12px 0;padding:12px;border:1.5px solid var(--line);border-radius:14px;background:var(--paper)}.x-demo .exo-enonce{margin-top:8px}.x-demo .exo-step{margin-top:10px}.x-demo .xs{margin-top:10px}
-</style>
-</head>""")
-
 dest.write_text(html, encoding='utf-8')
 print(f'{dest} : {len(html.encode())} octets')
