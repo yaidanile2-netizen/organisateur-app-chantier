@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute } from 'workbox-precaching'
+import { noterNotif } from './notifs'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -48,6 +49,10 @@ async function afficherRappel() {
         icon: '/icon-192.png',
         badge: '/icon-192.png',
   })
+  // Historique (bouton 🔔 de l'app) ; prévient aussi les pages ouvertes.
+  await noterNotif({ date: new Date().toISOString(), titre: title, texte: body })
+  const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  pages.forEach((c) => c.postMessage({ type: 'notif' }))
 }
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {

@@ -4,6 +4,7 @@
 // Maison — pas de trajet : il suffit d'être rentré, la séance doit finir avant l'heure limite maison.
 import type { Cours, Tache } from './api'
 import { DUREE_SEANCE, PROGRAMME, dureeDe, seanceParCode, type CodeSeance, type SeanceProgramme } from './programme'
+import { filtrerCours, interditSport, occupationsEnPlus } from './jours'
 
 export const MARQUEUR = '#sport-auto'
 
@@ -192,21 +193,31 @@ export function planifierSemaine(
     taches: Tache[],
     r: Reglages = REGLAGES_PAR_DEFAUT,
     maintenant: Date = new Date(),
+    opts: { seulement?: CodeSeance[]; joursPris?: Date[]; sansChangements?: boolean } = {},
 ): Creneau[] {
-    const occ = absences(cours, taches, r)
     const jours: Date[] = []
     for (let i = 0; i < 7; i++) {
         const jour = new Date(lundi)
         jour.setDate(lundi.getDate() + i)
         jours.push(jour)
     }
-    const seances = PROGRAMME.filter((b) => b.lieu === 'salle' || r.seanceMaison).map((b) => seanceParCode(b.code))
+    const fin = new Date(jours[6])
+    fin.setHours(23, 59, 59, 999)
+    // Changements de programme (pas cours, malade, blessé, imprévu) : cours retirés, créneaux bloqués, séances interdites.
+    const avecChgt = !opts.sansChangements
+    const occ = avecChgt ? absences(filtrerCours(cours), [...taches, ...occupationsEnPlus(lundi, fin, 'sport')], r) : absences(cours, taches, r)
+    const seances = PROGRAMME.filter((b) => b.lieu === 'salle' || r.seanceMaison)
+        .filter((b) => !opts.seulement || opts.seulement.includes(b.code))
+        .map((b) => seanceParCode(b.code))
     // options[s][j] : meilleur créneau de la séance s le jour j (chaque séance a sa durée).
-    const options = seances.map((s) => jours.map((j) => meilleurCreneau(j, occ, r, maintenant, s.lieu, dureeDe(s, r.duree))))
+    const options = seances.map((s) =>
+        jours.map((j) => (avecChgt && interditSport(s.code, j) ? null : meilleurCreneau(j, occ, r, maintenant, s.lieu, dureeDe(s, r.duree)))),
+    )
 
     let meilleur: Choix[] = []
     let meilleureCle = -Infinity
-    const pris = new Set<number>()
+    // Jours où une séance est déjà faite (replanification) : une seule séance par jour.
+    const pris = new Set<number>(jours.flatMap((j, i) => ((opts.joursPris ?? []).some((d) => d.toDateString() === j.toDateString()) ? [i] : [])))
     const courant: Choix[] = []
     // On cherche d'abord le plus de séances possible, puis le meilleur planning.
     const explorer = (k: number) => {
@@ -251,7 +262,7 @@ export function descriptionSeance(c: Creneau): string {
                 ? `Séance skills ${hm(c.debut)}–${hm(c.fin)} (à la maison ou à la salle : une barre de traction suffit)`
                 : `Séance maison ${hm(c.debut)}–${hm(c.fin)} (élastiques et poids du corps)`
             : `Départ ${hm(c.depart)} · séance ${hm(c.debut)}–${hm(c.fin)} au Basic-Fit Atlantis · retour vers ${hm(c.retour)}`
-    return [entete, `${s.code === 'C' ? '' : s.parcours === 'calis' ? 'Callisthénie · ' : 'Basique · '}Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
+    return [entete, `${s.code === 'C' ? (s.parcours === 'velo' ? 'Vélo · ' : 'Course · ') : s.parcours === 'calis' ? 'Callisthénie · ' : 'Basique · '}Niveau ${s.niveau} · ${s.nom}`, '', ...exos, '', `Détail et suivi dans l’onglet Muscu — ${MARQUEUR} ${s.code}`].join('\n')
 }
 
 // Retrouve la séance (A/B/C/D) d'une tâche créée automatiquement.

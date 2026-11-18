@@ -1,3 +1,4 @@
+import { TYPES, changementsDu, coursSaute, effetsTexte, stockJours } from './jours'
 import { BoutonRepli } from './Repliable'
 import { useRepli } from './repli'
 import { useEffect, useMemo, useState } from 'react'
@@ -67,6 +68,9 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
     const [categories, setCategories] = useState<Categorie[]>([])
     const [chargement, setChargement] = useState(true)
     const [erreur, setErreur] = useState<string | null>(null)
+    // Changements de programme (bandeau du jour, cours barrés) : on se remet à jour quand ils changent.
+    const [, setVersionJours] = useState(0)
+    useEffect(() => stockJours.abonner(() => setVersionJours((v) => v + 1)), [])
     const [formOuvert, setFormOuvert] = useState(false)
     const [tacheEnEdition, setTacheEnEdition] = useState<Tache | null>(null)
     const [detail, setDetail] = useState<{ item: Item; maintenant: number } | null>(null)
@@ -246,6 +250,14 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                 ))}
             </div>
 
+            {changementsDu(date).map((c) => (
+                <p key={c.id} className="chg-bandeau">
+                    {TYPES[c.type].emoji} {TYPES[c.type].court[0].toUpperCase() + TYPES[c.type].court.slice(1)}
+                    {effetsTexte(c).length ? ` : ${effetsTexte(c).join(', ')}` : ''}
+                    {c.note ? ` · ${c.note}` : ''}
+                </p>
+            ))}
+
             {chargement && <p className="muted">Chargement…</p>}
             {erreur && <p className="form-error">{erreur}</p>}
 
@@ -258,7 +270,8 @@ export default function DayView({ rafraichir = 0, onVoirSeance }: { rafraichir?:
                     {items.map((item) => (
                         <li
                             key={`${item.type}-${item.data.id}`}
-                            className={`day-item ${item.type === 'cours' ? 'day-item-cours' : ''}`}
+                            className={`day-item ${item.type === 'cours' ? 'day-item-cours' : ''}${item.type === 'cours' && coursSaute(item.data) ? ' ev-saute' : ''}`}
+                            title={item.type === 'cours' && coursSaute(item.data) ? 'Tu as noté que ce cours n’a pas lieu (ou que tu n’y vas pas)' : undefined}
                             style={
                                 item.type === 'cours'
                                     ? ({ '--chip-color': typeDe(item.data).couleur } as React.CSSProperties)

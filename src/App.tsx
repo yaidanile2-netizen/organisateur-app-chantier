@@ -7,6 +7,9 @@ import { getCategories, type Categorie } from './api'
 import DayView from './DayView'
 import EtudesPlanner from './EtudesPlanner'
 import SportPlanner from './SportPlanner'
+import ChangerProgramme from './ChangerProgramme'
+import NotesRappels from './NotesRappels'
+import HistoriqueNotifs from './HistoriqueNotifs'
 import NutritionCoach from './NutritionCoach'
 import MuscuView from './MuscuView'
 import { QuestionsTD, SuiviTD } from './AvancementTD'
@@ -102,7 +105,10 @@ function App() {
                     <span className="brand-dot" />
                     Organisateur
                 </div>
-                <span className="today">{capitalize(todayLabel)}</span>
+                <div className="topbar-droite">
+                    <span className="today">{capitalize(todayLabel)}</span>
+                    <HistoriqueNotifs etatNotifs={etat} />
+                </div>
             </header>
 
             <main className="content">
@@ -114,6 +120,10 @@ function App() {
                                 definirOuvert('muscu.seance', true)
                                 choisir('muscu')
                             }} />
+
+                        <NotesRappels version={version} onChange={() => setVersion((v) => v + 1)} />
+
+                        <ChangerProgramme onPlanifie={() => setVersion((v) => v + 1)} />
 
                         <SportPlanner onPlanifie={() => setVersion((v) => v + 1)} />
 

@@ -108,14 +108,21 @@ export type SeanceBase = {
 export type SeanceProgramme = SeanceBase & NiveauSeance & { niveau: number; nbNiveaux: number; parcours: Parcours }
 
 /** Le chemin suivi pour A, B et D : le programme basique (machines, haltères, barre) ou la callisthénie. */
-export type Parcours = 'basique' | 'calis'
+/** Pour le cardio C : « calis » = la course (son chemin d'origine), « velo » = le cardio vélo (18/11/2026). */
+export type Parcours = 'basique' | 'calis' | 'velo'
 export const PARCOURS: Record<Parcours, { emoji: string; nom: string; court: string }> = {
     basique: { emoji: '🏋️', nom: 'Basique', court: 'Machines, haltères, barre' },
     calis: { emoji: '🤸', nom: 'Callisthénie', court: 'Poids du corps, figures' },
+    velo: { emoji: '🚴', nom: 'Vélo', court: 'Endurance tranquille, sans forcer' },
 }
+const COURSE = { emoji: '🏃', nom: 'Course', court: 'Course + marche, jusqu’aux 10 km' }
+/** Le nom d'un chemin pour une séance (pour C, « calis » s'affiche « Course »). */
+export const cheminInfo = (code: CodeSeance, p: Parcours) => (code === 'C' && p !== 'velo' ? COURSE : PARCOURS[p])
+/** Les deux chemins proposés pour une séance. */
+export const cheminsDe = (code: CodeSeance): Parcours[] => (code === 'C' ? ['calis', 'velo'] : ['basique', 'calis'])
 export type ParcoursChoisis = Partial<Record<CodeSeance, Parcours>>
-/** Le cardio C est le même dans les deux chemins. */
-export const aDeuxChemins = (code: CodeSeance) => code !== 'C'
+/** Toutes les séances ont deux chemins (C : course ou vélo, depuis le 18/11/2026). */
+export const aDeuxChemins = (code: CodeSeance) => Boolean(code)
 
 export const SALLE = {
     nom: 'Basic-Fit Saint-Herblain Atlantis',
@@ -860,13 +867,13 @@ export const PROGRAMME: SeanceBase[] = [
         niveaux: [
             {
                 nom: 'Départ',
-                resume: 'Pour démarrer en douceur : des petits blocs de course très lente, et beaucoup de marche. Le souffle et les jambes s’habituent.',
+                resume: 'Pour démarrer en douceur : une échelle course + marche. La course s’allonge un peu à chaque séance, la marche raccourcit. On règle l’allure au souffle (tu dois pouvoir parler), pas au km/h.',
                 duree: 40,
-                echauffement: ['6 min de marche, de 5 à 6 km/h', 'Montées de genoux et talons-fesses sur place (1 min)', '1 min de trottinage très lent à 6,5 km/h'],
+                echauffement: ['6 min de marche, de 5 à 6 km/h', 'Montées de genoux et talons-fesses sur place (1 min)', '1 min de trottinage très lent'],
                 blocs: [
                     bloc('Course + marche', 1, 0, [
-                        course('c-depart', '7 × (2 min course + 2 min marche)', 7, '2 min à 6,5–7,5 km/h, puis 2 min de marche à 5,5 km/h', [
-                            'Course TRÈS lente : tu dois pouvoir parler en phrases. Essoufflé ? Ralentis encore, même à 6,5 km/h',
+                        course('c-depart', '8 × (1 min 30 course + 1 min 30 marche)', 8, '1 min 30 de course très lente (6,5–7,5 km/h), puis 1 min 30 de marche à 5,5 km/h', [
+                            'Test de la parole : tu dois pouvoir dire une phrase entière. Essoufflé ? Ralentis, même à 6,5 km/h',
                             'Petits pas rapides, pieds sous le corps : ça évite que les cuisses « brûlent »',
                             'Les jambes qui chauffent au début, c’est normal : ça diminue en quelques séances',
                         ]),
@@ -874,23 +881,23 @@ export const PROGRAMME: SeanceBase[] = [
                     bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '8 %', '5 km/h')]),
                 ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: 'D’abord garder la même vitesse et que ce soit plus facile. Ensuite : 2 min 30 de course, puis 3 min.',
-                monter: 'Niveau 2 quand tu cours 5 min d’affilée sans être essoufflé.',
-                defi: { titre: 'Courir 5 min sans t’arrêter, en pouvant parler', detail: 'À 7–7,5 km/h. Si tu y arrives sans être à bout de souffle, tu es prêt pour ta formule.', apres: 4 },
+                progression: 'L’échelle, une marche par séance si la précédente était facile : 8 × (1 min 30 + 1 min 30) → 7 × (2 min + 1 min 30) → 6 × (3 min + 1 min 30) → 5 × (4 min + 1 min). Pas facile ? Refais la même séance.',
+                monter: 'Niveau 2 quand 5 × (4 min course + 1 min marche) passent en pouvant parler.',
+                defi: { titre: 'Courir 5 min sans t’arrêter, en pouvant parler', detail: 'À allure tranquille. Si tu y arrives sans être à bout de souffle, tu es prêt pour le niveau Fond.', apres: 4 },
             },
             {
                 nom: 'Fond',
-                resume: 'Ta formule course + marche, avec un peu plus de course : la base du souffle.',
+                resume: 'On allonge la course et on garde des pauses de marche courtes (1 min) : la base du souffle, sans forcer.',
                 duree: 45,
                 echauffement: ECHAUFFEMENT_COURSE,
                 blocs: [
-                    bloc('Course + marche', 1, 0, [course('c-fond', '4 × (5 min course + 2 min marche)', 4, '5 min à 7,5–8,5 km/h, puis 2 min de marche à 5,5 km/h', ['Course facile : tu peux parler par phrases (effort 6/10)', 'Coche un rond à chaque bloc'])]),
+                    bloc('Course + marche', 1, 0, [course('c-fond', '4 × (6 min course + 1 min marche)', 4, '6 min de course facile (7,5–8,5 km/h), puis 1 min de marche', ['Course facile : tu peux parler par phrases (effort 5-6/10)', 'Coche un rond à chaque bloc'])]),
                     bloc('Finition en côte', 1, 0, [marche('c-marche-inclinee', 6, '10 %', '5 km/h')]),
                 ],
                 retourAuCalme: RETOUR_COURSE,
-                progression: '+0,5 km/h sur la course quand les 4 blocs passent bien.',
-                monter: 'Niveau 2 quand tu tiens 4 × 5 min à 9 km/h sans finir épuisé.',
-                defi: { titre: 'Courir 15 min sans t’arrêter', detail: 'À 8 km/h environ, sans marcher. Tu dois finir en pouvant encore parler.', apres: 4 },
+                progression: 'L’échelle : 4 × (6 min + 1 min) → 3 × (8 min + 1 min) → 2 × (12 min + 1 min) → 15 min d’affilée. N’augmente le temps total de course que d’environ 10 % par semaine ; la vitesse viendra toute seule.',
+                monter: 'Niveau 3 quand tu cours 15 min d’affilée en pouvant parler.',
+                defi: { titre: 'Courir 15 min sans t’arrêter', detail: 'Allure facile, sans marcher. Tu dois finir en pouvant encore parler.', apres: 4 },
             },
             {
                 nom: 'Vitesse',
@@ -903,7 +910,7 @@ export const PROGRAMME: SeanceBase[] = [
                 ],
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur les accélérations quand elles restent faciles à tenir.',
-                monter: 'Niveau 3 quand les 24 min de course passent sans pause difficile.',
+                monter: 'Niveau 4 quand les 24 min de course passent sans pause difficile.',
                 defi: { titre: 'Courir 20 min sans t’arrêter, puis 6 accélérations à 12 km/h', detail: 'Le fond et la vitesse dans la même séance.', apres: 4 },
             },
             {
@@ -917,7 +924,7 @@ export const PROGRAMME: SeanceBase[] = [
                 ],
                 retourAuCalme: RETOUR_COURSE,
                 progression: '+0,5 km/h sur les 30 s vite quand les 16 passent.',
-                monter: 'Niveau 4 quand tu récupères en trottinant (6-7 km/h) au lieu de marcher.',
+                monter: 'Niveau 5 quand tu récupères en trottinant (6-7 km/h) au lieu de marcher.',
                 defi: { titre: '16 × 30/30 en récupérant en trottinant', detail: 'Les 30 s lentes se font en courant (6-7 km/h), jamais en marchant.', apres: 4 },
             },
             {
@@ -931,7 +938,7 @@ export const PROGRAMME: SeanceBase[] = [
                 ],
                 retourAuCalme: RETOUR_COURSE,
                 progression: 'Monte la course continue de 0,5 km/h quand c’est facile.',
-                monter: 'Niveau 5 quand les 25 min sont faciles à 9 km/h.',
+                monter: 'Niveau 6 quand les 25 min sont faciles à 9 km/h.',
                 defi: { titre: 'Courir 5 km sans t’arrêter', detail: 'Allure libre (environ 35 min). C’est le premier grand palier vers les 10 km.', apres: 5 },
             },
             {
@@ -945,7 +952,7 @@ export const PROGRAMME: SeanceBase[] = [
                 ],
                 retourAuCalme: RETOUR_COURSE,
                 progression: 'Garde la qualité des 15 s vite jusqu’au 3e quart-temps.',
-                monter: 'Niveau 6 quand le 3e quart-temps est aussi rapide que le 1er.',
+                monter: 'Niveau 7 quand le 3e quart-temps est aussi rapide que le 1er.',
                 defi: { titre: 'Test du basketteur : 3 quart-temps de 15/15 sans ralentir', detail: 'Le 3e quart-temps aussi rapide que le 1er : tu tiens un match entier.', apres: 5 },
             },
             {
@@ -1233,6 +1240,101 @@ export const PROGRAMME_BASIQUE: SeanceBase[] = [
     },
 ]
 
+// ---------- Cardio C, chemin « Vélo » (18/11/2026) ----------
+// Demande de Daniel : un cardio « chill » pour progresser sans trop forcer, à la place de la course quand il veut.
+// Principe : surtout de l'endurance facile (zone 2 : tu peux parler en phrases), on progresse en ajoutant du temps,
+// puis quelques petits passages un peu plus soutenus. Vélo de la salle (ou dehors).
+function velo(id: string, nom: string, nb: number, reps: string, consignes: string[]): Exercice {
+    return ex(id, nom, 'Vélo de la salle (ou vélo dehors)', 'cardio', ['cardio', 'quadriceps', 'fessiers', 'mollets'], nb, reps, [
+        ...consignes,
+        'Note la distance totale à la fin (compteur du vélo ou montre)',
+    ], { mesure: 'km', alternative: 'Vélo elliptique ou rameur, même effort' })
+}
+const ECHAUFFEMENT_VELO = ['5 min de pédalage très facile (résistance basse, 80 tours/min)', 'Monte doucement la résistance jusqu’à l’effort « je peux parler »']
+const RETOUR_VELO = ['3 min de pédalage très facile', 'Étirements cuisses, fessiers et mollets (30 s chacun)']
+const ZONE2 = 'Zone 2 : tu peux parler en phrases, tu respires par le nez la plupart du temps (effort 4-5/10). Trop dur ? Baisse la résistance, pas la cadence'
+
+export const PROGRAMME_VELO: SeanceBase[] = [
+    {
+        code: 'C',
+        lieu: 'salle',
+        emoji: '🚴',
+        degrade: ['#05304a', '#1e9bd9'],
+        titre: 'Cardio vélo',
+        court: 'Cardio vélo (endurance tranquille)',
+        couleur: '#2aa8e8',
+        focus: 'Un cardio tranquille qui fait quand même progresser : beaucoup d’endurance facile (on peut parler), en ajoutant du temps petit à petit. Doux pour les genoux, parfait les jours où tu ne veux pas forcer.',
+        niveaux: [
+            {
+                nom: 'Tranquille',
+                resume: '25 min de vélo facile : tu peux parler tout le long. Le cœur et le souffle prennent l’habitude.',
+                duree: 35,
+                echauffement: ECHAUFFEMENT_VELO,
+                blocs: [bloc('Endurance facile', 1, 0, [velo('v-endurance', '25 min de vélo facile', 5, '5 min sans t’arrêter, cadence 80–90 tours/min', [ZONE2, 'Coche un rond toutes les 5 minutes', 'Selle à la bonne hauteur : jambe presque tendue en bas'])])],
+                retourAuCalme: RETOUR_VELO,
+                progression: '+5 min quand la séance passe facilement (25 → 30 → 35 min).',
+                monter: 'Niveau 2 quand 35 min passent en pouvant parler tout le long.',
+                defi: { titre: '35 min de vélo en pouvant parler', detail: 'Cadence autour de 85 tours/min, sans jamais être essoufflé.', apres: 3 },
+            },
+            {
+                nom: 'Endurance',
+                resume: '40 min d’endurance facile : la vraie base du cardio. Tu peux mettre une série ou de la musique.',
+                duree: 50,
+                echauffement: ECHAUFFEMENT_VELO,
+                blocs: [bloc('Endurance facile', 1, 0, [velo('v-endurance', '40 min de vélo facile', 8, '5 min sans t’arrêter, cadence 85–90 tours/min', [ZONE2, 'Coche un rond toutes les 5 minutes'])])],
+                retourAuCalme: RETOUR_VELO,
+                progression: 'Même effort, un cran de résistance en plus quand c’est trop facile (tu dois toujours pouvoir parler).',
+                monter: 'Niveau 3 quand 40 min passent avec 1 cran de plus qu’au début.',
+                defi: { titre: '45 min de vélo en zone 2', detail: 'En pouvant parler du début à la fin.', apres: 4 },
+            },
+            {
+                nom: 'Rythme',
+                resume: 'De l’endurance + 3 passages « un peu plus soutenus » de 4 min : tu progresses sans te mettre dans le rouge.',
+                duree: 50,
+                echauffement: ECHAUFFEMENT_VELO,
+                blocs: [
+                    bloc('Endurance facile', 1, 0, [velo('v-endurance', '10 min de vélo facile', 2, '5 min, cadence 85–90 tours/min', [ZONE2])]),
+                    bloc('Rythme', 1, 0, [velo('v-rythme', '3 × (4 min soutenu + 3 min facile)', 3, '4 min à effort 6-7/10 (phrases courtes), puis 3 min faciles', ['Soutenu mais tenable : tu pourrais tenir 20 min à ce rythme', 'Un rond à chaque passage soutenu'])]),
+                    bloc('Endurance facile', 1, 0, [velo('v-endurance', '10 min de vélo facile', 2, '5 min faciles', [ZONE2])]),
+                ],
+                retourAuCalme: RETOUR_VELO,
+                progression: '4 min → 5 min → 6 min de passage soutenu, toujours 3 passages.',
+                monter: 'Niveau 4 quand 3 × 6 min soutenues passent bien.',
+                defi: { titre: '3 × 6 min soutenues', detail: 'Le dernier passage aussi régulier que le premier.', apres: 4 },
+            },
+            {
+                nom: 'Cadence',
+                resume: 'Endurance + petites relances de cadence (pédaler vite, sans résistance) : jambes plus légères, utile aussi pour la course.',
+                duree: 55,
+                echauffement: ECHAUFFEMENT_VELO,
+                blocs: [
+                    bloc('Endurance facile', 1, 0, [velo('v-endurance', '15 min de vélo facile', 3, '5 min, cadence 85–90 tours/min', [ZONE2])]),
+                    bloc('Relances', 1, 0, [velo('v-cadence', '8 × (1 min vite en pédalage + 2 min facile)', 8, '1 min à 100–110 tours/min résistance légère, puis 2 min faciles', ['Vite les jambes, pas fort : le bassin ne rebondit pas sur la selle', 'Un rond à chaque relance'])]),
+                    bloc('Endurance facile', 1, 0, [velo('v-endurance', '10 min de vélo facile', 2, '5 min faciles', [ZONE2])]),
+                ],
+                retourAuCalme: RETOUR_VELO,
+                progression: 'Quand les relances sont faciles : un cran de résistance en plus pendant la minute vite.',
+                monter: 'Niveau 5 quand les 8 relances passent sans rebondir sur la selle.',
+                defi: { titre: '8 relances à 110 tours/min', detail: 'Bassin stable, en gardant la respiration contrôlée.', apres: 4 },
+            },
+            {
+                nom: 'Grand fond',
+                resume: 'Une heure de vélo facile avec 4 petites accélérations : ta meilleure base d’endurance, sans souffrir.',
+                duree: 70,
+                echauffement: ECHAUFFEMENT_VELO,
+                blocs: [
+                    bloc('Endurance facile', 1, 0, [velo('v-endurance', '50 min de vélo facile', 10, '5 min, cadence 85–90 tours/min', [ZONE2, 'Bois un peu toutes les 15 min'])]),
+                    bloc('Accélérations', 1, 0, [velo('v-acceleration', '4 × (30 s fort + 2 min facile)', 4, '30 s à effort 8/10, puis 2 min très faciles', ['Fort mais pas un sprint à fond', 'Un rond à chaque accélération'])]),
+                ],
+                retourAuCalme: RETOUR_VELO,
+                progression: 'Alterne : une semaine ce niveau, une semaine le niveau 3 ou 4.',
+                monter: 'Dernier niveau ! Garde-le pour les jours « chill » longs.',
+                defi: { titre: '🏅 1 h de vélo en zone 2', detail: 'Une heure complète en pouvant parler : un vrai moteur d’endurance.', apres: 6 },
+            },
+        ],
+    },
+]
+
 // ---------- Accès ----------
 
 export const SEANCES_SALLE = PROGRAMME.filter((s) => s.lieu === 'salle')
@@ -1241,13 +1343,13 @@ export const SEANCE_MAISON = PROGRAMME.find((s) => s.lieu === 'maison') as Seanc
 /** Tous les exercices de tous les niveaux (pour l'historique et les conseils). */
 export const TOUS_LES_EXERCICES: Exercice[] = (() => {
     const vus = new Map<string, Exercice>()
-    for (const s of PROGRAMME) for (const n of s.niveaux) for (const b of n.blocs) for (const e of b.exercices) if (!vus.has(e.id)) vus.set(e.id, e)
+    for (const s of [...PROGRAMME, ...PROGRAMME_VELO]) for (const n of s.niveaux) for (const b of n.blocs) for (const e of b.exercices) if (!vus.has(e.id)) vus.set(e.id, e)
     // Exercices des anciennes versions du programme : gardés pour l'historique et les courbes.
     for (const e of [...Object.values(A), ...Object.values(B), ...Object.values(D), ...Object.values(KA), ...Object.values(KB), ...Object.values(KD)]) if (!vus.has(e.id)) vus.set(e.id, e)
     return [...vus.values()]
 })()
 
-const CLE_NIVEAUX: Record<Parcours, string> = { calis: 'muscu.niveaux', basique: 'muscu.niveauxBase' }
+const CLE_NIVEAUX: Record<Parcours, string> = { calis: 'muscu.niveaux', basique: 'muscu.niveauxBase', velo: 'muscu.niveauxVelo' }
 export type NiveauxChoisis = Partial<Record<CodeSeance, { n: number; depuis?: string }>>
 
 /** Les niveaux d'un chemin (le cardio C est rangé avec la callisthénie, son chemin unique). */
@@ -1283,25 +1385,29 @@ export function ecrireParcours(p: ParcoursChoisis): void {
         // stockage indisponible
     }
 }
-/** Chemin d'une séance : basique par défaut (choix de Daniel), le cardio C n'en a qu'un. */
+/** Chemin d'une séance : basique par défaut pour A, B, D (choix de Daniel) ; course par défaut pour C. */
 export function parcoursDe(code: CodeSeance, choix: ParcoursChoisis = lireParcours()): Parcours {
-    return aDeuxChemins(code) ? (choix[code] ?? 'basique') : 'calis'
+    if (code === 'C') return choix.C === 'velo' ? 'velo' : 'calis'
+    const p = choix[code]
+    return p === 'calis' ? 'calis' : 'basique'
 }
 
 /** La séance de base d'un chemin. */
 export function baseDe(code: string, p: Parcours): SeanceBase {
-    const liste = p === 'basique' ? PROGRAMME_BASIQUE : PROGRAMME
+    const liste = p === 'basique' ? PROGRAMME_BASIQUE : p === 'velo' ? PROGRAMME_VELO : PROGRAMME
     return liste.find((s) => s.code === code) ?? PROGRAMME.find((s) => s.code === code) ?? PROGRAMME[0]
 }
 
 /** La séance au niveau demandé, dans le chemin choisi (par défaut : ceux gardés sur l'appareil). */
 export function seanceParCode(code: string, niveau?: number, parcours?: Parcours): SeanceProgramme {
     const c = (PROGRAMME.some((s) => s.code === code) ? code : 'A') as CodeSeance
-    const p = parcours ?? parcoursDe(c)
-    const base = baseDe(c, aDeuxChemins(c) ? p : 'calis')
-    const voulu = niveau ?? lireNiveaux(aDeuxChemins(c) ? p : 'calis')[base.code]?.n ?? 1
+    let p = parcours ?? parcoursDe(c)
+    if (c === 'C' && p === 'basique') p = 'calis'
+    if (c !== 'C' && p === 'velo') p = 'basique'
+    const base = baseDe(c, p)
+    const voulu = niveau ?? lireNiveaux(p)[base.code]?.n ?? 1
     const n = Math.min(base.niveaux.length, Math.max(1, Math.round(voulu) || 1))
-    return { ...base, ...base.niveaux[n - 1], niveau: n, nbNiveaux: base.niveaux.length, parcours: aDeuxChemins(c) ? p : 'calis' }
+    return { ...base, ...base.niveaux[n - 1], niveau: n, nbNiveaux: base.niveaux.length, parcours: p }
 }
 
 /** Durée de la séance en minutes (les courses ont leur propre durée selon l'étape). */

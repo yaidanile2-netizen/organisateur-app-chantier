@@ -7,6 +7,11 @@ import {
     basculerImportant,
     changerTotal,
     definirExo,
+    dernierCours,
+    noterCours,
+    resumerCours,
+    supprimerNoteCours,
+    texteCours,
     exosARevoir,
     exosImportants,
     exosRestants,
@@ -25,6 +30,8 @@ import {
     type SuiviMatiere,
 } from './suiviTD'
 import { ecouter, emettre } from './evenements'
+import { demanderIA } from './ia'
+import { nomModule } from './coursType'
 import Repliable from './Repliable'
 import './avancement.css'
 
@@ -71,8 +78,38 @@ function Compteur({ valeur, min, max, onChange, vide }: { valeur: number | undef
 
 // ---------- La question après un TD ----------
 
+/** L'IA résume en arrière-plan ce qui a été vu en cours (et le garde avec la note). */
+function resumerParIA(id: string, matiere: string, texte: string) {
+    const msg = `Daniel note où en est le cours de ${matiere} : « ${texte} ». Réponds en 2 phrases maximum, sans formule de politesse : 1) où en est le cours (partie et sujet, si tu peux le déduire) ; 2) ce qu'il doit relire avant la prochaine séance. N'ajoute aucune action.`
+    demanderIA(msg, [], 'cours')
+        .then((r) => {
+            const t = (r.reponse || '').replace(/\[?RETENIR\]?.*$/gim, '').trim()
+            if (t) resumerCours(id, t)
+        })
+        .catch(() => {})
+}
+
+type Mode = 'exos' | 'cours' | 'deux'
+
+/** Saisie libre de l'avancement du cours. */
+function ChampCours({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+    return (
+        <label className="av-cours-champ">
+            <span>📖 Où en est le cours ? Écris-le comme tu veux, l’IA s’occupe du reste.</span>
+            <textarea
+                rows={3}
+                value={valeur}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="ex. On a fait du cours jusqu’à la partie 3.3.2 (régime transitoire), pas d’exos."
+            />
+        </label>
+    )
+}
+
 function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined; onFini: () => void }) {
     const sug = suggestion(s)
+    const [mode, setMode] = useState<Mode>('exos')
+    const [texteCoursVu, setTexteCoursVu] = useState('')
     const [td, setTd] = useState(sug.td)
     const memeTd = (n: number) => (positionDe(s)?.td === n ? sug.depuis : 0)
     const depuis = memeTd(td)
@@ -92,8 +129,27 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
 
     const faitsIci = Array.from({ length: Math.max(0, jusqua - depuis) }, (_, i) => depuis + i + 1)
 
+    const avecExos = mode !== 'cours'
+    const avecCours = mode !== 'exos'
     return (
         <div className="av-form">
+            <div className="av-mode" role="radiogroup" aria-label="Ce que vous avez fait">
+                <span>Pendant la séance, vous avez fait :</span>
+                {(
+                    [
+                        ['exos', '✏️ Des exos'],
+                        ['cours', '📖 Du cours'],
+                        ['deux', '✏️ + 📖 Les deux'],
+                    ] as [Mode, string][]
+                ).map(([m, l]) => (
+                    <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'actif' : ''} onClick={() => setMode(m)}>
+                        {l}
+                    </button>
+                ))}
+            </div>
+            {avecCours && <ChampCours valeur={texteCoursVu} onChange={setTexteCoursVu} />}
+            {avecExos && (
+            <>
             <div className="av-ligne">
                 <span>TD n°</span>
                 <Compteur valeur={td} min={1} max={30} onChange={changerTd} />
@@ -161,6 +217,8 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
                 </div>
             )}
             {jusqua === 0 && depuis === 0 && <p className="muted av-note">0 = aucun exo fini (le TD vient de commencer).</p>}
+            </>
+            )}
             <div className="av-boutons">
                 <button className="btn-secondary" type="button" onClick={() => (ignorer(q), onFini())}>
                     Pas eu ce TD
@@ -168,8 +226,13 @@ function Formulaire({ q, s, onFini }: { q: Question; s: SuiviMatiere | undefined
                 <button
                     className="btn-primary"
                     type="button"
+                    disabled={avecCours && !texteCoursVu.trim()}
                     onClick={() => {
-                        repondre(q, { td, jusqua, total, depuis, etats, importants })
+                        if (avecExos) repondre(q, { td, jusqua, total, depuis, etats, importants })
+                        if (avecCours) {
+                            const id = noterCours(q.matiere, texteCoursVu, q)
+                            resumerParIA(id, q.matiere, texteCoursVu)
+                        }
                         emettre('organisateur:actualiser', { domaine: 'agenda' })
                         onFini()
                     }}
@@ -237,6 +300,10 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
     const tds = Object.keys(s.tds)
         .map(Number)
         .sort((x, y) => x - y)
+    const [noter, setNoter] = useState(false)
+    const [texte, setTexte] = useState('')
+    const dc = dernierCours(s)
+    const notes = (s.cours ?? []).slice().sort((x, y) => y.date.localeCompare(x.date))
     return (
         <div className="av-matiere">
             <div className="av-matiere-tete">
@@ -301,6 +368,52 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
                     </div>
                 )
             })}
+            {dc && (
+                <details className="av-cours">
+                    <summary>
+                        📖 Cours : {texteCours(dc)}
+                        {notes.length > 1 ? ` · ${notes.length} notes` : ''}
+                    </summary>
+                    {notes.map((c) => (
+                        <div key={c.id} className="av-cours-note">
+                            <small>{dateCourte.format(new Date(c.date))}</small>
+                            <p>{c.texte}</p>
+                            {c.resume ? <p className="av-cours-ia">✨ {c.resume}</p> : <p className="av-cours-ia muted">✨ résumé en cours…</p>}
+                            <button type="button" className="btn-link" onClick={() => supprimerNoteCours(cle, c.id)}>
+                                Supprimer
+                            </button>
+                        </div>
+                    ))}
+                </details>
+            )}
+            {noter ? (
+                <div className="av-cours-ajout">
+                    <ChampCours valeur={texte} onChange={setTexte} />
+                    <div className="av-boutons">
+                        <button type="button" className="btn-secondary" onClick={() => setNoter(false)}>
+                            Annuler
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-primary"
+                            disabled={!texte.trim()}
+                            onClick={() => {
+                                const id = noterCours(s.nom, texte)
+                                resumerParIA(id, s.nom, texte)
+                                setTexte('')
+                                setNoter(false)
+                                emettre('organisateur:actualiser', { domaine: 'agenda' })
+                            }}
+                        >
+                            Enregistrer
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <button type="button" className="btn-link av-noter-cours" onClick={() => setNoter(true)}>
+                    📖 Noter où en est le cours
+                </button>
+            )}
             <ul className="av-infos">
                 {restants.length > 0 && <li>📌 À finir avant le prochain TD : {texteExos(restants)}</li>}
                 {revoir.length > 0 && <li>🔁 À revoir avant le DS : {texteExos(revoir)}</li>}
@@ -314,6 +427,53 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
                     </li>
                 )}
             </ul>
+        </div>
+    )
+}
+
+/** Noter l'avancement d'un cours pour n'importe quelle matière (CM, TD sans exos…). */
+function NoterCoursLibre({ cours }: { cours: Cours[] | null }) {
+    const [ouvert, setOuvert] = useState(false)
+    const [matiere, setMatiere] = useState('')
+    const [texte, setTexte] = useState('')
+    const noms = useMemo(() => [...new Set((cours ?? []).map((c) => nomModule(c.titre)))].slice(0, 40), [cours])
+    if (!ouvert)
+        return (
+            <button type="button" className="btn-link av-noter-cours" onClick={() => setOuvert(true)}>
+                📖 Noter où en est un cours (CM, TD sans exos…)
+            </button>
+        )
+    return (
+        <div className="av-cours-ajout">
+            <label className="av-cours-champ">
+                <span>Matière</span>
+                <input list="av-matieres" value={matiere} onChange={(e) => setMatiere(e.target.value)} placeholder="ex. Régulation" />
+                <datalist id="av-matieres">
+                    {noms.map((n) => (
+                        <option key={n} value={n} />
+                    ))}
+                </datalist>
+            </label>
+            <ChampCours valeur={texte} onChange={setTexte} />
+            <div className="av-boutons">
+                <button type="button" className="btn-secondary" onClick={() => setOuvert(false)}>
+                    Annuler
+                </button>
+                <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!texte.trim() || !matiere.trim()}
+                    onClick={() => {
+                        const id = noterCours(matiere.trim(), texte)
+                        resumerParIA(id, matiere.trim(), texte)
+                        setTexte('')
+                        setOuvert(false)
+                        emettre('organisateur:actualiser', { domaine: 'agenda' })
+                    }}
+                >
+                    Enregistrer
+                </button>
+            </div>
         </div>
     )
 }
@@ -346,6 +506,7 @@ export function SuiviTD() {
                     ))}
                 </>
             )}
+            <NoterCoursLibre cours={cours} />
         </Repliable>
     )
 }

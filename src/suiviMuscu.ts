@@ -194,12 +194,13 @@ export const fmtKg = (kg: number) => String(kg).replace('.', ',')
 // --- Niveaux des séances (choisis par Daniel, synchronisés via les « charges » niveau-a, niveau-b…) ---
 
 // Chemin basique : « niveau-a-base »… ; callisthénie et cardio : « niveau-a »…
-export const cleNiveau = (code: CodeSeance, p: Parcours = 'calis') => `niveau-${code.toLowerCase()}${p === 'basique' && code !== 'C' ? '-base' : ''}`
+// Vélo (cardio C) : « niveau-c-velo ».
+export const cleNiveau = (code: CodeSeance, p: Parcours = 'calis') => `niveau-${code.toLowerCase()}${p === 'basique' && code !== 'C' ? '-base' : p === 'velo' ? '-velo' : ''}`
 
 /** Reprend les niveaux enregistrés en ligne (s'ils existent) dans les niveaux de l'appareil, pour un chemin. */
 export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxChoisis, p: Parcours = 'calis'): NiveauxChoisis {
     const res: NiveauxChoisis = { ...locaux }
-    const codes: CodeSeance[] = p === 'basique' ? ['A', 'B', 'D'] : ['A', 'B', 'C', 'D']
+    const codes: CodeSeance[] = p === 'basique' ? ['A', 'B', 'D'] : p === 'velo' ? ['C'] : ['A', 'B', 'C', 'D']
     for (const code of codes) {
         const n = charges[cleNiveau(code, p)]
         if (n && n !== locaux[code]?.n) res[code] = { n: Math.round(n), depuis: locaux[code]?.depuis }
@@ -213,14 +214,15 @@ export function niveauxDepuis(charges: Record<string, number>, locaux: NiveauxCh
     return res
 }
 
-/** Chemins choisis, synchronisés comme des « charges » parcours-a = 1 (basique) ou 2 (callisthénie). */
+/** Chemins choisis, synchronisés comme des « charges » parcours-a = 1 (basique) ou 2 (callisthénie) ; parcours-c = 2 (course) ou 3 (vélo). */
 export const cleParcours = (code: CodeSeance) => `parcours-${code.toLowerCase()}`
 export function parcoursDepuis(charges: Record<string, number>, locaux: ParcoursChoisis): ParcoursChoisis {
     const res: ParcoursChoisis = { ...locaux }
-    for (const code of ['A', 'B', 'D'] as CodeSeance[]) {
+    for (const code of ['A', 'B', 'C', 'D'] as CodeSeance[]) {
         const v = charges[cleParcours(code)]
-        if (v === 1) res[code] = 'basique'
+        if (v === 1 && code !== 'C') res[code] = 'basique'
         else if (v === 2) res[code] = 'calis'
+        else if (v === 3 && code === 'C') res[code] = 'velo'
     }
     return res
 }
@@ -269,7 +271,7 @@ export type DefisReussis = Record<string, string> // clé → date ISO (ou '' si
 // Depuis le passage à la callisthénie (nov. 2026), les défis de A, B et D ont changé : nouvelles clés « defi-a1k ».
 // Le chemin basique reprend les anciennes clés « defi-a1 » (mêmes défis qu'avant).
 export const cleDefi = (code: CodeSeance, niveau: number, p: Parcours = 'calis') =>
-    `defi-${code.toLowerCase()}${niveau}${code === 'C' || p === 'basique' ? '' : 'k'}`
+    `defi-${code.toLowerCase()}${niveau}${p === 'velo' ? 'v' : code === 'C' || p === 'basique' ? '' : 'k'}`
 
 export function lireDefis(): DefisReussis {
     return lire<DefisReussis>('muscu.defis', {})

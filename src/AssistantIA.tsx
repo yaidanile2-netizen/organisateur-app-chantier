@@ -1,8 +1,9 @@
+import { ajouterNote, demandeDeNote } from './notes'
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import './assistant.css'
 import type { ReponseNutrition } from './api'
 import { ecouter, emettre } from './evenements'
-import { demanderIA, ecrireHistorique, executerAction, lireHistorique, type Message } from './ia'
+import { demandeDeRetenir, demanderIA, ecrireHistorique, executerAction, extraireSouvenirs, fil as filIA, lireHistorique, memoire, oublier, retenir, type Message } from './ia'
 
 const NOMS: Record<string, string> = { agenda: 'Agenda', muscu: 'Muscu', nutrition: 'Nutrition', cours: 'Cours' }
 
@@ -31,6 +32,29 @@ const SUGGESTIONS: Record<string, { texte: string; prerempli?: boolean }[]> = {
 }
 
 const id = () => Math.random().toString(36).slice(2, 10)
+
+const jourTexte = (iso: string) => {
+    const d = new Date(iso)
+    const auj = new Date()
+    const hier = new Date(Date.now() - 86400000)
+    const meme = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+    if (meme(d, auj)) return 'Aujourd’hui'
+    if (meme(d, hier)) return 'Hier'
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+// ---------- Bouton flottant déplaçable (position gardée sur l'appareil) ----------
+type Pos = { x: number; y: number } // en fraction de l'écran (0 à 1), coin haut-gauche du bouton
+const CLE_POS = 'ia.fab.position'
+function lirePos(): Pos | null {
+    try {
+        const p = JSON.parse(localStorage.getItem(CLE_POS) || 'null') as Pos | null
+        return p && typeof p.x === 'number' && typeof p.y === 'number' ? p : null
+    } catch {
+        return null
+    }
+}
+const borner = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 
 /** Texte de l'IA : **gras**, listes « - », paragraphes. */
 function Riche({ texte }: { texte: string }) {
@@ -145,6 +169,79 @@ function CarteNutrition({ r }: { r: ReponseNutrition }) {
 export default function AssistantIA({ ecran }: { ecran: string }) {
     const [ouvert, setOuvert] = useState(false)
     const [messages, setMessages] = useState<Message[]>(() => lireHistorique())
+    const [souvenirs, setSouvenirs] = useState(() => memoire.lire().souvenirs)
+    const [voirMemoire, setVoirMemoire] = useState(false)
+    const [nouveauSouvenir, setNouveauSouvenir] = useState('')
+    const [pos, setPos] = useState<Pos | null>(() => lirePos())
+    const glisse = useRef<{ dx: number; dy: number; x0: number; y0: number; bouge: boolean } | null>(null)
+
+    // Synchro de la conversation (30 jours) et de la mémoire entre appareils
+    useEffect(() => {
+        const a = filIA.abonner(() => setMessages(lireHistorique()))
+        const b = memoire.abonner(() => setSouvenirs(memoire.lire().souvenirs))
+        filIA.synchroniser().catch(() => {})
+        memoire.synchroniser().catch(() => {})
+        return () => {
+            a()
+            b()
+        }
+    }, [])
+    useEffect(() => {
+        if (ouvert) {
+            filIA.synchroniser().catch(() => {})
+            memoire.synchroniser().catch(() => {})
+        }
+    }, [ouvert])
+
+    // Bouton : on le glisse où on veut ; un simple toucher ouvre l'assistant.
+    function fabDown(e: React.PointerEvent<HTMLButtonElement>) {
+        const r = e.currentTarget.getBoundingClientRect()
+        glisse.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, x0: e.clientX, y0: e.clientY, bouge: false }
+        e.currentTarget.setPointerCapture(e.pointerId)
+    }
+    function fabMove(e: React.PointerEvent<HTMLButtonElement>) {
+        const g = glisse.current
+        if (!g) return
+        if (!g.bouge && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 8) return
+        g.bouge = true
+        const w = window.innerWidth
+        const h = window.innerHeight
+        setPos({ x: borner((e.clientX - g.dx) / w, 0, (w - 56) / w), y: borner((e.clientY - g.dy) / h, 60 / h, (h - 56 - 64) / h) })
+    }
+    function fabUp(e: React.PointerEvent<HTMLButtonElement>) {
+        const g = glisse.current
+        glisse.current = null
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId)
+        } catch {
+            // déjà relâché
+        }
+        if (!g?.bouge) {
+            setOuvert(true)
+            return
+        }
+        // on le colle au bord le plus proche (gauche ou droite)
+        setPos((p) => {
+            if (!p) return p
+            const w = window.innerWidth
+            const x = p.x * w + 28 < w / 2 ? 12 / w : (w - 56 - 12) / w
+            const n = { x, y: p.y }
+            try {
+                localStorage.setItem(CLE_POS, JSON.stringify(n))
+            } catch {
+                // stockage indisponible
+            }
+            return n
+        })
+    }
+    function replacerBouton() {
+        setPos(null)
+        try {
+            localStorage.removeItem(CLE_POS)
+        } catch {
+            // stockage indisponible
+        }
+    }
     const [texte, setTexte] = useState('')
     const [occupe, setOccupe] = useState(false)
     const fil = useRef<HTMLDivElement>(null)
@@ -173,10 +270,25 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
             if (!message || occupe) return
             const historique = messagesRef.current
             ajouter({ id: id(), role: 'user', texte: message, date: new Date().toISOString() })
+            // « note que … » : la note est ajoutée tout de suite à « Notes et rappels », sans attendre l'IA.
+            const note = demandeDeNote(message)
+            if (note) {
+                ajouterNote(note)
+                setTexte('')
+                ajouter({ id: id(), role: 'assistant', texte: `📝 Noté : « ${note} ». Tu la retrouves dans l’Agenda → Notes et rappels. Si tu veux un rappel à une heure précise, dis-moi quand.`, date: new Date().toISOString() })
+                emettre('organisateur:actualiser', { domaine: 'agenda' })
+                return
+            }
+            const aRetenir = demandeDeRetenir(message)
+            if (aRetenir) retenir(aRetenir)
+            const avant = memoire.lire().souvenirs.length
             setTexte('')
             setOccupe(true)
             try {
                 const r = await demanderIA(message, historique, ecran)
+                r.reponse = extraireSouvenirs(r.reponse || '')
+                const nouveaux = memoire.lire().souvenirs.slice(avant)
+                if (nouveaux.length) r.reponse = `${r.reponse}\n\n🧠 Je retiens : ${nouveaux.map((x) => x.texte).join(' · ')}`
                 const idr = id()
                 ajouter({ id: idr, role: 'assistant', texte: r.reponse, date: new Date().toISOString(), action: r.action, relances: r.relances })
                 if (r.action !== 'aucune') {
@@ -264,9 +376,17 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
     return (
         <>
             <button
-                className={`ia-fab${ouvert ? ' cache' : ''}${ecran === 'cours' ? ' haut' : ''}`}
-                onClick={() => setOuvert(true)}
-                aria-label="Ouvrir l’assistant"
+                className={`ia-fab${ouvert ? ' cache' : ''}${ecran === 'cours' && !pos ? ' haut' : ''}${pos ? ' libre' : ''}`}
+                style={pos ? { left: `${pos.x * 100}%`, top: `${pos.y * 100}%`, right: 'auto', bottom: 'auto' } : undefined}
+                onPointerDown={fabDown}
+                onPointerMove={fabMove}
+                onPointerUp={fabUp}
+                onPointerCancel={() => (glisse.current = null)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setOuvert(true)
+                }}
+                aria-label="Ouvrir l’assistant (glisse-le pour le déplacer)"
+                title="Touche pour ouvrir · glisse pour déplacer"
             >
                 <span aria-hidden="true">✨</span>
             </button>
@@ -280,6 +400,14 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                         <span className="ia-ecran">voit l’écran : {NOMS[ecran] ?? ecran}</span>
                     </div>
                     <div className="ia-tete-btns">
+                        <button onClick={() => setVoirMemoire((v) => !v)} aria-label="Ce que l’assistant retient" title="Ce que l’assistant retient">
+                            🧠
+                        </button>
+                        {pos && (
+                            <button onClick={replacerBouton} aria-label="Remettre le bouton à sa place" title="Remettre le bouton ✨ à sa place">
+                                ↘︎
+                            </button>
+                        )}
                         {messages.length > 0 && (
                             <button
                                 onClick={() => {
@@ -301,6 +429,35 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                 </header>
 
                 <div className="ia-fil" ref={fil}>
+                    {voirMemoire && (
+                        <div className="ia-memoire">
+                            <b>🧠 Ce que je retiens de toi</b>
+                            <p className="ia-gris">Je m’en sers à chaque réponse. Dis « retiens que… » pour en ajouter, ou écris-le ici.</p>
+                            {souvenirs.length === 0 && <p className="ia-gris">Rien pour l’instant.</p>}
+                            <ul>
+                                {souvenirs.map((s) => (
+                                    <li key={s.id}>
+                                        <span>{s.texte}</span>
+                                        <button onClick={() => oublier(s.id)} aria-label="Oublier">
+                                            ×
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    retenir(nouveauSouvenir)
+                                    setNouveauSouvenir('')
+                                }}
+                            >
+                                <input value={nouveauSouvenir} onChange={(e) => setNouveauSouvenir(e.target.value)} placeholder="ex. Je ne mange pas de porc" />
+                                <button type="submit" disabled={!nouveauSouvenir.trim()}>
+                                    Ajouter
+                                </button>
+                            </form>
+                        </div>
+                    )}
                     {messages.length === 0 && (
                         <div className="ia-accueil">
                             <div className="ia-orbe" aria-hidden="true">
@@ -313,13 +470,16 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                             </p>
                         </div>
                     )}
-                    {messages.map((m) => (
-                        <div key={m.id} className={`ia-msg ${m.role}${m.erreur ? ' erreur' : ''}`}>
+                    {messages.map((m, k) => (
+                        <Fragment key={m.id}>
+                        {(k === 0 || jourTexte(messages[k - 1].date) !== jourTexte(m.date)) && <div className="ia-jour">{jourTexte(m.date)}</div>}
+                        <div className={`ia-msg ${m.role}${m.erreur ? ' erreur' : ''}`}>
                             <div className="ia-bulle">
                                 {m.role === 'assistant' ? <Riche texte={m.texte} /> : m.texte}
                                 {m.nutrition && <CarteNutrition r={m.nutrition} />}
                             </div>
                         </div>
+                        </Fragment>
                     ))}
                     {occupe && (
                         <div className="ia-msg assistant">

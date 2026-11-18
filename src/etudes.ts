@@ -5,6 +5,7 @@ import type { Cours, Tache } from './api'
 import { cleDuType, nomModule } from './coursType'
 import { MARQUEUR as MARQUEUR_SPORT, lireReglages } from './sport'
 import { consignesDS, consignesTD, exosRestants, lireAvancement, prevoirDS, trouverMatiere } from './suiviTD'
+import { filtrerCours, occupationsEnPlus } from './jours'
 
 export const MARQUEUR_ETUDE = '#etude-auto'
 export const MARQUEUR_ECHEANCE = '#echeance'
@@ -272,10 +273,13 @@ export function planifierEtudes(
     maintenant: Date = new Date(),
 ): { blocs: BlocEtude[]; restants: { echeance: Echeance; etape: number }[] } {
     const finSemaine = lundi.getTime() + 7 * JOUR
+    // Changements de programme (pas cours, malade, imprévu…) : cours retirés et créneaux bloqués.
+    const coursVus = filtrerCours(cours)
+    const bloques = occupationsEnPlus(lundi, new Date(finSemaine - 1), 'etudes')
     const jours = Array.from({ length: 7 }, (_, i) => {
         const jour = new Date(lundi)
         jour.setDate(lundi.getDate() + i)
-        return { jour, ...occupations(jour, cours, taches), utilise: 0 }
+        return { jour, ...occupations(jour, coursVus, [...taches, ...bloques]), utilise: 0 }
     })
     // Minutes d'étude déjà prévues chaque jour (blocs gardés).
     for (const t of taches) {

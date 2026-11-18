@@ -16,7 +16,9 @@ export const ETATS_EXO: Record<EtatExo, { icone: string; libelle: string }> = {
     revoir: { icone: '🔁', libelle: 'à revoir' },
 }
 export type SeanceTD = { cle: string; date: string; td: number; jusqua: number }
-export type SuiviMatiere = { nom: string; tds: Record<string, InfoTD>; seances: SeanceTD[] }
+/** Avancement du cours écrit en texte libre (« on a fait le cours jusqu'à la partie 3.3.2 »), résumé par l'IA. */
+export type NoteCours = { id: string; cle?: string; date: string; texte: string; partie?: string; resume?: string }
+export type SuiviMatiere = { nom: string; tds: Record<string, InfoTD>; seances: SeanceTD[]; cours?: NoteCours[] }
 export type Avancement = { v: 1; updatedAt: number; matieres: Record<string, SuiviMatiere>; ignores: string[] }
 
 const CLE_LOCALE = 'td.avancement'
@@ -328,10 +330,13 @@ export function questionsEnAttente(cours: Cours[], a: Avancement, maintenant = n
             if (fin > q.fin) q.fin = fin
         } else parSeance.set(cle, { cle, matiere, cleMat, fin, coursIds: [c.id] })
     }
-    const repondues = new Set([...a.ignores, ...Object.values(a.matieres).flatMap((m) => m.seances.map((s) => s.cle))])
+    const repondues = new Set([
+        ...a.ignores,
+        ...Object.values(a.matieres).flatMap((m) => [...m.seances.map((s) => s.cle), ...(m.cours ?? []).map((c) => c.cle).filter((c): c is string => !!c)]),
+    ])
     const plusRecente = new Map<string, Question>()
     for (const q of parSeance.values()) {
-        const derniere = a.matieres[q.cleMat]?.seances.map((s) => s.date).sort().at(-1)
+        const derniere = [...(a.matieres[q.cleMat]?.seances.map((s) => s.date) ?? []), ...(a.matieres[q.cleMat]?.cours?.filter((c) => c.cle).map((c) => c.date) ?? [])].sort().at(-1)
         if (repondues.has(q.cle) || (derniere && derniere >= q.fin.toISOString())) continue
         const deja = plusRecente.get(q.cleMat)
         if (!deja || q.fin > deja.fin) plusRecente.set(q.cleMat, q)
@@ -361,6 +366,62 @@ export function repondre(q: Question, r: Reponse): void {
         a.matieres[q.cleMat] = m
         return a
     })
+}
+
+/** « 3.3.2 », « partie 4 », « chapitre 2 » : le repère le plus avancé cité dans le texte. */
+export function partieDe(texte: string): string | undefined {
+    const num = [...texte.matchAll(/\b(\d+(?:[.,]\d+){1,4})\b/g)].map((m) => m[1].replace(/,/g, '.'))
+    if (num.length) return num.sort((a, b) => a.split('.').map(Number).reduce((r, x, i) => r || x - (b.split('.').map(Number)[i] ?? 0), 0)).at(-1)
+    const m = texte.match(/\b(?:partie|chapitre|chap\.?|section|paragraphe|§)\s*([IVX\d]+[a-z]?)/i)
+    return m ? m[1] : undefined
+}
+
+/** Note l'avancement du cours (texte libre). `q` : la question de fin de TD à laquelle ça répond, s'il y en a une. */
+export function noterCours(matiere: string, texte: string, q?: Question, date = new Date()): string {
+    const t = texte.trim()
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const cleMat = q?.cleMat ?? (trouverMatiereCle(lireAvancement(), matiere) || cleMatiere(matiere))
+    modifierAvancement((a) => {
+        const m: SuiviMatiere = a.matieres[cleMat] ?? { nom: q?.matiere ?? matiere, tds: {}, seances: [] }
+        m.cours = [...(m.cours ?? []), { id, cle: q?.cle, date: (q?.fin ?? date).toISOString(), texte: t.slice(0, 600), partie: partieDe(t) }].slice(-40)
+        a.matieres[cleMat] = m
+        return a
+    })
+    return id
+}
+
+/** Ajoute le résumé fait par l'IA à une note de cours. */
+export function resumerCours(id: string, resume: string): void {
+    modifierAvancement((a) => {
+        for (const m of Object.values(a.matieres)) {
+            const c = m.cours?.find((x) => x.id === id)
+            if (c) c.resume = resume.trim().slice(0, 500)
+        }
+        return a
+    })
+}
+
+export function supprimerNoteCours(cleMat: string, id: string): void {
+    modifierAvancement((a) => {
+        const m = a.matieres[cleMat]
+        if (m?.cours) m.cours = m.cours.filter((c) => c.id !== id)
+        return a
+    })
+}
+
+/** La dernière note de cours d'une matière. */
+export function dernierCours(s: SuiviMatiere | undefined): NoteCours | undefined {
+    return (s?.cours ?? []).slice().sort((x, y) => x.date.localeCompare(y.date)).at(-1)
+}
+
+export function texteCours(c: NoteCours): string {
+    const quand = new Date(c.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    return `${c.partie ? `jusqu’à la partie ${c.partie}` : c.texte.slice(0, 80)} (vu le ${quand})`
+}
+
+function trouverMatiereCle(a: Avancement, matiere: string): string | undefined {
+    const s = trouverMatiere(a, matiere)
+    return s ? Object.entries(a.matieres).find(([, v]) => v === s)?.[0] : undefined
 }
 
 export function ignorer(q: Question): void {
@@ -415,6 +476,8 @@ export function consignesTD(matiere: string): string[] {
     const importants = exosImportants(s).filter(([td, e]) => !revoir.some(([t2, e2]) => t2 === td && e2 === e))
     if (importants.length) res.push(`Relis un exo important ⭐ : ${nomExo(...importants[importants.length - 1])}`)
     if (p) res.push(`Tu en étais à : ${nomExo(p.td, p.jusqua)}${p.total ? ` (sur ${p.total})` : ''}`)
+    const c = dernierCours(s)
+    if (c) res.push(`Relis le cours vu : ${texteCours(c)}${c.resume ? ` — ${c.resume}` : ''}`)
     return res
 }
 
@@ -431,6 +494,8 @@ export function consignesDS(matiere: string, etape: number, prevision: Prevision
     }
     const importants = exosImportants(s)
     if (etape === 0 && importants.length) res.push(`Exos importants ⭐ signalés en TD : ${regrouper(importants.slice(0, 8))}`)
+    const dc = dernierCours(s)
+    if (etape === 0 && dc) res.push(`Cours vu en classe : ${texteCours(dc)}${dc.resume ? ` — ${dc.resume}` : ''}. Ne révise que jusque-là (sauf si le prof a annoncé plus).`)
     // Cours à revoir et à laisser : calculés par l'onglet Cours d'après les TD (si la matière y a été ouverte).
     const cle = Object.entries(lireAvancement().matieres).find(([, m]) => m === s)?.[0]
     const plan = cle ? lireJSON<Record<string, PlanCours>>('cours.ds', {})[cle] : undefined
@@ -463,7 +528,8 @@ export function resumeAvancement(): string {
         const restants = exosRestants(m)
         const revoir = exosARevoir(m)
         const importants = exosImportants(m)
-        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'rien noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}${importants.length ? ` · importants : ${regrouper(importants)}` : ''}`
+        const dc = dernierCours(m)
+        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'aucun exo noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}${importants.length ? ` · importants : ${regrouper(importants)}` : ''}${dc ? ` · cours : ${texteCours(dc)}${dc.resume ? ` (${dc.resume})` : ''}` : ''}`
     })
     return lignes.length ? `Avancement des TD :\n${lignes.join('\n')}` : ''
 }
