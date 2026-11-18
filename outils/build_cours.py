@@ -168,7 +168,8 @@ ORG.planDS=function(){const su=ORG.monSuivi();if(!su)return null;const s=su.m;co
   const der=(s.seances||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).pop();
   const prev=(lsGet('td.previsions',{})||{})[su.cle]||null;
   const T=Math.max(der?der.td:0,prev&&new Date(prev.date)>new Date()?prev.td:0);
-  const base={cle:su.cle,nom:s.nom,T,prev:prev&&new Date(prev.date)>new Date()?prev:null,der};
+  const coursVu=(s.cours||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).pop()||null;
+  const base={cle:su.cle,nom:s.nom,T,prev:prev&&new Date(prev.date)>new Date()?prev:null,der,coursVu};
   if(!nums.length||!T)return Object.assign(base,{vide:!nums.length});
   const need=new Set(),prio=new Map();
   nums.filter(n=>n<=T).forEach(n=>C[n].all.forEach(id=>need.add(id)));
@@ -182,14 +183,20 @@ ORG.planDS=function(){const su=ORG.monSuivi();if(!su)return null;const s=su.m;co
   return Object.assign(base,{prio:NOT.filter(x=>prio.has(x.id)).map(x=>({id:x.id,why:prio.get(x.id)})),voir:NOT.filter(x=>need.has(x.id)&&!prio.has(x.id)).map(x=>x.id),laisser:later,seul,tdsApres:nums.filter(n=>n>T)});};
 ORG.parModule=function(ids){const by={};ids.forEach(id=>{const n=NBY[id];(by[n.secteur]=by[n.secteur]||[]).push(n);});
   return SECT.filter(sc=>by[sc.id]).map(sc=>`<div class="x-dsmod"><b>${esc(sc.nom)}</b><div class="x-exos">${by[sc.id].map(n=>`<button class="chip" data-x="openN" data-n="${esc(n.id)}">${n.num}. ${esc(n.titre)}</button>`).join('')}</div></div>`).join('');};
+ORG.coursVuHTML=function(P){const c=P&&P.coursVu;if(!c)return '';const q=new Date(c.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+  return `<p class="small" style="margin-top:6px">📖 <b>Cours vu en classe :</b> ${c.partie?'jusqu’à la partie '+esc(c.partie):esc(String(c.texte).slice(0,120))} (le ${q}).${c.resume?' <span class="mut">'+esc(c.resume)+'</span>':''}</p>`;};
+/* Mini DS et séances : seulement ce qui a déjà été vu (chapitres des TD faits ou prévus d'ici le DS) */
+ORG.poolVu=function(pool){try{const P=ORG.planDS();if(!P||!P.T||!(P.voir||[]).length&&!(P.prio||[]).length)return pool;
+  const vus=new Set(P.voir.concat(P.prio.map(x=>x.id)));const secs=new Set([...vus].map(id=>NBY[id]&&NBY[id].secteur).filter(Boolean));
+  const f=pool.filter(q=>q.n?vus.has(q.n):secs.has(q.m));return f.length>=8?f:pool;}catch(e){return pool;}};
 ORG.dsHTML=function(dansDS){const P=ORG.planDS();
   if(!P){return dansDS?`<section class="card tight"><div class="eyebrow">🎯 Quoi réviser pour le DS</div><p class="small mut" style="margin-top:4px">Note ton avancement après chaque TD (Agenda → « jusqu’où es-tu arrivé ? ») : je te dirai ici quels cours revoir pour le DS, et lesquels laisser de côté.</p></section><div class="sp"></div>`:'';}
-  if(P.vide||!P.T)return dansDS?`<section class="card tight"><div class="eyebrow">🎯 Quoi réviser pour le DS</div><p class="small mut" style="margin-top:4px">${P.vide?'Ce module ne relie pas encore ses TD au cours (TD numérotés « td1 », « td2 »… avec leurs chapitres). Demande à Claude de l’ajouter avec le modèle de module.':'Note d’abord jusqu’où tu es arrivé dans un TD.'}</p></section><div class="sp"></div>`:'';
+  if(P.vide||!P.T)return dansDS?`<section class="card tight"><div class="eyebrow">🎯 Quoi réviser pour le DS</div><p class="small mut" style="margin-top:4px">${P.vide?'Ce module ne relie pas encore ses TD au cours (TD numérotés « td1 », « td2 »… avec leurs chapitres). Demande à Claude de l’ajouter avec le modèle de module.':'Note d’abord jusqu’où tu es arrivé dans un TD.'}</p>${ORG.coursVuHTML(P)}</section><div class="sp"></div>`:'';
   ORG.cacheDS(P);
   const jusqua=P.prev?`TD ${P.prev.td}${P.prev.exo?' ex. '+P.prev.exo:''} (prévu au DS du ${new Date(P.prev.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})})`:`TD ${P.T} (là où tu en es)`;
   const nb=P.prio.length+P.voir.length;
   return `<section class="card" style="border-left:4px solid var(--accent)"><div class="eyebrow">🎯 Quoi réviser pour le DS</div>
-   <p class="small mut" style="margin-top:4px">D’après tes TD : programme jusqu’au ${esc(jusqua)}. ${nb} notion${nb>1?'s':''} à revoir${P.laisser.length?', '+P.laisser.length+' à laisser de côté':''}. Touche une notion pour l’ouvrir.</p>
+   <p class="small mut" style="margin-top:4px">D’après tes TD : programme jusqu’au ${esc(jusqua)}. ${nb} notion${nb>1?'s':''} à revoir${P.laisser.length?', '+P.laisser.length+' à laisser de côté':''}. Touche une notion pour l’ouvrir. Le mini DS ne pose que des questions sur ce que tu as déjà vu.</p>${ORG.coursVuHTML(P)}
    ${P.prio.length?`<h3 class="mt12">En priorité</h3><p class="small mut">Liées à tes exos à revoir ou importants.</p><div class="x-exos">${P.prio.map(x=>{const n=NBY[x.id];return `<button class="chip warn" data-x="openN" data-n="${esc(n.id)}">${n.num}. ${esc(n.titre)} <small>· ${esc(x.why.join(', '))}</small></button>`;}).join('')}</div>`:''}
    ${P.voir.length?`<h3 class="mt12">À revoir</h3><p class="small mut">Le cours des TD faits (ou prévus d’ici le DS).</p>${ORG.parModule(P.voir)}`:''}
    ${P.laisser.length?`<h3 class="mt12">Pas besoin pour ce DS</h3><p class="small mut">Pas encore traité en TD (TD ${P.tdsApres.join(', ')}). À laisser de côté, sauf si le prof l’annonce au programme.</p>${ORG.parModule(P.laisser)}`:''}
@@ -366,6 +373,9 @@ html = remplacer(html, "</style>\n</head>", """/* Grand écran (Organisateur) */
 @media (min-width:1700px){.grid:not(.cols2):not(.cols3){grid-template-columns:repeat(3,minmax(0,1fr))}.xp2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 </style>
 </head>""")
+
+# ---------- 7. Mini DS : seulement ce qui a déjà été vu en TD (d'après l'avancement) ----------
+html = remplacer(html, "const pool=QUESTIONS.filter(q=>!q.tete);const by=SECT.map(", "const pool=ORG.poolVu(QUESTIONS.filter(q=>!q.tete));const by=SECT.map(")
 
 dest.write_text(html, encoding='utf-8')
 print(f'{dest} : {len(html.encode())} octets')
