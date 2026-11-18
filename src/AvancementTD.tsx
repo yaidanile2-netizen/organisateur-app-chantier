@@ -9,6 +9,10 @@ import {
     definirExo,
     dernierCours,
     noterCours,
+    noterProgramme,
+    programmeAnnonce,
+    supprimerProgramme,
+    texteProgramme,
     resumerCours,
     supprimerNoteCours,
     texteCours,
@@ -31,6 +35,7 @@ import {
 } from './suiviTD'
 import { ecouter, emettre } from './evenements'
 import { demanderIA } from './ia'
+import { appliquerProgrammeAnnonce } from './replanifier'
 import { nomModule } from './coursType'
 import Repliable from './Repliable'
 import './avancement.css'
@@ -386,6 +391,7 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
                     ))}
                 </details>
             )}
+            <ProgrammeEvalMatiere cle={cle} s={s} ds={ds} />
             {noter ? (
                 <div className="av-cours-ajout">
                     <ChampCours valeur={texte} onChange={setTexte} />
@@ -421,7 +427,9 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
                 {ds && (
                     <li>
                         📝 DS le {dateCourte.format(ds)} :{' '}
-                        {prev
+                        {programmeAnnonce(s, ds)?.tdMax
+                            ? `programme annoncé jusqu’au TD ${programmeAnnonce(s, ds)?.tdMax}.`
+                            : prev
                             ? `vous devriez être vers le TD ${prev.td} ex. ${prev.exo} (${prev.seances} TD d’ici là, ≈ ${String(prev.rythme).replace('.', ',')} exos par séance).`
                             : 'note encore une séance de TD pour que je puisse estimer le programme.'}
                     </li>
@@ -432,6 +440,88 @@ function Matiere({ cle, s, cours }: { cle: string; s: SuiviMatiere; cours: Cours
 }
 
 /** Noter l'avancement d'un cours pour n'importe quelle matière (CM, TD sans exos…). */
+/** Ce que le prof a annoncé pour une évaluation : noté ici ou en le disant à l'assistant. Les révisions suivent. */
+function ProgrammeEvalMatiere({ cle, s, ds }: { cle: string; s: SuiviMatiere; ds: Date | null }) {
+    const annonce = programmeAnnonce(s)
+    const [ouvert, setOuvert] = useState(false)
+    const [evaluation, setEvaluation] = useState('DS')
+    const [quand, setQuand] = useState('')
+    const [texte, setTexte] = useState('')
+    const [etat, setEtat] = useState<'repos' | 'calcul' | 'fait'>('repos')
+    const [bilan, setBilan] = useState<string[]>([])
+    const jourDS = ds ? `${ds.getFullYear()}-${String(ds.getMonth() + 1).padStart(2, '0')}-${String(ds.getDate()).padStart(2, '0')}` : ''
+
+    async function enregistrer() {
+        const q = quand || (evaluation === 'DS' ? jourDS : '') || undefined
+        noterProgramme(s.nom, { evaluation, quand: q, texte })
+        setEtat('calcul')
+        try {
+            setBilan((await appliquerProgrammeAnnonce(s.nom, evaluation, q)).lignes)
+        } catch (e) {
+            setBilan([`Programme noté. ⚠️ Agenda pas mis à jour : ${e instanceof Error ? e.message : 'erreur'}`])
+        }
+        setEtat('fait')
+        setOuvert(false)
+        setTexte('')
+        emettre('organisateur:actualiser', { domaine: 'agenda' })
+    }
+
+    return (
+        <div className="av-prog">
+            {annonce && (
+                <p className="av-prog-ligne">
+                    🎯 <b>{annonce.evaluation}{annonce.quand ? ` du ${dateCourte.format(new Date(`${annonce.quand}T12:00:00`))}` : ''}</b> : {texteProgramme(annonce)}
+                    <button type="button" className="btn-link" onClick={() => supprimerProgramme(cle, annonce.id)}>
+                        Retirer
+                    </button>
+                </p>
+            )}
+            {etat === 'calcul' && <p className="muted">Je mets à jour tes révisions…</p>}
+            {etat === 'fait' && bilan.length > 0 && (
+                <ul className="av-prog-bilan">
+                    {bilan.map((l, i) => (
+                        <li key={i}>{l}</li>
+                    ))}
+                </ul>
+            )}
+            {ouvert ? (
+                <div className="av-cours-ajout">
+                    <div className="av-prog-ligne2">
+                        <label className="av-cours-champ">
+                            <span>Évaluation</span>
+                            <select value={evaluation} onChange={(e) => setEvaluation(e.target.value)}>
+                                {['DS', 'TP noté', 'Oral', 'Projet'].map((x) => (
+                                    <option key={x}>{x}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="av-cours-champ">
+                            <span>Date {ds && evaluation === 'DS' && !quand ? `(DS le ${dateCourte.format(ds)})` : ''}</span>
+                            <input type="date" value={quand} onChange={(e) => setQuand(e.target.value)} />
+                        </label>
+                    </div>
+                    <label className="av-cours-champ">
+                        <span>Ce que tu dois réviser</span>
+                        <textarea rows={3} value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="ex. Jusqu’à « retour sur investissement », ou jusqu’à la partie 3.3.2 et les TD 1 à 4" />
+                    </label>
+                    <div className="av-boutons">
+                        <button type="button" className="btn-secondary" onClick={() => setOuvert(false)}>
+                            Annuler
+                        </button>
+                        <button type="button" className="btn-primary" disabled={!texte.trim()} onClick={enregistrer}>
+                            Mettre à jour mes révisions
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <button type="button" className="btn-link av-noter-cours" onClick={() => setOuvert(true)}>
+                    🎯 {annonce ? 'Changer le programme de l’éval' : 'Ce qui tombe à l’éval (dit par le prof)'}
+                </button>
+            )}
+        </div>
+    )
+}
+
 function NoterCoursLibre({ cours }: { cours: Cours[] | null }) {
     const [ouvert, setOuvert] = useState(false)
     const [matiere, setMatiere] = useState('')

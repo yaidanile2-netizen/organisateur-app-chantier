@@ -416,7 +416,7 @@ export function descriptionBloc(b: BlocEtude, r: ReglagesEtudes, cours: Cours[] 
     const etape = prog[b.etape]
     // DS : programme probable (d'après l'avancement des TD) et exos « à revoir » en priorité.
     const enPlus =
-        e.type === 'ds' ? consignesDS(e.matiere, b.etape, prevoirDS(trouverMatiere(lireAvancement(), e.matiere), e.date, cours, new Date())) : []
+        e.type === 'ds' ? consignesDS(e.matiere, b.etape, prevoirDS(trouverMatiere(lireAvancement(), e.matiere), e.date, cours, new Date()), e.date) : []
     const quoi = e.type === 'td' ? `TD de ${e.matiere}, ${dateLongue.format(e.date)}` : `${t.libelle} ${e.matiere}, ${dateLongue.format(e.date)}`
     return [
         `Étape ${b.etape + 1}/${prog.length} — ${etape.nom} (${etape.duree} min) · ${quoi}`,

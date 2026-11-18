@@ -1,8 +1,9 @@
 // Replanification après un changement de programme (18/11/2026).
 // Pour chaque semaine touchée : on recalcule les séances de sport et les blocs de révision encore à venir
 // (ceux déjà faits ou passés restent), puis on dit à Daniel ce qui bouge : « Séance B : mar. 18 h → mer. 10 h 30 ».
-import { creerTache, getCategories, getCoursEntre, getTachesEntre, supprimerTache, type Cours, type NouvelleTache, type Tache } from './api'
-import { MARQUEUR_ETUDE, descriptionBloc, echeances, lireReglagesEtudes, planifierEtudes, titreBloc } from './etudes'
+import { creerTache, getCategories, getCoursEntre, getTachesEntre, modifierTache, supprimerTache, type Cours, type NouvelleTache, type Tache } from './api'
+import { MARQUEUR_ECHEANCE, MARQUEUR_ETUDE, TYPES_ECHEANCE, descriptionBloc, echeances, lireReglagesEtudes, planifierEtudes, titreBloc, type BlocEtude, type TypeEcheance } from './etudes'
+import { memeMatiere } from './suiviTD'
 import type { CodeSeance } from './programme'
 import { jourIso } from './stockage'
 import { MARQUEUR, codeDeTache, debutDeSemaine, descriptionSeance, lireReglages, planifierSemaine, titreSeance } from './sport'
@@ -75,14 +76,20 @@ async function semaineSport(lundi: Date, maintenant: Date, cours: Cours[], tache
     return { mouvements, supprimer, creer }
 }
 
-async function semaineEtudes(lundi: Date, maintenant: Date): Promise<Replan> {
+/** `prec` : ce qui a déjà été décidé pour les semaines précédentes (pas encore enregistré). */
+async function semaineEtudes(lundi: Date, maintenant: Date, forcer = false, prec?: Replan): Promise<Replan> {
     const dimanche = new Date(lundi.getTime() + 7 * JOUR - 1)
     const finFenetre = new Date(dimanche.getTime() + 14 * JOUR)
-    const [cours, taches] = await Promise.all([getCoursEntre(new Date(lundi.getTime() - 3 * JOUR), finFenetre), getTachesEntre(new Date(lundi.getTime() - 21 * JOUR), finFenetre)])
+    const [cours, lues] = await Promise.all([getCoursEntre(new Date(lundi.getTime() - 3 * JOUR), finFenetre), getTachesEntre(new Date(lundi.getTime() - 21 * JOUR), finFenetre)])
+    const retirees = new Set((prec?.supprimer ?? []).map((t) => t.id))
+    const ajoutees: Tache[] = (prec?.creer ?? [])
+        .filter((t) => t.genre === 'etude')
+        .map((t, i) => ({ id: `prevu-${i}`, titre: t.titre, description: t.description ?? null, categorie_id: null, date_debut: t.date_debut ?? null, date_fin: t.date_fin ?? null, toute_la_journee: false, statut: 'a_faire', priorite: 'normale', source: 'manuel', modifiable: true, notifie: false, categorie_nom: null, categorie_couleur: null }))
+    const taches = [...lues.filter((t) => !retirees.has(t.id)), ...ajoutees]
     const remplacees = taches.filter(
         (t) => t.description?.includes(MARQUEUR_ETUDE) && t.statut !== 'fait' && t.statut !== 'annule' && t.date_debut && new Date(t.date_debut) >= lundi && new Date(t.date_debut) <= dimanche && new Date(t.date_debut) > maintenant,
     )
-    if (!remplacees.length) return { mouvements: [], supprimer: [], creer: [] }
+    if (!remplacees.length && !forcer) return { mouvements: [], supprimer: [], creer: [] }
     const r = lireReglagesEtudes()
     const gardees = taches.filter((t) => !remplacees.includes(t))
     const liste = echeances(cours, gardees, maintenant, finFenetre, r)
@@ -128,15 +135,20 @@ async function semaineEtudes(lundi: Date, maintenant: Date): Promise<Replan> {
 }
 
 /** Ce qui changerait dans l'agenda entre `du` et `au` (AAAA-MM-JJ), sans rien enregistrer. */
-export async function calculerReplan(du: string, au: string, maintenant = new Date()): Promise<Replan> {
+export async function calculerReplan(du: string, au: string, maintenant = new Date(), opts: { etudesSeulement?: boolean } = {}): Promise<Replan> {
     const res: Replan = { mouvements: [], supprimer: [], creer: [] }
     const fin = new Date(`${au}T23:59:59`)
     for (let lundi = debutDeSemaine(new Date(`${du}T12:00:00`)); lundi <= fin; lundi = new Date(lundi.getTime() + 7 * JOUR + 2 * 3600 * 1000)) {
         lundi = debutDeSemaine(lundi)
         const dimanche = new Date(lundi.getTime() + 7 * JOUR - 1)
         if (dimanche < maintenant) continue
-        const [cours, taches] = await Promise.all([getCoursEntre(lundi, dimanche), getTachesEntre(lundi, dimanche)])
-        for (const r of [await semaineSport(lundi, maintenant, cours, taches, du, au), await semaineEtudes(lundi, maintenant)]) {
+        const parts = opts.etudesSeulement
+            ? [await semaineEtudes(lundi, maintenant, true, res)]
+            : await (async () => {
+                  const [cours, taches] = await Promise.all([getCoursEntre(lundi, dimanche), getTachesEntre(lundi, dimanche)])
+                  return [await semaineSport(lundi, maintenant, cours, taches, du, au), await semaineEtudes(lundi, maintenant, false, res)]
+              })()
+        for (const r of parts) {
             res.mouvements.push(...r.mouvements)
             res.supprimer.push(...r.supprimer)
             res.creer.push(...r.creer)
@@ -160,4 +172,75 @@ export function phraseMouvement(m: Mouvement): string {
     if (m.avant && m.apres) return `${m.nom} : ${quandTexte(m.avant)} → ${quandTexte(m.apres)}`
     if (m.avant) return `${m.nom} : ${quandTexte(m.avant)} → retirée (plus de place adaptée cette semaine)`
     return `${m.nom} : nouveau créneau ${quandTexte(m.apres!)}`
+}
+
+// ---------- Programme annoncé pour une évaluation (19/11/2026) ----------
+// Daniel dit (à l'IA ou dans l'Avancement) ce qu'il doit réviser : on note le programme, on ajoute l'évaluation
+// à l'agenda si elle n'y est pas, on met à jour les consignes des révisions prévues et on replace les créneaux.
+
+/** Ajoute l'évaluation à l'agenda (échéance) si elle n'y est pas déjà. Renvoie true si elle a été ajoutée. */
+async function assurerEcheance(matiere: string, quand: string, type: TypeEcheance): Promise<boolean> {
+    const jour = new Date(`${quand}T12:00:00`)
+    if (Number.isNaN(jour.getTime()) || jour.getTime() < Date.now() - JOUR) return false
+    const avant = new Date(jour.getTime() - 4 * JOUR)
+    const apres = new Date(jour.getTime() + 4 * JOUR)
+    const [cours, taches] = await Promise.all([getCoursEntre(avant, apres), getTachesEntre(avant, apres)])
+    const liste = echeances(cours, taches, avant, apres, lireReglagesEtudes())
+    if (liste.some((e) => e.type === type && memeMatiere(e.matiere, matiere))) return false
+    const debut = new Date(`${quand}T08:00:00`)
+    const cats = await getCategories()
+    const nom = { ds: 'DS', soutenance: 'Oral', projet: 'Projet', tp: 'TP', td: 'TD' }[type]
+    await creerTache({
+        titre: `${TYPES_ECHEANCE[type].emoji} ${nom} · ${matiere}`,
+        description: `${MARQUEUR_ECHEANCE} ${type} — ajouté d’après le programme annoncé`,
+        categorie_id: cats.find((c) => /cours|[ée]tude/i.test(c.nom))?.id ?? null,
+        date_debut: debut.toISOString(),
+        date_fin: new Date(debut.getTime() + 60 * 60000).toISOString(),
+        toute_la_journee: false,
+        statut: 'a_faire',
+        priorite: 'haute',
+    })
+    return true
+}
+
+/** Réécrit les consignes des révisions à venir (sans changer leurs horaires). Renvoie le nombre de créneaux mis à jour. */
+async function rafraichirConsignes(matiere?: string): Promise<number> {
+    const maintenant = new Date()
+    const fin = new Date(maintenant.getTime() + 35 * JOUR)
+    const [cours, taches] = await Promise.all([getCoursEntre(new Date(maintenant.getTime() - 3 * JOUR), fin), getTachesEntre(new Date(maintenant.getTime() - 21 * JOUR), fin)])
+    const r = lireReglagesEtudes()
+    const liste = echeances(cours, taches, maintenant, fin, r)
+    let n = 0
+    for (const t of taches) {
+        if (!t.description?.includes(MARQUEUR_ETUDE) || t.statut === 'fait' || t.statut === 'annule' || !t.date_debut || new Date(t.date_debut) < maintenant) continue
+        const m = t.description.match(/#etude-auto (\S+) e(\d+)/)
+        const e = m && liste.find((x) => x.cle === m[1])
+        if (!e || (matiere && !memeMatiere(e.matiere, matiere))) continue
+        const b: BlocEtude = { echeance: e, etape: Number(m[2]) - 1, debut: new Date(t.date_debut), fin: new Date(t.date_fin || t.date_debut), mode: t.description.includes('⚡') ? 'urgence' : 'soir' }
+        const d = descriptionBloc(b, r, cours)
+        if (d !== t.description) {
+            await modifierTache({ id: t.id, description: d })
+            n++
+        }
+    }
+    return n
+}
+
+export type BilanProgramme = { lignes: string[]; echeanceAjoutee: boolean; consignes: number; replan: Replan }
+
+/** Après un programme annoncé : évaluation dans l'agenda, consignes à jour, créneaux de révision replacés. */
+export async function appliquerProgrammeAnnonce(matiere: string, evaluation: string, quand?: string): Promise<BilanProgramme> {
+    const type: TypeEcheance = /oral|soutenance/i.test(evaluation) ? 'soutenance' : /projet|rendu/i.test(evaluation) ? 'projet' : /\btp\b/i.test(evaluation) ? 'tp' : 'ds'
+    const echeanceAjoutee = quand ? await assurerEcheance(matiere, quand, type) : false
+    const consignes = await rafraichirConsignes(matiere)
+    const auj = new Date()
+    const au = new Date(auj.getTime() + 13 * JOUR)
+    const replan = await calculerReplan(jourIso(auj), jourIso(au), auj, { etudesSeulement: true })
+    if (replan.mouvements.length) await appliquerReplan(replan)
+    const lignes: string[] = []
+    if (echeanceAjoutee && quand) lignes.push(`📅 ${evaluation} de ${matiere} ajouté à ton agenda le ${new Date(`${quand}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`)
+    if (consignes) lignes.push(`📝 Consignes de ${consignes} révision${consignes > 1 ? 's' : ''} mises à jour avec ce programme`)
+    for (const m of replan.mouvements) lignes.push(`📚 ${phraseMouvement(m)}`)
+    if (!lignes.length) lignes.push('Aucune révision prévue à changer pour l’instant : le programme sera utilisé dès que tu proposeras tes révisions.')
+    return { lignes, echeanceAjoutee, consignes, replan }
 }

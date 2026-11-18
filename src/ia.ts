@@ -4,6 +4,7 @@ import { envoyerNutrition, type ContexteConseil, type MomentConseil, type Repons
 import { creerStock, uid } from './stockage'
 import { resumeChangements } from './jours'
 import { resumeNotes } from './notes'
+import { lireAvancement } from './suiviTD'
 
 const BASE_URL = 'https://n8n-production-bdf5.up.railway.app/webhook'
 
@@ -77,11 +78,11 @@ export function demanderIA(message: string, historique: Message[], ecran: string
     const memo = texteMemoire()
     const consigne =
         '[Mémoire] Si Daniel te donne une information durable sur lui (préférence, contrainte, santé, objectif, organisation) ou te demande de retenir quelque chose, ajoute à la toute fin de ta réponse une ligne qui commence par « [RETENIR] » suivie de l’info en une phrase courte. Sinon, n’ajoute rien.'
-    const contexte = [memo ? `Ce que tu sais de Daniel (à garder en tête) :\n${memo}` : '', consigne, resumeChangements(), resumeNotes(), contexteEcran(ecran)].filter(Boolean).join('\n\n')
+    const contexte = [memo ? `Ce que tu sais de Daniel (à garder en tête) :\n${memo}` : '', consigne, CONSIGNE_PROGRAMME(), resumeChangements(), resumeNotes(), contexteEcran(ecran)].filter(Boolean).join('\n\n')
     return poster<ReponseIA>('ia', {
         message,
         ecran,
-        contexte_ecran: contexte.slice(0, 4200),
+        contexte_ecran: contexte.slice(0, 5200),
         historique: historique
             .filter((m) => !m.erreur)
             .slice(-12)
@@ -126,6 +127,45 @@ export function extraireSouvenirs(reponse: string): string {
         else garder.push(ligne)
     }
     return garder.join('\n').trim()
+}
+
+// ---------- Programme d'une évaluation (19/11/2026) ----------
+// Quand Daniel dit ce qu'il doit réviser pour un DS (jusqu'où dans le cours, quels TD…), l'IA ajoute une ligne
+// « [PROGRAMME] … » que l'app lit pour mettre à jour son programme de révision.
+
+const CONSIGNE_PROGRAMME = () =>
+    `[Programme] Aujourd’hui : ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}. Si Daniel dit ce qu’il doit réviser pour une évaluation (DS, contrôle, TP noté, oral…) : jusqu’où dans le cours, quels TD, quels chapitres, ou la date de l’évaluation, ajoute à la toute fin de ta réponse UNE ligne par évaluation au format exact « [PROGRAMME] matière | évaluation | date AAAA-MM-JJ ou ? | jusqu’à quelle partie du cours ou ? | dernier TD au programme (nombre) ou ? | chapitres ou notions en quelques mots ou ? ». Utilise le nom de matière de son avancement s’il existe${(() => { const n = Object.values(lireAvancement().matieres).map((m) => m.nom); return n.length ? ` (${n.slice(0, 15).join(', ')})` : '' })()}. Dans ta réponse, dis-lui simplement que tu as noté le programme et que ses révisions vont suivre.`
+
+export type ProgrammeIA = { matiere: string; evaluation: string; quand?: string; jusqua?: string; tdMax?: number; chapitres?: string }
+
+export function extraireProgrammes(reponse: string): { texte: string; programmes: ProgrammeIA[] } {
+    const garder: string[] = []
+    const programmes: ProgrammeIA[] = []
+    const val = (x?: string) => {
+        const v = (x ?? '').trim().replace(/^[«"“]|[»"”]$/g, '').trim()
+        return v && v !== '?' && !/^(inconnu|aucun|non précisé|-)$/i.test(v) ? v : undefined
+    }
+    for (const ligne of reponse.split('\n')) {
+        const m = ligne.match(/^\s*\[?\s*PROGRAMME\s*\]?\s*[:：-]?\s*(.+)$/i)
+        if (!m || !m[1].includes('|')) {
+            garder.push(ligne)
+            continue
+        }
+        const [matiere, evaluation, quand, jusqua, td, chapitres] = m[1].split('|')
+        const mat = val(matiere)
+        if (!mat) continue
+        const q = val(quand)
+        const n = Number(val(td)?.match(/\d+/)?.[0])
+        programmes.push({
+            matiere: mat,
+            evaluation: val(evaluation) ?? 'DS',
+            quand: q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : undefined,
+            jusqua: val(jusqua)?.replace(/^(?:la\s+)?partie\s+/i, ''),
+            tdMax: n > 0 && n < 40 ? n : undefined,
+            chapitres: val(chapitres),
+        })
+    }
+    return { texte: garder.join('\n').trim(), programmes }
 }
 
 /** « Retiens que… », « souviens-toi que… », « n'oublie pas que… » : noté tout de suite, sans attendre l'IA. */
@@ -212,11 +252,11 @@ export function lireHistorique(): Message[] {
 
 export function ecrireHistorique(m: Message[]): void {
     const garde = recent(m)
-    fil.modifier((f) => ({ ...f, efface: m.length ? f.efface : Date.now(), messages: garde.map(allege) }))
     try {
-        // la version complète (avec les cartes nutrition) reste sur l'appareil
+        // la version complète (avec les cartes nutrition) reste sur l'appareil — écrite AVANT de prévenir les abonnés
         localStorage.setItem(CLE, JSON.stringify(garde.slice(-80)))
     } catch {
         // stockage plein ou indisponible
     }
+    fil.modifier((f) => ({ ...f, efface: m.length ? f.efface : Date.now(), messages: garde.map(allege) }))
 }

@@ -531,3 +531,16 @@
     color: #a5b4fc;
   }
 }
+
+/* Programme annoncé d'une évaluation (19/11/2026) */
+.av-prog { margin-top: 4px; }
+.av-prog-ligne { font-size: 13px; background: #eef2ff; color: #3730a3; border-radius: 10px; padding: 8px 10px; margin: 6px 0; line-height: 1.45; }
+.av-prog-ligne .btn-link { font-size: 12px; margin-left: 8px; }
+.av-prog-ligne2 { display: flex; gap: 8px; flex-wrap: wrap; }
+.av-prog-ligne2 > label { flex: 1; min-width: 130px; }
+.av-prog-bilan { font-size: 13px; margin: 6px 0; padding-left: 18px; }
+.av-cours-champ select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: #fff; color: inherit; }
+@media (prefers-color-scheme: dark) {
+  .av-prog-ligne { background: #1e1b4b; color: #c7d2fe; }
+  .av-cours-champ select { background: #1f1f22; border-color: #3a3a3e; }
+}

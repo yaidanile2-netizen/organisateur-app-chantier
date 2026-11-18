@@ -18,7 +18,9 @@ export const ETATS_EXO: Record<EtatExo, { icone: string; libelle: string }> = {
 export type SeanceTD = { cle: string; date: string; td: number; jusqua: number }
 /** Avancement du cours écrit en texte libre (« on a fait le cours jusqu'à la partie 3.3.2 »), résumé par l'IA. */
 export type NoteCours = { id: string; cle?: string; date: string; texte: string; partie?: string; resume?: string }
-export type SuiviMatiere = { nom: string; tds: Record<string, InfoTD>; seances: SeanceTD[]; cours?: NoteCours[] }
+/** Ce que le prof a annoncé pour une évaluation (19/11/2026) : jusqu'où réviser, quels TD, quels chapitres. */
+export type ProgrammeEval = { id: string; date: string; evaluation: string; quand?: string; jusqua?: string; tdMax?: number; chapitres?: string; texte: string }
+export type SuiviMatiere = { nom: string; tds: Record<string, InfoTD>; seances: SeanceTD[]; cours?: NoteCours[]; programmes?: ProgrammeEval[] }
 export type Avancement = { v: 1; updatedAt: number; matieres: Record<string, SuiviMatiere>; ignores: string[] }
 
 const CLE_LOCALE = 'td.avancement'
@@ -250,7 +252,9 @@ export function previsionsDS(cours: Cours[], maintenant = new Date()): Record<st
     for (const [cle, s] of Object.entries(lireAvancement().matieres)) {
         const ds = prochainDS(cours, s, maintenant)
         const p = ds ? prevoirDS(s, ds, cours, maintenant) : null
-        if (ds && p) res[cle] = { td: p.td, exo: p.exo, date: ds.toISOString() }
+        const an = programmeAnnonce(s, ds ?? undefined, maintenant)
+        if (ds && an?.tdMax) res[cle] = { td: an.tdMax, exo: 0, date: ds.toISOString() }
+        else if (ds && p) res[cle] = { td: p.td, exo: p.exo, date: ds.toISOString() }
     }
     return res
 }
@@ -368,6 +372,15 @@ export function repondre(q: Question, r: Reponse): void {
     })
 }
 
+/** Compare deux repères de cours (« 3.3.2 » > « 3.2 ») ; 0 si on ne sait pas. */
+export function comparerParties(x: string, y: string): number {
+    const a = x.split('.').map(Number)
+    const b = y.split('.').map(Number)
+    if (a.some(Number.isNaN) || b.some(Number.isNaN)) return 0
+    for (let i = 0; i < Math.max(a.length, b.length); i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) - (b[i] ?? 0)
+    return 0
+}
+
 /** « 3.3.2 », « partie 4 », « chapitre 2 » : le repère le plus avancé cité dans le texte. */
 export function partieDe(texte: string): string | undefined {
     const num = [...texte.matchAll(/\b(\d+(?:[.,]\d+){1,4})\b/g)].map((m) => m[1].replace(/,/g, '.'))
@@ -407,6 +420,81 @@ export function supprimerNoteCours(cleMat: string, id: string): void {
         if (m?.cours) m.cours = m.cours.filter((c) => c.id !== id)
         return a
     })
+}
+
+// ---------- Programme annoncé pour une évaluation ----------
+
+const JOUR_MS = 24 * 3600 * 1000
+
+/** « TD 4 », « jusqu'au TD 3 », « TD 1 à 5 » → le dernier TD au programme. */
+export function tdMaxDe(texte: string): number | undefined {
+    const n = [...texte.matchAll(/\bTD\s*(?:n°\s*)?(\d{1,2})(?:\s*(?:à|-|–|au)\s*(?:TD\s*)?(\d{1,2}))?/gi)].flatMap((m) => [Number(m[1]), m[2] ? Number(m[2]) : 0])
+    return n.length ? Math.max(...n) || undefined : undefined
+}
+
+/** « jusqu'à retour sur investissement » → « retour sur investissement » (repère sans numéro). */
+export function jusquaDe(texte: string): string | undefined {
+    const m = texte.match(/jusqu['’ ]?\s*(?:à|a|au|aux)\s+(?:la |le |l['’]|les )?(?:(?:partie|chapitre|notion|cours)\s+(?:sur |de |du |des )?(?:la |le |l['’]|les )?)?(.{3,80}?)(?:\s*(?:\(|,|;|\.|!|\?| et | inclus| compris|$))/i)
+    const t = m?.[1]?.trim()
+    return t && !/^(td|tp)\b/i.test(t) ? t : undefined
+}
+
+/** Note le programme d'une évaluation. Renvoie la clé de la matière. */
+export function noterProgramme(matiere: string, p: Omit<ProgrammeEval, 'id' | 'date'>): string {
+    const cleMat = trouverMatiereCle(lireAvancement(), matiere) || cleMatiere(matiere)
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const texte = p.texte.trim().slice(0, 600)
+    const prog: ProgrammeEval = {
+        ...p,
+        id,
+        date: new Date().toISOString(),
+        texte,
+        jusqua: p.jusqua || partieDe(texte) || jusquaDe(texte),
+        tdMax: p.tdMax || tdMaxDe(texte),
+    }
+    modifierAvancement((a) => {
+        const m: SuiviMatiere = a.matieres[cleMat] ?? { nom: matiere, tds: {}, seances: [] }
+        // Un nouveau programme pour la même évaluation remplace l'ancien.
+        const autres = (m.programmes ?? []).filter((x) => !(x.evaluation.toLowerCase() === prog.evaluation.toLowerCase() && (x.quand ?? '') === (prog.quand ?? '')))
+        m.programmes = [...autres, prog].slice(-10)
+        a.matieres[cleMat] = m
+        return a
+    })
+    return cleMat
+}
+
+export function supprimerProgramme(cleMat: string, id: string): void {
+    modifierAvancement((a) => {
+        const m = a.matieres[cleMat]
+        if (m?.programmes) m.programmes = m.programmes.filter((x) => x.id !== id)
+        return a
+    })
+}
+
+/** Le programme annoncé encore valable (évaluation pas encore passée) ; proche de `dateEval` si elle est connue. */
+export function programmeAnnonce(s: SuiviMatiere | undefined, dateEval?: Date, maintenant = new Date()): ProgrammeEval | undefined {
+    const auj = maintenant.getTime() - JOUR_MS
+    return (s?.programmes ?? [])
+        .filter((p) => {
+            if (p.quand) {
+                const q = new Date(`${p.quand}T12:00:00`).getTime()
+                if (q < auj) return false
+                if (dateEval && Math.abs(q - dateEval.getTime()) > 4 * JOUR_MS) return false
+                return true
+            }
+            return new Date(p.date).getTime() > maintenant.getTime() - 60 * JOUR_MS
+        })
+        .sort((x, y) => x.date.localeCompare(y.date))
+        .at(-1)
+}
+
+export function texteProgramme(p: ProgrammeEval): string {
+    const morceaux = [
+        p.jusqua ? (/^[\d.]+$/.test(p.jusqua) ? `cours jusqu’à la partie ${p.jusqua}` : `cours jusqu’à « ${p.jusqua} »`) : '',
+        p.tdMax ? `TD 1 à ${p.tdMax}` : '',
+        p.chapitres ? p.chapitres : '',
+    ].filter(Boolean)
+    return morceaux.length ? morceaux.join(' · ') : p.texte.slice(0, 120)
 }
 
 /** La dernière note de cours d'une matière. */
@@ -482,20 +570,31 @@ export function consignesTD(matiere: string): string[] {
 }
 
 /** Consignes « avancement » pour un DS (étape Réviser ou Appliquer). */
-export function consignesDS(matiere: string, etape: number, prevision: Prevision | null): string[] {
+export function consignesDS(matiere: string, etape: number, prevision: Prevision | null, dateEval?: Date): string[] {
     const s = trouverMatiere(lireAvancement(), matiere)
     if (!s) return []
     const p = positionDe(s)
     const revoir = exosARevoir(s)
     const res: string[] = []
-    if (etape === 0 && (prevision || p)) {
+    const annonce = programmeAnnonce(s, dateEval)
+    if (etape <= 1 && annonce) res.push(`🎯 Programme annoncé pour le ${annonce.evaluation} : ${texteProgramme(annonce)}${annonce.texte && texteProgramme(annonce) !== annonce.texte.slice(0, 120) ? ` (« ${annonce.texte.slice(0, 140)} »)` : ''}`)
+    if (etape === 0 && !annonce?.tdMax && (prevision || p)) {
         const jusqua = prevision ? `TD ${prevision.td} ex. ${prevision.exo} (prévu)` : `TD ${p!.td} ex. ${p!.jusqua}`
         res.push(`Programme probable du DS : du TD 1 jusqu’au ${jusqua}`)
     }
     const importants = exosImportants(s)
     if (etape === 0 && importants.length) res.push(`Exos importants ⭐ signalés en TD : ${regrouper(importants.slice(0, 8))}`)
     const dc = dernierCours(s)
-    if (etape === 0 && dc) res.push(`Cours vu en classe : ${texteCours(dc)}${dc.resume ? ` — ${dc.resume}` : ''}. Ne révise que jusque-là (sauf si le prof a annoncé plus).`)
+    if (etape === 0 && dc) {
+        const plusLoin = annonce?.jusqua && (!dc.partie || comparerParties(annonce.jusqua, dc.partie) > 0)
+        res.push(
+            annonce?.jusqua
+                ? plusLoin
+                    ? `Cours vu en classe : ${texteCours(dc)}. Le programme va jusqu’à la partie ${annonce.jusqua} : lis aussi la suite dans le poly.`
+                    : `Cours vu en classe : ${texteCours(dc)}. Révise jusqu’à ${/^[\d.]+$/.test(annonce.jusqua) ? `la partie ${annonce.jusqua}` : `« ${annonce.jusqua} »`} (inclus), pas plus loin.`
+                : `Cours vu en classe : ${texteCours(dc)}${dc.resume ? ` — ${dc.resume}` : ''}. Ne révise que jusque-là (sauf si le prof a annoncé plus).`,
+        )
+    } else if (etape === 0 && annonce?.jusqua) res.push(`Révise le cours jusqu’à ${/^[\d.]+$/.test(annonce.jusqua) ? `la partie ${annonce.jusqua}` : `« ${annonce.jusqua} »`} (inclus), pas plus loin.`)
     // Cours à revoir et à laisser : calculés par l'onglet Cours d'après les TD (si la matière y a été ouverte).
     const cle = Object.entries(lireAvancement().matieres).find(([, m]) => m === s)?.[0]
     const plan = cle ? lireJSON<Record<string, PlanCours>>('cours.ds', {})[cle] : undefined
@@ -503,7 +602,7 @@ export function consignesDS(matiere: string, etape: number, prevision: Prevision
         if (plan.prio.length) res.push(`Cours à revoir en priorité : ${plan.prio.slice(0, 5).join(', ')}`)
         if (etape === 0 && plan.voir.length) res.push(`Chapitres du DS : ${plan.voir.join(', ')}`)
         if (etape === 0 && plan.laisser.length) res.push(`Pas besoin pour ce DS (pas encore vu en TD) : ${plan.laisser.join(', ')}`)
-    } else if (etape === 0) res.push('Onglet Cours → DS : la liste des cours à revoir et de ceux à laisser, d’après tes TD')
+    } else if (etape === 0) res.push(annonce ? 'Onglet Cours → DS : la liste des cours à revoir et de ceux à laisser, d’après ce programme' : 'Onglet Cours → DS : la liste des cours à revoir et de ceux à laisser, d’après tes TD')
     if (etape === 1 && revoir.length) res.push(`Commence par tes exos « à revoir » : ${regrouper(revoir.slice(0, 8))}`)
     if (etape === 1 && importants.length) res.push(`Puis refais les exos importants ⭐ : ${regrouper(importants.slice(0, 8))}`)
     return res
@@ -529,7 +628,10 @@ export function resumeAvancement(): string {
         const revoir = exosARevoir(m)
         const importants = exosImportants(m)
         const dc = dernierCours(m)
-        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'aucun exo noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}${importants.length ? ` · importants : ${regrouper(importants)}` : ''}${dc ? ` · cours : ${texteCours(dc)}${dc.resume ? ` (${dc.resume})` : ''}` : ''}`
+        return `- ${m.nom} : ${p ? `${nomExo(p.td, p.jusqua)}${p.total ? `/${p.total}` : ''}` : 'aucun exo noté'}${restants.length ? ` · à finir : ${regrouper(restants)}` : ''}${revoir.length ? ` · à revoir : ${regrouper(revoir)}` : ''}${importants.length ? ` · importants : ${regrouper(importants)}` : ''}${dc ? ` · cours : ${texteCours(dc)}${dc.resume ? ` (${dc.resume})` : ''}` : ''}${(() => {
+            const an = programmeAnnonce(m)
+            return an ? ` · programme annoncé (${an.evaluation}${an.quand ? ` du ${an.quand}` : ''}) : ${texteProgramme(an)}` : ''
+        })()}`
     })
     return lignes.length ? `Avancement des TD :\n${lignes.join('\n')}` : ''
 }

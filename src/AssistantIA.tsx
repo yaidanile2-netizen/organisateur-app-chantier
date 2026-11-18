@@ -1,9 +1,11 @@
 import { ajouterNote, demandeDeNote } from './notes'
+import { appliquerProgrammeAnnonce } from './replanifier'
+import { noterProgramme } from './suiviTD'
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import './assistant.css'
 import type { ReponseNutrition } from './api'
 import { ecouter, emettre } from './evenements'
-import { demandeDeRetenir, demanderIA, ecrireHistorique, executerAction, extraireSouvenirs, fil as filIA, lireHistorique, memoire, oublier, retenir, type Message } from './ia'
+import { demandeDeRetenir, demanderIA, ecrireHistorique, executerAction, extraireProgrammes, extraireSouvenirs, fil as filIA, lireHistorique, memoire, oublier, retenir, type Message } from './ia'
 
 const NOMS: Record<string, string> = { agenda: 'Agenda', muscu: 'Muscu', nutrition: 'Nutrition', cours: 'Cours' }
 
@@ -287,10 +289,31 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
             try {
                 const r = await demanderIA(message, historique, ecran)
                 r.reponse = extraireSouvenirs(r.reponse || '')
+                const { texte: sansProgramme, programmes } = extraireProgrammes(r.reponse)
+                r.reponse = sansProgramme || (programmes.length ? 'C’est noté, je mets à jour ton programme de révision.' : sansProgramme)
                 const nouveaux = memoire.lire().souvenirs.slice(avant)
                 if (nouveaux.length) r.reponse = `${r.reponse}\n\n🧠 Je retiens : ${nouveaux.map((x) => x.texte).join(' · ')}`
                 const idr = id()
                 ajouter({ id: idr, role: 'assistant', texte: r.reponse, date: new Date().toISOString(), action: r.action, relances: r.relances })
+                if (programmes.length) {
+                    // Programme d'une évaluation : noté dans l'avancement, puis révisions de l'agenda mises à jour.
+                    const base = r.reponse
+                    remplacer(idr, { texte: `${base}\n\n🎯 Je mets à jour ton programme de révision…` })
+                    const lignes: string[] = []
+                    try {
+                        for (const p of programmes) {
+                            noterProgramme(p.matiere, { evaluation: p.evaluation, quand: p.quand, jusqua: p.jusqua, tdMax: p.tdMax, chapitres: p.chapitres, texte: message })
+                            const quoi = [p.jusqua && `cours jusqu’à ${p.jusqua}`, p.tdMax && `TD 1 à ${p.tdMax}`, p.chapitres].filter(Boolean).join(' · ')
+                            lignes.push(`🎯 ${p.evaluation} de ${p.matiere}${p.quand ? ` (${new Date(`${p.quand}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })})` : ''} : ${quoi || 'programme noté'}`)
+                            const bilan = await appliquerProgrammeAnnonce(p.matiere, p.evaluation, p.quand)
+                            lignes.push(...bilan.lignes)
+                        }
+                        remplacer(idr, { texte: `${base}\n\n${lignes.join('\n')}` })
+                    } catch (e) {
+                        remplacer(idr, { texte: `${base}\n\n${lignes.join('\n')}\n⚠️ Programme noté, mais je n’ai pas pu mettre à jour l’agenda : ${e instanceof Error ? e.message : 'erreur'}` })
+                    }
+                    emettre('organisateur:actualiser', { domaine: 'agenda' })
+                }
                 if (r.action !== 'aucune') {
                     try {
                         const res = await executerAction(r, message)
