@@ -23,6 +23,11 @@ export default function CoursView({ actif }: { actif: boolean }) {
     const [items, setItems] = useState<ItemRevision[]>([])
     const [version, setVersion] = useState(0)
     const enAttente = useRef<ItemRevision | null>(null)
+    // Version HTML du Bureau : l'app de révision est intégrée au fichier (srcdoc, même origine que l'app).
+    const [srcdoc, setSrcdoc] = useState<string | null>(null)
+    useEffect(() => {
+        if (import.meta.env.VITE_BUREAU) import('../public/cours/index.html?raw').then((m) => setSrcdoc(m.default))
+    }, [])
 
     const api = (): ApiCours | null => {
         try {
@@ -100,10 +105,11 @@ export default function CoursView({ actif }: { actif: boolean }) {
     return (
         <div className="cours-zone" hidden={!actif}>
             {actif && <QuestionsTD bandeau />}
-            {monte && (
+            {monte && (!import.meta.env.VITE_BUREAU || srcdoc) && (
                 <iframe
                     ref={cadre}
-                    src="/cours/index.html"
+                    src={import.meta.env.VITE_BUREAU ? undefined : '/cours/index.html'}
+                    srcDoc={import.meta.env.VITE_BUREAU ? (srcdoc ?? undefined) : undefined}
                     title="Mes cours"
                     onLoad={() => {
                         setPret(true)

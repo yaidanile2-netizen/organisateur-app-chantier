@@ -135,8 +135,11 @@ function App() {
                             {etat === 'chargement' && <p className="muted">Vérification…</p>}
                             {etat === 'indisponible' && (
                                 <p className="muted">
-                                    Les notifications ne sont pas disponibles ici — sur iPhone, installe d'abord l'app sur
-                                    l'écran d'accueil (bouton Partager → Sur l'écran d'accueil), puis reviens sur cette page.
+                                    {import.meta.env.VITE_BUREAU || location.protocol === 'file:'
+                                        ? 'Cette version HTML (fichier du Bureau) ne reçoit pas les notifications. Pour les avoir sur le PC, ouvre l’app en ligne dans Chrome et installe-la (icône d’installation dans la barre d’adresse).'
+                                        : null}
+                                    {import.meta.env.VITE_BUREAU || location.protocol === 'file:' ? null : <>Les notifications ne sont pas disponibles ici — sur iPhone, installe d'abord l'app sur
+                                    l'écran d'accueil (bouton Partager → Sur l'écran d'accueil), puis reviens sur cette page.</>}
                                 </p>
                             )}
                             {etat === 'refuse' && (

@@ -11,6 +11,8 @@ const SAVE_SUBSCRIPTION_URL =
 export type EtatNotifications = 'indisponible' | 'refuse' | 'inactif' | 'actif'
 
 export function notificationsDisponibles(): boolean {
+    // Version HTML du Bureau (fichier ouvert directement) : pas de service worker, donc pas de push.
+    if (import.meta.env.VITE_BUREAU || location.protocol === 'file:') return false
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
