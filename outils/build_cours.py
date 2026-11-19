@@ -397,5 +397,87 @@ html = remplacer(html, "</style>\n</head>", """/* Grand écran (Organisateur) */
 # ---------- 7. Mini DS : seulement ce qui a déjà été vu en TD (d'après l'avancement) ----------
 html = remplacer(html, "const pool=QUESTIONS.filter(q=>!q.tete);const by=SECT.map(", "const pool=ORG.poolVu(QUESTIONS.filter(q=>!q.tete));const by=SECT.map(")
 
+# ---------- 8. Flashcards : par partie du cours, ou sélection de cartes choisies une par une, enregistrable (19/11/2026) ----------
+FSEL_JS = r"""
+/* Flashcards : sur quoi réviser ? (tout, des parties du cours, ou ma sélection de cartes) — sélections enregistrées dans ST.x.fsel (synchronisé) */
+const FSEC={};SECT.forEach(s=>FSEC[s.nom]=s.id);
+/* la partie d'une carte : sa notion, sa formule, ou son « topic » (titre du chapitre, même approché) */
+function fSecDe(t){if(!t)return null;if(FSEC[t])return FSEC[t];if(SBY[t])return t;const nz=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();const q=nz(t);if(q.length<3)return null;
+  const s=SECT.find(s=>{const n=nz(s.nom);return n.startsWith(q)||q.startsWith(n);})||SECT.find(s=>nz(s.nom).includes(q));return s?s.id:null;}
+XFLASH.forEach(c=>{let sec=null;if(c.n&&NBY[c.n])sec=NBY[c.n].secteur;else if(c.kind==='formule'){const f=FBY[String(c.id).slice(1)];if(f)sec=f.m;}c.sec=sec||fSecDe(c.topic)||fSecDe(c.m)||'autre';});
+const FKIND={formule:'∑',definition:'📘',carte:'📇',explique:'🗣️'};
+const FSEL={
+  sel(){return X.fsel||{t:'tout'};},
+  garde(c){const s=this.sel();if(s.t==='parties')return !s.ids.length||s.ids.includes(c.sec);if(s.t==='cartes')return s.ids.includes(c.id);return true;},
+  cle(){return JSON.stringify(this.sel());},
+  liste(){const x=XS();if(!Array.isArray(x.fsel))x.fsel=[];return x.fsel;},
+  parties(){const l=SECT.map(s=>({id:s.id,nom:s.nom,num:s.num,c:s.couleur}));if(XFLASH.some(c=>c.sec==='autre'))l.push({id:'autre',nom:'Autres cartes',num:'',c:''});return l;},
+  nb(ids){return XFLASH.filter(c=>ids.includes(c.sec)).length;},
+  txt(c){return String(c.q||'').replace(/<[^>]+>/g,' ').replace(/[*_`$\\\\{}]/g,'').replace(/\s+/g,' ').trim();},
+  resume(s){if(s.t==='parties')return s.ids.length?s.ids.map(id=>{const p=this.parties().find(x=>x.id===id);return p?(p.num?p.num+'. ':'')+p.nom:'';}).filter(Boolean).join(', '):'toutes les parties';
+    if(s.t==='cartes'){const n=s.ids.filter(id=>XFLASH.some(c=>c.id===id)).length;return n+' carte'+(n>1?'s':'')+' choisie'+(n>1?'s':'');}return 'tout le cours';},
+  barre(){const s=this.sel(),L=this.liste();
+    const seg=[['tout','📚 Tout le cours'],['parties','🧩 Par partie'],['cartes','🃏 Mes cartes']].map(m=>`<button class="${s.t===m[0]?'on':''}" data-x="fselMode" data-v="${m[0]}">${m[1]}</button>`).join('');
+    let corps='';
+    if(s.t==='parties')corps=`<p class="small mut" style="margin:8px 0 6px">Touche les parties du cours à réviser${s.ids.length?'':' (aucune choisie = toutes)'} :</p><div class="x-fparts">${this.parties().map(p=>`<button class="chip ${s.ids.includes(p.id)?'on':''}" data-x="fpart" data-v="${p.id}"${p.c?` style="--c:${p.c}"`:''}>${p.num?p.num+'. ':''}${esc(p.nom)} <small>${this.nb([p.id])}</small></button>`).join('')}</div>`;
+    if(s.t==='cartes')corps=`<p class="small" style="margin:8px 0 6px">${s.ids.length?'🃏 <b>'+this.resume(s)+'</b>':'Choisis tes cartes une par une.'}</p><button class="btn sm ${s.ids.length?'ghost':'primary'}" data-x="fpickOpen">✏️ ${s.ids.length?'Modifier ma sélection':'Choisir mes cartes'}</button>`;
+    const peutSauver=(s.t==='parties'&&s.ids.length)||(s.t==='cartes'&&s.ids.length);
+    const sauver=peutSauver?`<div class="x-fsave"><input id="fselNom" type="text" maxlength="40" placeholder="Nom (ex. Avant le DS 2)" value="${esc(s.nom||'')}"><button class="btn sm dark" data-x="fselSave">💾 Enregistrer</button></div>`:'';
+    const enr=L.length?`<div class="eyebrow" style="margin-top:12px">Mes sélections enregistrées</div><div class="x-fsaved">${L.map(e=>`<span class="x-fsv ${s.id===e.id?'on':''}"><button data-x="fselLoad" data-v="${e.id}">${e.t==='parties'?'🧩':'🃏'} ${esc(e.nom)} <small>${this.resume(e)}</small></button><button class="x-fdel" data-x="fselDel" data-v="${e.id}" aria-label="Supprimer la sélection ${esc(e.nom)}">×</button></span>`).join('')}</div>`:'';
+    return `<div class="card tight x-fsel"><div class="eyebrow">Sur quoi ?</div><div class="x-seg" style="margin-top:6px">${seg}</div>${corps}${sauver}${enr}</div><div class="sp"></div>`;},
+  choix(){const ids=new Set(X.fpickIds||[]);
+    const groupes=this.parties().map(p=>({p,cs:XFLASH.filter(c=>c.sec===p.id)})).filter(g=>g.cs.length);
+    return `<div class="fade" data-scope><div class="eyebrow">Flashcards · ma sélection</div><h2 class="disp">Choisis tes cartes</h2>
+    <p class="lead">Coche les cartes une par une, ou une partie entière. Tu pourras enregistrer la sélection pour la refaire plus tard.</p>
+    ${this.barreChoix(ids)}
+    <input type="search" class="x-fsearch" placeholder="🔎 Chercher une carte…" oninput="FSEL.filtre(this.value)">
+    ${groupes.map(g=>{const tous=g.cs.every(c=>ids.has(c.id));return `<div class="card tight x-fgrp"><div class="x-fgrp-t"><b>${g.p.num?g.p.num+'. ':''}${esc(g.p.nom)}</b><button class="btn sm ghost" data-x="fpickPart" data-v="${g.p.id}">${tous?'Tout décocher':'Tout cocher'}</button></div>
+      ${g.cs.map(c=>`<button class="x-fcard ${ids.has(c.id)?'on':''}" data-x="fpickToggle" data-v="${esc(c.id)}" data-txt="${esc(this.txt(c).toLowerCase())}"><span class="bx">✓</span><span class="k">${FKIND[c.kind]||'🃏'}</span><span class="q">${esc(this.txt(c).slice(0,140))}</span></button>`).join('')}</div>`;}).join('')}
+    ${this.barreChoix(ids)}</div>`;},
+  barreChoix(ids){return `<div class="x-fbar"><span class="fpickN">${ids.size} carte${ids.size>1?'s':''}</span><button class="btn ghost sm" data-x="fpickCancel">Annuler</button><button class="btn primary sm fpickGoB" data-x="fpickGo" ${ids.size?'':'disabled'}>▶ Réviser ces cartes</button></div>`;},
+  filtre(q){q=String(q||'').toLowerCase().trim();document.querySelectorAll('.x-fcard').forEach(b=>{b.style.display=!q||b.dataset.txt.includes(q)?'':'none';});},
+  majCompteur(){const n=(X.fpickIds||[]).length;document.querySelectorAll('.fpickN').forEach(e=>e.textContent=n+' carte'+(n>1?'s':''));document.querySelectorAll('.fpickGoB').forEach(g=>g.disabled=!n);}
+};
+window.FSEL=FSEL;
+XA.fselMode=d=>{const s=FSEL.sel();if(s.t===d.v&&!s.id)return;X.fsel=d.v==='tout'?null:d.v==='parties'?{t:'parties',ids:s.t==='parties'?s.ids:[]}:{t:'cartes',ids:s.t==='cartes'?s.ids:[]};X.fdeck=null;
+  if(d.v==='cartes'&&!X.fsel.ids.length){X.fpickIds=[];X.fpick=true;}render();};
+XA.fpart=d=>{const s=FSEL.sel();const ids=s.t==='parties'?s.ids.slice():[];const i=ids.indexOf(d.v);if(i>=0)ids.splice(i,1);else ids.push(d.v);X.fsel={t:'parties',ids};X.fdeck=null;render();};
+XA.fpickOpen=()=>{const s=FSEL.sel();X.fpickIds=s.t==='cartes'?s.ids.slice():[];X.fpick=true;render();window.scrollTo(0,0);};
+XA.fpickToggle=(d,b)=>{const l=X.fpickIds||(X.fpickIds=[]);const i=l.indexOf(d.v);if(i>=0)l.splice(i,1);else l.push(d.v);b.classList.toggle('on',i<0);FSEL.majCompteur();};
+XA.fpickPart=d=>{const l=X.fpickIds||(X.fpickIds=[]);const cs=XFLASH.filter(c=>c.sec===d.v).map(c=>c.id);const tous=cs.every(id=>l.includes(id));
+  X.fpickIds=tous?l.filter(id=>!cs.includes(id)):l.concat(cs.filter(id=>!l.includes(id)));const y=window.scrollY;render();window.scrollTo(0,y);};
+XA.fpickCancel=()=>{X.fpick=false;if(FSEL.sel().t==='cartes'&&!FSEL.sel().ids.length)X.fsel=null;render();window.scrollTo(0,0);};
+XA.fpickGo=()=>{const ids=(X.fpickIds||[]).slice();if(!ids.length)return;const s=FSEL.sel();X.fsel={t:'cartes',ids,id:s.t==='cartes'?s.id:undefined,nom:s.t==='cartes'?s.nom:undefined};X.fpick=false;X.fmode='all';X.fdeck=null;render();window.scrollTo(0,0);};
+XA.fselSave=()=>{const s=FSEL.sel();if(s.t==='tout'||!s.ids.length)return;const el=document.getElementById('fselNom');const L=FSEL.liste();
+  const nom=(el&&el.value.trim())||(s.t==='parties'?'Parties : '+FSEL.resume(s):'Ma sélection '+(L.filter(e=>e.t==='cartes').length+1));
+  let e=s.id&&L.find(x=>x.id===s.id);if(e){e.nom=nom;e.ids=s.ids.slice();e.t=s.t;e.date=new Date().toISOString();}
+  else{e={id:'s'+Date.now().toString(36),nom,t:s.t,ids:s.ids.slice(),date:new Date().toISOString()};L.push(e);}
+  X.fsel=Object.assign({},s,{id:e.id,nom});saveState();toast('Sélection enregistrée : '+nom);render();};
+XA.fselLoad=d=>{const e=FSEL.liste().find(x=>x.id===d.v);if(!e)return;X.fsel={t:e.t,ids:e.ids.filter(id=>e.t==='parties'||XFLASH.some(c=>c.id===id)),id:e.id,nom:e.nom};X.fmode='all';X.fdeck=null;render();};
+XA.fselDel=d=>{const L=FSEL.liste();const i=L.findIndex(x=>x.id===d.v);if(i<0)return;if(!confirm('Supprimer la sélection « '+L[i].nom+' » ?'))return;L.splice(i,1);
+  if(FSEL.sel().id===d.v)X.fsel=Object.assign({},FSEL.sel(),{id:undefined,nom:undefined});saveState();render();};
+"""
+html = remplacer(html, "function xFlashPool(kind){return XFLASH.filter(c=>kind==='mix'||c.kind===kind);}",
+                 FSEL_JS + "\nfunction xFlashPool(kind){return XFLASH.filter(c=>(kind==='mix'||c.kind===kind)&&FSEL.garde(c));}")
+html = remplacer(html, "function vFlash(){\n  const kind=X.fkind||'mix',mode=X.fmode||'due';", "function vFlash(){if(X.fpick)return FSEL.choix();\n  const kind=X.fkind||'mix',mode=X.fmode||'due';")
+html = remplacer(html, "if(!X.fdeck||X.fmodeUsed!==mode+kind){", "if(!X.fdeck||X.fmodeUsed!==mode+kind+FSEL.cle()){")
+html = remplacer(html, "X.fi=0;X.frev=false;X.fok=0;X.fchk={};X.fmodeUsed=mode+kind;}", "X.fi=0;X.frev=false;X.fok=0;X.fchk={};X.fmodeUsed=mode+kind+FSEL.cle();}")
+html = remplacer(html, "<p class=\"lead\">Réponds de tête avant de retourner. Ratée : elle revient vite ; sue : dans 1, 3, 7 puis 14 jours.</p>",
+                 "<p class=\"lead\">Réponds de tête avant de retourner. Ratée : elle revient vite ; sue : dans 1, 3, 7 puis 14 jours.</p>${FSEL.barre()}")
+html = remplacer(html, "<b>Plus rien à revoir ici aujourd’hui 🎉</b><p class=\"small mut\" style=\"margin-top:6px\">Passe en « Toutes » pour t’entraîner quand même.</p>",
+                 "<b>${pool.length?'Plus rien à revoir ici aujourd’hui 🎉':'Aucune carte dans ce choix'}</b><p class=\"small mut\" style=\"margin-top:6px\">${pool.length?'Passe en « Toutes » pour t’entraîner quand même.':'Change de partie, de type de carte ou de sélection.'}</p>")
+html = remplacer(html, "</style>\n</head>", """.x-fparts{display:flex;flex-wrap:wrap;gap:6px}.x-fparts .chip{border:1px solid var(--line);cursor:pointer;background:#fff;text-align:left}.x-fparts .chip.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}.x-fparts .chip small{opacity:.75}
+.x-fsave{display:flex;gap:6px;margin-top:10px}.x-fsave input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:14px}
+.x-fsaved{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.x-fsv{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:#fff;overflow:hidden}.x-fsv.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.x-fsv button{border:0;background:none;padding:7px 10px;font:inherit;font-size:13px;cursor:pointer;text-align:left;color:inherit}.x-fsv small{color:var(--muted)}.x-fsv .x-fdel{padding:7px 10px 7px 4px;color:var(--muted);font-size:16px}
+.x-fsearch{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font:inherit;margin:4px 0 12px}
+.x-fgrp{margin-bottom:10px}.x-fgrp-t{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.x-fcard{display:flex;width:100%;gap:10px;align-items:flex-start;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:9px 2px;font:inherit;font-size:14px;cursor:pointer;color:inherit}
+.x-fcard .bx{flex:0 0 22px;height:22px;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:transparent;font-size:13px;font-weight:800}
+.x-fcard.on .bx{background:var(--accent);border-color:var(--accent);color:#fff}.x-fcard .k{flex:0 0 auto}.x-fcard .q{flex:1;min-width:0}
+.x-fbar{display:flex;gap:8px;align-items:center;padding:8px 0 12px}.x-fbar span{flex:1;font-weight:700}
+</style>
+</head>""")
+
 dest.write_text(html, encoding='utf-8')
 print(f'{dest} : {len(html.encode())} octets')
