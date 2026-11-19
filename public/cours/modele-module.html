@@ -33,6 +33,12 @@
     - Réviser → DS corrigés : les exercices dont le titre commence par « DS 2025 — », « DS1 — »,
       « Contrôle — »… sont rangés par sujet, dans l'ordre des exercices (Ex.1, Ex.2…), avec leur
       corrigé. Ils restent aussi dans « Exercices corrigés ».
+    - Réviser → 🃏 Flashcards : formules (FORMULAS), définitions, cartes (XFLASH) et « explique » de
+      chaque notion. On peut réviser tout le cours, seulement certaines parties (chapitres), ou une
+      sélection de cartes choisies une par une ; une sélection peut être enregistrée sous un nom pour
+      la refaire plus tard (synchronisée entre appareils). La partie d'une carte vient de son chapitre :
+      dans FORMULAS, « m » = l'id du chapitre ; dans XFLASH, « topic » = le titre du chapitre (ou son
+      début ; sinon la carte est rangée dans « Autres cartes »).
     - Onglet TD : préparer chaque TD la veille (pré-test, l'essentiel, exercice
       corrigé pas à pas, bilan). Les TD d'id « td1 », « td2 »… sont ouverts directement
       depuis l'agenda (« Préparer le TD 2 »).
@@ -330,7 +336,7 @@ const XFICHE = {
   plan: ["Lis tout le sujet et note les données avec leurs unités.", "Formule en lettres → valeurs → résultat encadré avec l’unité.", "Vérifie l’ordre de grandeur (un mur isolé : U entre 0,1 et 0,5)."]
 };
 
-/* Flashcards en plus (onglet Réviser). type : Rappel, Application ou Calcul. */
+/* Flashcards en plus (onglet Réviser). type : Rappel, Application ou Calcul. topic = titre du chapitre, ou son début (pour « réviser par partie »). */
 const XFLASH = [
   { id: "fl1", q: "Quelle couche porte la plus grande résistance dans un mur isolé ?", a: "L’isolant : e/λ = 0,10/0,04 = 2,5 m²·K/W.", type: "Rappel", topic: "Parois composées" },
   { id: "fl2", q: "U = 0,25 W/(m²·K), 20 m², ΔT = 18 K : flux ?", a: "Φ = 0,25 × 20 × 18 = 90 W.", type: "Calcul", topic: "Parois composées" }
