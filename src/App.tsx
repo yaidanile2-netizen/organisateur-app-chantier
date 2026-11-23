@@ -10,6 +10,7 @@ import SportPlanner from './SportPlanner'
 import ChangerProgramme from './ChangerProgramme'
 import NotesRappels from './NotesRappels'
 import HistoriqueNotifs from './HistoriqueNotifs'
+import Veille from './Veille'
 import NutritionCoach from './NutritionCoach'
 import MuscuView from './MuscuView'
 import { QuestionsTD, SuiviTD } from './AvancementTD'
@@ -114,6 +115,8 @@ function App() {
             <main className="content">
                 {onglet === 'agenda' && (
                     <>
+                        <Veille onChange={() => setVersion((v) => v + 1)} />
+
                         <QuestionsTD />
 
                         <DayView rafraichir={version} onVoirSeance={() => {

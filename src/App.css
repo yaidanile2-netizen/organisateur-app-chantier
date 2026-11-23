@@ -1833,3 +1833,19 @@
   .notif-corps span { color: #c7c7cc; }
   .notif-info { background: #3a2212; color: #fdba74; }
 }
+
+/* Veille de l'emploi du temps (23/11/2026) */
+.veille-ok { font-size: 12px; color: #6b7280; margin: -4px 4px; }
+.veille-ok .btn-link { font-size: 12px; }
+.veille { border-left: 4px solid #f59e0b; }
+.veille-titre { font-size: 16px; margin: 0 0 8px; }
+.veille-liste, .veille-bilan { margin: 0 0 8px; padding-left: 4px; list-style: none; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.veille-liste li.annule { color: #b91c1c; }
+.veille-bilan { font-size: 13px; color: #4b5563; }
+.veille-semaine p { margin: 4px 0; font-size: 14px; }
+.veille-semaine.sep { border-top: 1px solid #eef0f2; margin-top: 12px; padding-top: 12px; }
+@media (prefers-color-scheme: dark) {
+  .veille-liste li.annule { color: #f87171; }
+  .veille-bilan { color: #c7c7cc; }
+  .veille-semaine.sep { border-top-color: #2a2a2d; }
+}
