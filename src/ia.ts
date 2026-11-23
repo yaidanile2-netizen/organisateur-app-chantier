@@ -186,7 +186,8 @@ function momentActuel(): MomentConseil {
 export async function executerAction(r: ReponseIA, message: string): Promise<{ nutrition?: ReponseNutrition; organiser?: string }> {
     switch (r.action) {
         case 'repas':
-            return { nutrition: await envoyerNutrition({ texte: r.texte_action || message }) }
+            // Le message tel que Daniel l'a dit (« hier soir », « vendredi midi »…) aide le coach à dater chaque repas.
+            return { nutrition: await envoyerNutrition({ texte: r.texte_action || message, message }) }
         case 'conseil': {
             const c = r.conseil
             const contexte: ContexteConseil = {

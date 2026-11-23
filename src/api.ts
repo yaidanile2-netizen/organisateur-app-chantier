@@ -239,7 +239,7 @@ export type ReponseNutrition = {
 }
 
 export type DemandeNutrition =
-    | { texte: string }
+    | { texte: string; message?: string; date?: string } // date AAAA-MM-JJ si le jour est choisi à la main
     | { action: 'bilan' }
     | { action: 'liste' }
     | { action: 'objectifs'; objectifs: Objectif[] }
