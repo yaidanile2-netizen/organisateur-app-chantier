@@ -1,4 +1,5 @@
 import MontreMuscu from './MontreMuscu'
+import Cadence from './Cadence'
 import ExoIllustration from './ExoIllustration'
 import { aUneIllustration, legendeDe } from './illustrations'
 import { BoutonRepli } from './Repliable'
@@ -656,6 +657,7 @@ export default function MuscuView() {
                             </figcaption>
                         </figure>
                     )}
+                    {e.materiel === 'cardio' && <Cadence e={e} />}
                     <div className="mu-exo-bas">
                         <div className="mu-series">
                             {Array.from({ length: e.series }, (_, i) => (
