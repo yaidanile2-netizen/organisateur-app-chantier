@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute } from 'workbox-precaching'
-import { noterNotif } from './notifs'
+import { ecrireCle, lireCle, noterNotif } from './notifs'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -25,8 +25,35 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 const RAPPEL_URL = 'https://n8n-production-bdf5.up.railway.app/webhook/prochain-rappel'
 
 self.addEventListener('push', (event: PushEvent) => {
-    event.waitUntil(afficherRappel())
+    event.waitUntil(reposOuRappel())
 })
+
+// Chrono de repos (27/11/2026) : le push de fin de repos est vide lui aussi ; on le reconnaît parce que
+// l'app a noté l'heure de fin dans IndexedDB et qu'on est autour de cette heure-là.
+type Minuteur = { id: string; fin: number; total: number; libelle?: string; notifie?: boolean }
+async function reposOuRappel() {
+    const m = await lireCle<Minuteur>('minuteur')
+    if (m && !m.notifie && Math.abs(Date.now() - m.fin) < 150000) {
+        await ecrireCle('minuteur', { ...m, notifie: true })
+        const title = '⏱️ Repos terminé'
+        const body = 'C’est reparti : série suivante !'
+        await self.registration.showNotification(title, {
+            body,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: 'repos',
+            requireInteraction: false,
+            data: { vue: 'muscu' },
+            // vibration (Android) ; sur iPhone c'est la sonnerie des notifications
+            vibrate: [300, 120, 300, 120, 500],
+        } as NotificationOptions)
+        await noterNotif({ date: new Date().toISOString(), titre: title, texte: body })
+        const pages = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        pages.forEach((c) => c.postMessage({ type: 'notif' }))
+        return
+    }
+    await afficherRappel()
+}
 
 async function afficherRappel() {
     let title = 'Organisateur'

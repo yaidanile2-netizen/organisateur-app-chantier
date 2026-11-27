@@ -6,6 +6,7 @@
 // s'arrêter d'ici fin juin 2027 sont un bonus, pas la priorité.
 // Chaque séance a ses niveaux, que Daniel change lui-même dans l'app.
 
+import { EXOS_EN_PLUS } from './catalogueExos'
 export type Muscle =
     | 'pectoraux'
     | 'epaules'
@@ -1346,6 +1347,8 @@ export const TOUS_LES_EXERCICES: Exercice[] = (() => {
     for (const s of [...PROGRAMME, ...PROGRAMME_VELO]) for (const n of s.niveaux) for (const b of n.blocs) for (const e of b.exercices) if (!vus.has(e.id)) vus.set(e.id, e)
     // Exercices des anciennes versions du programme : gardés pour l'historique et les courbes.
     for (const e of [...Object.values(A), ...Object.values(B), ...Object.values(D), ...Object.values(KA), ...Object.values(KB), ...Object.values(KD)]) if (!vus.has(e.id)) vus.set(e.id, e)
+    // Catalogue « hors programme » (27/11/2026) : pour ajouter un exercice fait en plus.
+    for (const e of EXOS_EN_PLUS) if (!vus.has(e.id)) vus.set(e.id, e)
     return [...vus.values()]
 })()
 

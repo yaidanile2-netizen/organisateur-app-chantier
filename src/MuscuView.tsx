@@ -1,5 +1,7 @@
 import MontreMuscu from './MontreMuscu'
 import Cadence from './Cadence'
+import ChronoRepos, { useMinuteur } from './ChronoRepos'
+import { lancerRepos, preparerSon } from './minuteur'
 import ExoIllustration from './ExoIllustration'
 import { aUneIllustration, legendeDe } from './illustrations'
 import { BoutonRepli } from './Repliable'
@@ -192,7 +194,10 @@ export default function MuscuView() {
     const minuteurs = useRef<Record<string, number>>({})
     const [conseils, setConseils] = useState<string | null>(null)
     const [zoom, setZoom] = useState<string | null>(null)
-    const [repos, setRepos] = useState<{ restant: number; total: number } | null>(null)
+    const repos = useMinuteur()
+    const [sonnerie, setSonnerie] = useState<boolean | null>(null)
+    /** Séries faites en plus du programme, par exercice. */
+    const [plus, setPlus] = useState<Record<string, number>>(() => lire('muscu.seriesPlus', {}))
     const [message, setMessage] = useState<string | null>(null)
     // Niveaux de chaque chemin (callisthénie + cardio, basique), et chemin choisi pour A, B et D.
     const [niveauxCalis, setNiveauxCalis] = useState<NiveauxChoisis>(() => lireNiveaux('calis'))
@@ -291,15 +296,6 @@ export default function MuscuView() {
         return () => window.clearTimeout(id)
     }, [message])
 
-    useEffect(() => {
-        if (!repos || repos.restant <= 0) return
-        const id = window.setTimeout(() => {
-            if (repos.restant === 1 && 'vibrate' in navigator) navigator.vibrate([200, 100, 200])
-            setRepos((r) => (r && r.restant > 1 ? { ...r, restant: r.restant - 1 } : null))
-        }, 1000)
-        return () => window.clearTimeout(id)
-    }, [repos])
-
     const seance = seanceDe(code)
     const prevus = seance.blocs.flatMap((b) => b.exercices)
     const extrasSeance = (extras[code] ?? []).filter((e) => !prevus.some((p) => p.id === e.id))
@@ -307,7 +303,8 @@ export default function MuscuView() {
     const avis = avisNiveau(code, seance.niveau, seance.nbNiveaux, niveaux[code]?.depuis, suivi.seances, prevus.map((e) => e.id))
     const faitesAuNiveau = seancesAuNiveau(code, niveaux[code]?.depuis, prevus.map((e) => e.id), suivi.seances).length
     const defiReussi = defiFait(code, seance.niveau)
-    const total = exercices.reduce((n, e) => n + e.series, 0)
+    const nbSeries = (e: Exercice) => e.series + (plus[e.id] ?? 0)
+    const total = exercices.reduce((n, e) => n + nbSeries(e), 0)
     const faites = exercices.reduce((n, e) => n + (series[e.id] || []).filter(Boolean).length, 0)
     const pourcent = total ? Math.round((faites / total) * 100) : 0
     const prochaine = taches.find((x) => x.statut !== 'fait' && new Date(x.date_fin || x.date_debut || 0) >= new Date())
@@ -473,16 +470,47 @@ export default function MuscuView() {
         changerCharge(id, String(Math.max(0, Math.round((actuelle + delta) * 2) / 2)))
     }
 
+    function demarrerRepos(secondes: number) {
+        lancerRepos(secondes).then(setSonnerie)
+    }
+
     function basculerSerie(bloc: Bloc, e: Exercice, i: number) {
-        const actuelles = series[e.id] ? [...series[e.id]] : Array(e.series).fill(false)
+        preparerSon()
+        const actuelles = series[e.id] ? [...series[e.id]] : Array(nbSeries(e)).fill(false)
         actuelles[i] = !actuelles[i]
         const s = { ...series, [e.id]: actuelles }
         setSeries(s)
         ecrire('muscu.series', s)
-        // Tour terminé (tous les exercices du bloc cochés pour cette série) : repos automatique.
-        if (actuelles[i] && bloc.repos > 0) {
-            const tourFini = bloc.exercices.every((x) => (x.id === e.id ? actuelles : s[x.id] || [])[i])
-            if (tourFini) setRepos({ restant: bloc.repos, total: bloc.repos })
+        if (!actuelles[i]) return
+        // Séance entièrement cochée : pas de repos.
+        if (exercices.every((x) => (s[x.id] || []).filter(Boolean).length >= nbSeries(x))) return
+        // Repos chronométré : après chaque série (exercice seul, série en plus, exercice ajouté),
+        // ou à la fin du tour pour un superset (tous les exercices du bloc cochés pour cette série).
+        const enPlus = i >= e.series || bloc === BLOC_EXTRA
+        const duree = bloc.repos > 0 ? bloc.repos : enPlus && e.materiel !== 'cardio' ? 90 : 0
+        if (!duree) return
+        const tourFini = enPlus || bloc.exercices.every((x) => (x.id === e.id ? actuelles : s[x.id] || [])[i])
+        if (tourFini) demarrerRepos(duree)
+    }
+
+    function ajouterSerie(e: Exercice) {
+        const p = { ...plus, [e.id]: Math.min(10, (plus[e.id] ?? 0) + 1) }
+        setPlus(p)
+        ecrire('muscu.seriesPlus', p)
+    }
+
+    function retirerSerie(e: Exercice) {
+        const n = plus[e.id] ?? 0
+        if (n <= 0) return
+        const p = { ...plus, [e.id]: n - 1 }
+        if (!p[e.id]) delete p[e.id]
+        setPlus(p)
+        ecrire('muscu.seriesPlus', p)
+        const actuelles = series[e.id]
+        if (actuelles && actuelles.length > e.series + n - 1) {
+            const s = { ...series, [e.id]: actuelles.slice(0, e.series + n - 1) }
+            setSeries(s)
+            ecrire('muscu.series', s)
         }
     }
 
@@ -501,10 +529,9 @@ export default function MuscuView() {
                 const faitesExo = (series[e.id] || []).filter(Boolean).length
                 if (faitesExo === 0) return []
                 const ressenti: Ressenti = faitesExo >= e.series ? 'bien' : 'dur'
-                return [{ id: e.id, faites: faitesExo, total: e.series, kg: uniteDe(e) ? versKg(charges[e.id]) : null, ressenti }]
+                return [{ id: e.id, faites: faitesExo, total: Math.max(e.series, faitesExo), kg: uniteDe(e) ? versKg(charges[e.id]) : null, ressenti }]
             })
         )
-        setRepos(null)
         window.setTimeout(() => document.querySelector('.mu-bilan')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
     }
 
@@ -531,9 +558,15 @@ export default function MuscuView() {
             setSynchro('hors-ligne')
         }
         const s = { ...series }
-        for (const e of exercices) delete s[e.id]
+        const p = { ...plus }
+        for (const e of exercices) {
+            delete s[e.id]
+            delete p[e.id]
+        }
         setSeries(s)
         ecrire('muscu.series', s)
+        setPlus(p)
+        ecrire('muscu.seriesPlus', p)
         const sansExtras = { ...extras, [code]: [] }
         setExtras(sansExtras)
         ecrire('muscu.extras', sansExtras)
@@ -638,6 +671,7 @@ export default function MuscuView() {
                             <span>{e.machine}</span>
                             <span className="mu-cible">
                                 {e.reps ? `${e.series > 1 ? `${e.series} × ` : ''}${e.reps}` : `${e.series} série${e.series > 1 ? 's' : ''}`}
+                                {(plus[e.id] ?? 0) > 0 && <em className="mu-plus-tag"> +{plus[e.id]} en plus</em>}
                             </span>
                         </div>
                         {extra && (
@@ -660,16 +694,24 @@ export default function MuscuView() {
                     {e.materiel === 'cardio' && <Cadence e={e} />}
                     <div className="mu-exo-bas">
                         <div className="mu-series">
-                            {Array.from({ length: e.series }, (_, i) => (
+                            {Array.from({ length: nbSeries(e) }, (_, i) => (
                                 <button
                                     key={i}
-                                    className={`mu-serie ${faitesExo[i] ? 'fait' : ''}`}
+                                    className={`mu-serie ${faitesExo[i] ? 'fait' : ''}${i >= e.series ? ' en-plus' : ''}`}
                                     onClick={() => basculerSerie(bloc, e, i)}
-                                    aria-label={`Série ${i + 1}`}
+                                    aria-label={i >= e.series ? `Série ${i + 1} (en plus du programme)` : `Série ${i + 1}`}
                                 >
                                     {faitesExo[i] ? '✓' : i + 1}
                                 </button>
                             ))}
+                            {(plus[e.id] ?? 0) > 0 && (
+                                <button className="mu-serie-ajout moins" onClick={() => retirerSerie(e)} aria-label={`Retirer la dernière série ajoutée à ${e.nom}`}>
+                                    −
+                                </button>
+                            )}
+                            <button className="mu-serie-ajout" onClick={() => ajouterSerie(e)} aria-label={`Ajouter une série à ${e.nom}`} title="Série en plus du programme">
+                                +
+                            </button>
                         </div>
                         {avecCharge(e) ? (
                             <div className="mu-charge">
@@ -1408,7 +1450,10 @@ export default function MuscuView() {
                     </div>
                 ) : (
                     <div className="mu-boutons">
-                        <button className="mu-btn-sec" onClick={() => setRepos({ restant: 60, total: 60 })}>
+                        <button className="mu-btn-sec" onClick={() => {
+                                preparerSon()
+                                demarrerRepos(60)
+                            }}>
                             ⏱ REPOS 60 S
                         </button>
                         <button className="mu-btn" onClick={terminer}>
@@ -1439,15 +1484,7 @@ export default function MuscuView() {
                 </div>
             )}
 
-            {repos && (
-                <div className="mu-repos" role="timer">
-                    <div className="mu-repos-barre" style={{ width: `${(repos.restant / repos.total) * 100}%` }} />
-                    <span className="mu-repos-texte">
-                        REPOS · {Math.floor(repos.restant / 60)}:{String(repos.restant % 60).padStart(2, '0')}
-                    </span>
-                    <button onClick={() => setRepos(null)}>Passer ›</button>
-                </div>
-            )}
+            <ChronoRepos sonnerieProgrammee={sonnerie} />
         </div>
     )
 }
