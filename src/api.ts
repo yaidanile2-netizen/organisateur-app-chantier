@@ -235,11 +235,22 @@ export type ReponseNutrition = {
     coches: Coche[]
     /** Réponse personnalisée « quoi manger / acheter » (intent conseil). */
     conseil?: Conseil | null
+    /** Ce que la photo a permis de reconnaître (27/11/2026). */
+    photo?: PhotoReconnue | null
     detail: string
 }
 
+export type PhotoReconnue = {
+    plat: string
+    cuisine?: string
+    confiance?: number
+    autres?: string[]
+    elements?: { aliment: string; quantite?: string }[]
+    question?: string
+}
+
 export type DemandeNutrition =
-    | { texte: string; message?: string; date?: string } // date AAAA-MM-JJ si le jour est choisi à la main
+    | { texte: string; message?: string; date?: string; image?: string } // date AAAA-MM-JJ si le jour est choisi à la main ; image : photo du repas (data URL JPEG)
     | { action: 'bilan' }
     | { action: 'liste' }
     | { action: 'objectifs'; objectifs: Objectif[] }

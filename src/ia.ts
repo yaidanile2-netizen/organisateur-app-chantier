@@ -29,6 +29,8 @@ export type Message = {
     organiser?: string | null
     relances?: string[]
     erreur?: boolean
+    /** Miniature de la photo envoyée (gardée seulement sur l'appareil). */
+    photo?: string
 }
 
 // ---------- Contexte de l'écran ----------
@@ -224,7 +226,7 @@ const recent = (m: Message[]) => {
 
 type Fil = { updatedAt: number; efface: number; messages: Message[] }
 // En ligne : sans les grosses réponses du coach nutrition, pour rester léger.
-const allege = (m: Message): Message => ({ ...m, nutrition: undefined, texte: m.texte.slice(0, 2500) })
+const allege = (m: Message): Message => ({ ...m, nutrition: undefined, photo: undefined, texte: m.texte.slice(0, 2500) })
 export const fil = creerStock<Fil>(
     'ia.fil',
     'prog:ia-historique',

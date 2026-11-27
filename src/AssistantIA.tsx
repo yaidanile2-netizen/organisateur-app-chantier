@@ -3,7 +3,8 @@ import { appliquerProgrammeAnnonce } from './replanifier'
 import { noterProgramme } from './suiviTD'
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import './assistant.css'
-import type { ReponseNutrition } from './api'
+import { envoyerNutrition, type ReponseNutrition } from './api'
+import { preparerPhoto, type PhotoRepas } from './photo'
 import { ecouter, emettre } from './evenements'
 import { demandeDeRetenir, demanderIA, ecrireHistorique, executerAction, extraireProgrammes, extraireSouvenirs, fil as filIA, lireHistorique, memoire, oublier, retenir, type Message } from './ia'
 
@@ -246,6 +247,10 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
     }
     const [texte, setTexte] = useState('')
     const [occupe, setOccupe] = useState(false)
+    // Photo du repas à envoyer au coach (27/11/2026)
+    const [photo, setPhoto] = useState<PhotoRepas | null>(null)
+    const [photoErreur, setPhotoErreur] = useState<string | null>(null)
+    const fichierPhoto = useRef<HTMLInputElement>(null)
     const fil = useRef<HTMLDivElement>(null)
     const champ = useRef<HTMLTextAreaElement>(null)
     const messagesRef = useRef(messages)
@@ -266,9 +271,47 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
         })
     }, [])
 
+    /** Photo d'un repas : le coach reconnaît le plat (même africain), ses éléments, puis fait l'analyse et le note. */
+    const envoyerPhoto = useCallback(
+        async (brut: string, p: PhotoRepas) => {
+            const message = brut.trim()
+            setPhoto(null)
+            setTexte('')
+            ajouter({ id: id(), role: 'user', texte: message || '📷 Mon repas', date: new Date().toISOString(), photo: p.mini })
+            setOccupe(true)
+            try {
+                const r = await envoyerNutrition({ texte: message || 'Analyse ce repas en photo.', message: message || undefined, image: p.grande })
+                const ph = r.photo
+                const vu = ph?.plat
+                    ? `📷 J’ai reconnu : **${ph.plat}**${ph.cuisine ? ` (${ph.cuisine})` : ''}${typeof ph.confiance === 'number' ? ` · sûr à ${Math.round(ph.confiance)} %` : ''}${ph.elements?.length ? `\nDans l’assiette : ${ph.elements.map((e) => (e.quantite ? `${e.aliment} (${e.quantite})` : e.aliment)).join(', ')}` : ''}${ph.autres?.length ? `\nSinon, peut-être : ${ph.autres.join(', ')}` : ''}${ph.question ? `\n❓ ${ph.question}` : ''}`
+                    : ''
+                const corps = [vu, r.reponse, r.detail && !r.reponse ? `⚠️ ${r.detail}` : ''].filter(Boolean).join('\n\n') || 'Je n’ai pas réussi à analyser cette photo. Réessaie avec le plat bien éclairé, vu d’au-dessus.'
+                ajouter({ id: id(), role: 'assistant', texte: corps, date: new Date().toISOString(), action: 'repas', nutrition: r })
+                emettre('organisateur:nutrition', r)
+                emettre('organisateur:actualiser', { domaine: 'nutrition' })
+            } catch (e) {
+                ajouter({ id: id(), role: 'assistant', texte: `Je n’arrive pas à analyser la photo pour l’instant. ${e instanceof Error ? e.message : ''}`, date: new Date().toISOString(), erreur: true })
+            } finally {
+                setOccupe(false)
+            }
+        },
+        [ajouter]
+    )
+
+    async function choisirPhoto(f: File | undefined) {
+        setPhotoErreur(null)
+        if (!f) return
+        try {
+            setPhoto(await preparerPhoto(f))
+        } catch (e) {
+            setPhotoErreur(e instanceof Error ? e.message : 'Photo illisible.')
+        }
+    }
+
     const envoyer = useCallback(
         async (brut: string) => {
             const message = brut.trim()
+            if (photo && !occupe) return envoyerPhoto(brut, photo)
             if (!message || occupe) return
             const historique = messagesRef.current
             ajouter({ id: id(), role: 'user', texte: message, date: new Date().toISOString() })
@@ -342,7 +385,7 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                 setOccupe(false)
             }
         },
-        [occupe, ecran, ajouter, remplacer]
+        [occupe, ecran, ajouter, remplacer, photo, envoyerPhoto]
     )
 
     // Ouverture depuis n'importe où (bouton d'un écran, raccourci…)
@@ -498,6 +541,7 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                         {(k === 0 || jourTexte(messages[k - 1].date) !== jourTexte(m.date)) && <div className="ia-jour">{jourTexte(m.date)}</div>}
                         <div className={`ia-msg ${m.role}${m.erreur ? ' erreur' : ''}`}>
                             <div className="ia-bulle">
+                                {m.photo && <img className="ia-photo" src={m.photo} alt="Photo du repas" />}
                                 {m.role === 'assistant' ? <Riche texte={m.texte} /> : m.texte}
                                 {m.nutrition && <CarteNutrition r={m.nutrition} />}
                             </div>
@@ -527,6 +571,15 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                     )}
                 </div>
 
+                {(photo || photoErreur) && (
+                    <div className="ia-photo-attente">
+                        {photo && <img src={photo.mini} alt="Photo prête à envoyer" />}
+                        <span>{photoErreur ?? 'Photo prête. Ajoute un mot si tu veux (« c’était hier soir », « avec du piment »…), puis envoie.'}</span>
+                        <button type="button" onClick={() => { setPhoto(null); setPhotoErreur(null) }} aria-label="Retirer la photo">
+                            ×
+                        </button>
+                    </div>
+                )}
                 <form
                     className="ia-saisie"
                     onSubmit={(e) => {
@@ -534,11 +587,24 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                         envoyer(texte)
                     }}
                 >
+                    <input
+                        ref={fichierPhoto}
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(e) => {
+                            choisirPhoto(e.target.files?.[0])
+                            e.target.value = ''
+                        }}
+                    />
+                    <button type="button" className="ia-appareil" onClick={() => fichierPhoto.current?.click()} disabled={occupe} aria-label="Prendre en photo mon repas" title="Photo de ton repas">
+                        📷
+                    </button>
                     <textarea
                         ref={champ}
                         value={texte}
                         rows={1}
-                        placeholder="Écris ou dicte ta demande…"
+                        placeholder={photo ? 'Un mot sur ce repas ? (facultatif)' : 'Écris ou dicte ta demande…'}
                         onChange={(e) => setTexte(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
@@ -547,7 +613,7 @@ export default function AssistantIA({ ecran }: { ecran: string }) {
                             }
                         }}
                     />
-                    <button type="submit" disabled={occupe || !texte.trim()} aria-label="Envoyer">
+                    <button type="submit" disabled={occupe || (!texte.trim() && !photo)} aria-label="Envoyer">
                         ↑
                     </button>
                 </form>
